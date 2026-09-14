@@ -20,7 +20,9 @@ interface Stats {
   lunas: number;
   cancelled: number;
   upcomingEvents: number;
-  revenue: number;
+  revenueDp: number;
+  revenuePelunasan: number;
+  revenueTotal: number;
   totalClients: number;
 }
 
@@ -48,7 +50,7 @@ export function OverviewTab({
 
       try {
         const [bookingCount, clientCount] = await Promise.all([
-          supabase.from("bookings").select("status, grand_total, event_date"),
+          supabase.from("bookings").select("status, grand_total, event_date, dp_amount, dp_paid_at, paid_at"),
           supabase.from("clients").select("id", { count: "exact", head: true }),
         ]);
 
@@ -61,6 +63,14 @@ export function OverviewTab({
           (b) => b.event_date >= today && b.status !== "CANCELLED",
         ).length;
 
+        const revenueDp = bookings
+          .filter((b) => b.status === "MENUNGGU_PELUNASAN" || b.status === "LUNAS")
+          .reduce((s, b) => s + Number(b.dp_amount ?? 0), 0);
+
+        const revenuePelunasan = bookings
+          .filter((b) => b.status === "LUNAS")
+          .reduce((s, b) => s + (Number(b.grand_total ?? 0) - Number(b.dp_amount ?? 0)), 0);
+
         if (cancelled) return;
         setStats({
           totalBookings: bookings.length,
@@ -69,11 +79,9 @@ export function OverviewTab({
           lunas: bookings.filter((b) => b.status === "LUNAS").length,
           cancelled: bookings.filter((b) => b.status === "CANCELLED").length,
           upcomingEvents: upcoming,
-          revenue: bookings
-            .filter(
-              (b) => b.status === "MENUNGGU_PELUNASAN" || b.status === "LUNAS",
-            )
-            .reduce((s, b) => s + Number(b.grand_total), 0),
+          revenueDp,
+          revenuePelunasan,
+          revenueTotal: revenueDp + revenuePelunasan,
           totalClients: clientCount.count ?? 0,
         });
       } catch (err) {
@@ -115,17 +123,15 @@ export function OverviewTab({
     );
   }
 
-  const cards = [
-    { label: "Total Booking", value: String(stats.totalBookings), icon: <CalendarDays className="h-5 w-5" /> },
-    { label: "Menunggu DP", value: String(stats.menungguDp), icon: <Package className="h-5 w-5" /> },
-    { label: "Event Mendatang", value: String(stats.upcomingEvents), icon: <Users className="h-5 w-5" /> },
-    { label: "Pendapatan (DP Diterima)", value: formatCurrency(stats.revenue), icon: <DollarSign className="h-5 w-5" /> },
-  ];
-
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {cards.map((c) => (
+        {[
+          { label: "Total Booking", value: String(stats.totalBookings), icon: <CalendarDays className="h-5 w-5" /> },
+          { label: "Menunggu DP", value: String(stats.menungguDp), icon: <Package className="h-5 w-5" /> },
+          { label: "Event Mendatang", value: String(stats.upcomingEvents), icon: <Users className="h-5 w-5" /> },
+          { label: "Total Pemasukan", value: formatCurrency(stats.revenueTotal), icon: <DollarSign className="h-5 w-5" /> },
+        ].map((c) => (
           <div key={c.label} className="glass rounded-2xl p-4">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--brand)]/15 text-[var(--muted-2)]">
               {c.icon}
@@ -136,6 +142,38 @@ export function OverviewTab({
             <p className="mt-1 text-[11px] font-medium text-[var(--muted)]">{c.label}</p>
           </div>
         ))}
+      </div>
+
+      <div className="glass rounded-2xl p-5">
+        <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+          Rincian Pemasukan
+        </h3>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-amber-700">
+              Pendapatan dari DP
+            </p>
+            <p className="mt-1 font-sans text-lg font-bold text-amber-800">
+              {formatCurrency(stats.revenueDp)}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-blue-200 bg-blue-50/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-blue-700">
+              Pendapatan dari Pelunasan
+            </p>
+            <p className="mt-1 font-sans text-lg font-bold text-blue-800">
+              {formatCurrency(stats.revenuePelunasan)}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-green-200 bg-green-50/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-green-700">
+              Total Pemasukan (DP + Pelunasan)
+            </p>
+            <p className="mt-1 font-sans text-lg font-bold text-green-800">
+              {formatCurrency(stats.revenueTotal)}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">

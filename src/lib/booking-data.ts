@@ -9,7 +9,7 @@ export interface BookingData {
   bookedCounts: Record<string, number>;
 }
 
-const TTL_MS = 10 * 60 * 1000;
+const TTL_MS = 30 * 1000;
 
 let cached: { data: BookingData; expiresAt: number } | null = null;
 let inflight: Promise<BookingData> | null = null;

@@ -11,12 +11,14 @@ import {
   FileDown,
   MessageCircle,
   Search,
+  X,
 } from "lucide-react";
 import { cn, formatCurrency, formatShortDate } from "@/lib/utils";
+import Swal from "sweetalert2";
 import { STATUS_LABELS } from "@/lib/types";
 import type { BookingStatus } from "@/lib/types";
 import { InvoiceModal, type InvoiceKind } from "@/components/admin/invoice-modal";
-import { downloadInvoicePdf } from "@/lib/invoice-pdf";
+import { InvoicePdfPreview, downloadInvoicePdfBlob } from "@/components/admin/invoice-pdf-view";
 import type { InvoicePdfKind } from "@/lib/types";
 import { getSiteSettings, getStoredPublicUrl } from "@/lib/site-settings";
 
@@ -38,7 +40,7 @@ interface BookingRow {
   client: { full_name: string; whatsapp_number: string };
   details: {
     price_at_booking: number;
-    packages: { name: string; dp_type?: string; dp_value?: number };
+    packages: { name: string; dp_value?: number };
   }[];
   addons: { add_ons?: { name: string }; price_at_booking: number; qty?: number }[];
 }
@@ -79,6 +81,7 @@ export function BookingTab({
   const [blockDate, setBlockDate] = useState(() => todayInput());
   const [invoiceFor, setInvoiceFor] = useState<BookingRow | null>(null);
   const [invoiceKind, setInvoiceKind] = useState<InvoiceKind>("DP");
+  const [pdfFor, setPdfFor] = useState<{ booking: BookingRow; kind: InvoicePdfKind } | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -86,6 +89,8 @@ export function BookingTab({
     getSiteSettings()
       .then((settings) => setLogoUrl(getStoredPublicUrl(settings.logo_url)))
       .catch(() => {});
+    const t = setInterval(loadBookings, 30000);
+    return () => clearInterval(t);
   }, []);
 
   async function loadBookings() {
@@ -101,11 +106,12 @@ export function BookingTab({
         `
         *,
         client:clients(full_name, whatsapp_number),
-        details:booking_details(price_at_booking, packages:packages(name, dp_type, dp_value)),
+        details:booking_details(price_at_booking, packages:packages(name, dp_value)),
         addons:booking_addons(add_ons:addons(name), price_at_booking, qty)
       `,
       )
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(50);
 
     if (error) {
       console.error(error);
@@ -131,7 +137,11 @@ export function BookingTab({
       .eq("id", id);
     if (error) {
       console.error(error);
-      alert("Gagal memperbarui status. Cek koneksi/kebijakan RLS.");
+      await Swal.fire({
+        icon: "error",
+        title: "Gagal Memperbarui",
+        text: "Cek koneksi atau kebijakan RLS.",
+      });
     } else {
       setBookings((prev) =>
         prev.map((b) => (b.id === id ? { ...b, ...patch } : b)),
@@ -142,38 +152,65 @@ export function BookingTab({
   }
 
   async function verifyDp(id: number, name: string) {
-    const ok = window.confirm(
-      `Verifikasi DP dari "${name}"?\n\nStatus akan berubah menjadi MENUNGGU PELUNASAN.`,
-    );
-    if (!ok) return;
+    const confirmed = await Swal.fire({
+      icon: "question",
+      title: "Verifikasi DP",
+      text: `Verifikasi DP dari "${name}"?\n\nStatus akan berubah menjadi MENUNGGU PELUNASAN.`,
+      showCancelButton: true,
+      confirmButtonText: "Ya, Verifikasi",
+      cancelButtonText: "Batal",
+      confirmButtonColor: "#A8967A",
+    });
+    if (!confirmed.isConfirmed) return;
     await patchBooking(id, {
       status: "MENUNGGU_PELUNASAN",
       dp_paid_at: new Date().toISOString(),
     });
+    await Swal.fire({
+      icon: "success",
+      title: "DP Terverifikasi",
+      text: "Status berubah menjadi Menunggu Pelunasan.",
+      timer: 1200,
+      showConfirmButton: false,
+    });
   }
 
   async function receivePelunasan(id: number, name: string) {
-    const ok = window.confirm(
-      `Terima pelunasan dari "${name}"?\n\nStatus akan berubah menjadi LUNAS (tidak ada tagihan tersisa).`,
-    );
-    if (!ok) return;
+    const confirmed = await Swal.fire({
+      icon: "question",
+      title: "Terima Pelunasan",
+      text: `Terima pelunasan dari "${name}"?\n\nStatus akan berubah menjadi LUNAS (tidak ada tagihan tersisa).`,
+      showCancelButton: true,
+      confirmButtonText: "Ya, Terima",
+      cancelButtonText: "Batal",
+      confirmButtonColor: "#16a34a",
+    });
+    if (!confirmed.isConfirmed) return;
     await patchBooking(id, {
       status: "LUNAS",
       paid_at: new Date().toISOString(),
     });
-  }
-
-  async function downloadPdf(booking: BookingRow, kind: InvoicePdfKind) {
-    await downloadInvoicePdf({
-      booking,
-      kind,
-      logoUrl,
-      note: booking.notes,
+    await Swal.fire({
+      icon: "success",
+      title: "Pembayaran Lunas",
+      text: "Booking selesai. Atur timeline di SLA Tracker.",
+      timer: 1200,
+      showConfirmButton: false,
     });
   }
 
   async function blockDateHandle() {
     if (!blockDate) return;
+    const confirmed = await Swal.fire({
+      icon: "warning",
+      title: "Blokir Tanggal",
+      text: `Blokir tanggal ${blockDate}? Tanggal ini tidak bisa di-booking.`,
+      showCancelButton: true,
+      confirmButtonText: "Ya, Blokir",
+      cancelButtonText: "Batal",
+      confirmButtonColor: "#dc2626",
+    });
+    if (!confirmed.isConfirmed) return;
     const supabase = createClient();
     if (!supabase) return;
     const { error } = await supabase.from("bookings").insert({
@@ -192,9 +229,20 @@ export function BookingTab({
 
     if (error) {
       console.error(error);
+      await Swal.fire({
+        icon: "error",
+        title: "Gagal Memblokir",
+        text: error.message,
+      });
     } else {
       setBlockDate("");
       loadBookings();
+      await Swal.fire({
+        icon: "success",
+        title: "Tanggal Diblokir",
+        timer: 1200,
+        showConfirmButton: false,
+      });
     }
   }
 
@@ -293,7 +341,7 @@ export function BookingTab({
                       </p>
                       {booking.status !== "LUNAS" && booking.status !== "CANCELLED" && (
                         <p className="text-[10px] text-[var(--muted)]">
-                          Sisa: {formatCurrency(remaining)}
+                          Sisa: {formatCurrency(booking.status === "MENUNGGU_DP" ? booking.grand_total : remaining)}
                         </p>
                       )}
                     </div>
@@ -316,11 +364,12 @@ export function BookingTab({
                           Verifikasi DP
                         </button>
                         <button
-                          onClick={() => downloadPdf(booking, "MENUNGGU_DP")}
+                          onClick={() => setPdfFor({ booking, kind: "MENUNGGU_DP" })}
+                          title="Preview & download PDF invoice DP"
                           className="glass-inset inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[11px] font-bold uppercase tracking-widest text-[var(--ink)]"
                         >
                           <FileDown className="h-3.5 w-3.5" />
-                          PDF DP
+                          PDF
                         </button>
                         <button
                           onClick={() => openInvoice(booking, "DP")}
@@ -344,11 +393,12 @@ export function BookingTab({
                           Terima Pelunasan
                         </button>
                         <button
-                          onClick={() => downloadPdf(booking, "MENUNGGU_PELUNASAN")}
+                          onClick={() => setPdfFor({ booking, kind: "MENUNGGU_PELUNASAN" })}
+                          title="Preview & download PDF tagihan pelunasan"
                           className="glass-inset inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[11px] font-bold uppercase tracking-widest text-[var(--ink)]"
                         >
                           <FileDown className="h-3.5 w-3.5" />
-                          PDF Tagihan
+                          PDF
                         </button>
                         <button
                           onClick={() => openInvoice(booking, "PELUNASAN")}
@@ -371,11 +421,12 @@ export function BookingTab({
                           Atur Edit & Cetak
                         </button>
                         <button
-                          onClick={() => downloadPdf(booking, "LUNAS")}
+                          onClick={() => setPdfFor({ booking, kind: "LUNAS" })}
+                          title="Preview PDF tanda terima lunas"
                           className="glass-inset inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[11px] font-bold uppercase tracking-widest text-[var(--ink)]"
                         >
-                          <Download className="h-3.5 w-3.5" />
-                          PDF Lunas
+                          <FileDown className="h-3.5 w-3.5" />
+                          PDF
                         </button>
                         <button
                           onClick={() => openInvoice(booking, "LUNAS")}
@@ -411,11 +462,11 @@ export function BookingTab({
                         </p>
                         <p>
                           <span className="text-[var(--muted)]">DP:</span>{" "}
-                          {formatCurrency(booking.dp_amount)}
+                          {formatCurrency(booking.status === "MENUNGGU_DP" ? 0 : booking.dp_amount)}
                         </p>
                         <p>
                           <span className="text-[var(--muted)]">Sisa:</span>{" "}
-                          {formatCurrency(remaining)}
+                          {formatCurrency(booking.status === "MENUNGGU_DP" ? booking.grand_total : remaining)}
                         </p>
                       </div>
                       <div className="space-y-1.5 text-xs text-[var(--ink)]">
@@ -452,6 +503,30 @@ export function BookingTab({
           defaultKind={invoiceKind}
           logoUrl={logoUrl}
         />
+      )}
+
+      {pdfFor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setPdfFor(null)}>
+          <div className="relative flex w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl h-[90vh]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-200 px-5 py-3">
+              <p className="text-sm font-semibold text-gray-700">
+                {pdfFor.booking.invoice_number}
+              </p>
+              <div className="flex items-center gap-2">
+                <button onClick={async () => { await downloadInvoicePdfBlob(pdfFor.booking, pdfFor.kind, logoUrl); }} className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-2 text-xs font-bold text-white">
+                  <Download className="h-3.5 w-3.5" />
+                  Download PDF
+                </button>
+                <button onClick={() => setPdfFor(null)} className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            <div className="min-h-0 flex-1 bg-gray-100 p-3">
+              <InvoicePdfPreview booking={pdfFor.booking} kind={pdfFor.kind} logoUrl={logoUrl} />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

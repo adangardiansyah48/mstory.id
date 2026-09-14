@@ -490,6 +490,12 @@ body {
   scrollbar-width: none;
 }
 
+button,
+a,
+[role="button"] {
+  cursor: pointer;
+}
+
 ::-webkit-scrollbar {
   display: none;
 }

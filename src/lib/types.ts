@@ -4,8 +4,7 @@ export type BookingStatus =
   | "LUNAS"
   | "CANCELLED";
 export type LocationType = "KOTA_TASIK" | "LUAR_KOTA";
-export type RetouchStatus = "PENDING" | "IN_PROGRESS" | "DONE";
-export type PrintingStatus = "NOT_STARTED" | "IN_PRINTING" | "READY_FOR_PICKUP" | "DELIVERED";
+export type WorkflowStatus = "SHOOTING" | "EDIT" | "PRINTING" | "READY" | "DELIVERED";
 
 export interface Category {
   id: number;
@@ -26,8 +25,7 @@ export interface Package {
   duration_hours?: number | null;
   crew_info?: string | null;
   inclusions: string;
-  dp_type: "PERCENTAGE" | "FIXED";
-  dp_value: number;
+  dp_value: number;  // Nilai DP nominal (Rupiah)
   is_active?: boolean;
 }
 
@@ -82,17 +80,20 @@ export interface BookingAddon {
 export interface ProjectProgress {
   id: number;
   booking_id: number;
-  retouch_deadline?: string | null;
-  retouch_status: RetouchStatus;
-  retouch_drive_link?: string | null;
-  printing_deadline?: string | null;
-  printing_status: PrintingStatus;
+  progress_status: WorkflowStatus;
+  notes?: string | null;
+  drive_link?: string | null;
+  expected_date?: string | null;
   updated_at: string;
 }
 
 export interface BookingWithRelations extends Booking {
   client?: Client;
-  details?: (BookingDetail & { packages?: Package })[];
+  details?: (BookingDetail & { 
+    packages?: Package & { 
+      sub_categories?: SubCategory & { categories?: Category } 
+    } 
+  })[];
   addons?: (BookingAddon & { add_ons?: Addon })[];
   project_progress?: ProjectProgress[];
 }
@@ -114,22 +115,14 @@ export const PAYMENT_BANK = "BRI";
 
 export const OUTSIDE_CITY_TRANSPORT_FEE = 250000;
 
-export type DownPaymentType = "PERCENTAGE" | "FIXED";
+export type DownPaymentType = "FIXED";
 
 /**
  * Hitung nominal DP berdasarkan pengaturan DP per paket.
- * - PERCENTAGE: persentase dari grand total (dp_value dalam %)
- * - FIXED: nominal tetap dalam Rupiah (dp_value = nominal)
+ * Nilai DP diambil langsung dari paket sebagai nominal tetap (Rupiah).
  */
-export function calcDownPayment(
-  dpType: DownPaymentType,
-  dpValue: number,
-  grandTotal: number,
-): number {
-  if (dpType === "FIXED") {
-    return dpValue;
-  }
-  return grandTotal * (dpValue / 100);
+export function calcDownPayment(dpValue: number): number {
+  return dpValue;
 }
 
 export const SLA_RETOUCH_WEEKS = 1;
@@ -152,16 +145,11 @@ export const INVOICE_PDF_META: Record<InvoicePdfKind, string> = {
   LUNAS: "TANDA TERIMA - LUNAS",
 };
 
-export const RETOUCH_STATUS_LABELS: Record<RetouchStatus, string> = {
-  PENDING: "Menunggu",
-  IN_PROGRESS: "Sedang Diproses",
-  DONE: "Selesai",
-};
-
-export const PRINTING_STATUS_LABELS: Record<PrintingStatus, string> = {
-  NOT_STARTED: "Belum Dimulai",
-  IN_PRINTING: "Sedang Dicetak",
-  READY_FOR_PICKUP: "Siap Diambil",
+export const WORKFLOW_STATUS_LABELS: Record<WorkflowStatus, string> = {
+  SHOOTING: "Mulai Shooting",
+  EDIT: "Proses Edit",
+  PRINTING: "Proses Cetak",
+  READY: "Siap Kirim",
   DELIVERED: "Terkirim",
 };
 

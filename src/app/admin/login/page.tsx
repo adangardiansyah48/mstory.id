@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Lock, LogIn } from "lucide-react";
+import Swal from "sweetalert2";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { getSiteSettings, getStoredPublicUrl } from "@/lib/site-settings";
 
 export default function AdminLogin() {
   const router = useRouter();
@@ -13,6 +15,13 @@ export default function AdminLogin() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    getSiteSettings()
+      .then((settings) => setLogoUrl(getStoredPublicUrl(settings.logo_url)))
+      .catch(() => {});
+  }, []);
 
   async function handleSignIn(e: React.FormEvent) {
     e.preventDefault();
@@ -33,9 +42,22 @@ export default function AdminLogin() {
     if (error) {
       setError(error.message);
       setLoading(false);
+      await Swal.fire({
+        icon: "error",
+        title: "Gagal Masuk",
+        text: error.message,
+        confirmButtonColor: "#A8967A",
+      });
       return;
     }
 
+    await Swal.fire({
+      icon: "success",
+      title: "Berhasil Masuk",
+      text: "Selamat datang di dashboard Mstory.id",
+      timer: 1200,
+      showConfirmButton: false,
+    });
     router.push("/admin/dashboard");
     router.refresh();
   }
@@ -53,8 +75,17 @@ export default function AdminLogin() {
 
       <div className="glass-strong relative z-10 w-full max-w-sm rounded-[2rem] p-8">
         <div className="mb-8 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--brand)]/15">
-            <Lock className="h-7 w-7 text-[var(--muted-2)]" />
+          <div className="mx-auto flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-[var(--brand)]/15 ring-2 ring-[var(--brand)]/30">
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={logoUrl}
+                alt="Logo Mstory.id"
+                className="h-16 w-16 object-contain p-2"
+              />
+            ) : (
+              <Lock className="h-7 w-7 text-[var(--muted-2)]" />
+            )}
           </div>
           <h1 className="mt-4 font-serif text-2xl font-semibold text-[var(--ink)]">
             Admin Mstory.id

@@ -54,12 +54,7 @@ export function InvoiceModal({
   const [copied, setCopied] = useState(false);
 
   const pkg = booking.details?.[0]?.packages;
-  const dpLabel =
-    pkg?.dp_type === "PERCENTAGE"
-      ? `DP (${pkg.dp_value}%)`
-      : pkg?.dp_type === "FIXED"
-        ? `DP (${formatCurrency(pkg.dp_value ?? 0)})`
-        : "DP";
+  const dpLabel = "DP";
 
   const packageLines: string[] = [];
   if (booking.details?.[0]) {
@@ -234,20 +229,6 @@ export function InvoiceModal({
             Kirim ke WA
           </a>
           <button
-            onClick={handleDownloadTxt}
-            className="glass-inset inline-flex h-10 items-center gap-2 rounded-full px-4 text-xs font-semibold uppercase tracking-widest text-[var(--ink)]"
-          >
-            <FileDown className="h-3.5 w-3.5" />
-            .txt
-          </button>
-          <button
-            onClick={handlePrint}
-            className="glass-inset inline-flex h-10 items-center gap-2 rounded-full px-4 text-xs font-semibold uppercase tracking-widest text-[var(--ink)]"
-          >
-            <Printer className="h-3.5 w-3.5" />
-            Cetak / PDF
-          </button>
-          <button
             onClick={handleCopy}
             className="glass-inset inline-flex h-10 items-center gap-2 rounded-full px-4 text-xs font-semibold uppercase tracking-widest text-[var(--ink)]"
           >
@@ -257,6 +238,20 @@ export function InvoiceModal({
               <ClipboardCopy className="h-3.5 w-3.5" />
             )}
             {copied ? "Tersalin" : "Salin"}
+          </button>
+          <button
+            onClick={handlePrint}
+            className="glass-inset inline-flex h-10 items-center gap-2 rounded-full px-4 text-xs font-semibold uppercase tracking-widest text-[var(--ink)]"
+          >
+            <Printer className="h-3.5 w-3.5" />
+            Cetak
+          </button>
+          <button
+            onClick={handleDownloadTxt}
+            className="glass-inset inline-flex h-10 items-center gap-2 rounded-full px-4 text-xs font-semibold uppercase tracking-widest text-[var(--ink)]"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Unduh
           </button>
         </div>
       </div>

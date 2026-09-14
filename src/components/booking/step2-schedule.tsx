@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   CalendarDays,
   CalendarOff,
@@ -34,6 +34,17 @@ export function Step2Schedule({
   });
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  const clientInfoRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (client.eventDate && clientInfoRef.current) {
+      clientInfoRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }, [client.eventDate]);
 
   function toDateKey(date: Date) {
     return date.toISOString().slice(0, 10);
@@ -184,28 +195,28 @@ export function Step2Schedule({
           </div>
         </div>
 
-        {client.eventDate && (
-          <div className="mt-3 flex items-center gap-2 rounded-2xl border border-white/50 bg-white/60 px-4 py-3 backdrop-blur-md">
-            <CalendarOff className="h-4 w-4 text-[var(--muted-2)]" />
-            <p className="text-sm font-semibold text-[var(--ink)]">
-              {new Date(client.eventDate + "T00:00:00").toLocaleDateString(
-                "id-ID",
-                {
-                  weekday: "long",
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                },
-              )}
-            </p>
-          </div>
-        )}
-      </div>
+      {client.eventDate && (
+        <div className="mt-3 flex items-center gap-2 rounded-2xl border border-white/50 bg-white/60 px-4 py-3 backdrop-blur-md">
+          <CalendarOff className="h-4 w-4 text-[var(--muted-2)]" />
+          <p className="text-sm font-semibold text-[var(--ink)]">
+            {new Date(client.eventDate + "T00:00:00").toLocaleDateString(
+              "id-ID",
+              {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              },
+            )}
+          </p>
+        </div>
+      )}
+    </div>
 
-      <div>
-        <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-          <User className="h-4 w-4" /> Data Diri
-        </h3>
+    <div ref={clientInfoRef}>
+      <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+        <User className="h-4 w-4" /> Data Diri
+      </h3>
         <div className="mt-3 space-y-4">
           <Input
             placeholder="Nama Lengkap"

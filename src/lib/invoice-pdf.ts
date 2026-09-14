@@ -19,7 +19,6 @@ export interface InvoicePdfBooking {
     price_at_booking: number;
     packages?: {
       name: string;
-      dp_type?: string;
       dp_value?: number;
       inclusions?: string | null;
     };

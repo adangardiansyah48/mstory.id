@@ -6,7 +6,6 @@ import {
   ExternalLink,
   Loader2,
   PackageSearch,
-  Printer,
   Search,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -20,9 +19,8 @@ import {
 } from "@/lib/utils";
 import type { BookingWithRelations } from "@/lib/types";
 import {
-  PRINTING_STATUS_LABELS,
-  RETOUCH_STATUS_LABELS,
   STATUS_LABELS,
+  WORKFLOW_STATUS_LABELS,
 } from "@/lib/types";
 
 interface StatusCheckerProps {
@@ -95,7 +93,7 @@ export function StatusSearchPanel() {
             `
             *,
             client:clients(*),
-            details:booking_details(*, packages:packages(*)),
+            details:booking_details(*, packages:packages(*, sub_categories:sub_categories(*, categories:categories(*)))),
             addons:booking_addons(*, add_ons:addons(*)),
             project_progress(*)
           `,
@@ -122,16 +120,8 @@ export function StatusSearchPanel() {
     }
   }
 
-  const progress = result?.project_progress?.[0];
-  const bookingPkg = result?.details?.[0]?.packages;
-  const dpLabel =
-    bookingPkg?.dp_type === "PERCENTAGE"
-      ? `DP terbayar (${bookingPkg.dp_value}%): ${formatCurrency(
-          result?.dp_amount ?? 0,
-        )}`
-      : bookingPkg?.dp_type === "FIXED"
-        ? `DP terbayar (nominal): ${formatCurrency(result?.dp_amount ?? 0)}`
-        : `DP terbayar: ${formatCurrency(result?.dp_amount ?? 0)}`;
+  const progress = Array.isArray(result?.project_progress) ? result?.project_progress?.[0] : result?.project_progress;
+  const dpLabel = `DP terbayar: ${formatCurrency(result?.dp_amount ?? 0)}`;
   const remaining = Math.max(
     (result?.grand_total ?? 0) - (result?.dp_amount ?? 0),
     0,
@@ -248,6 +238,44 @@ export function StatusSearchPanel() {
                     Lunas · Tidak ada tagihan tersisa.
                   </p>
                 )}
+               </div>
+            </div>
+
+            {/* Rincian Paket */}
+            <div className="glass rounded-[1.75rem] p-5">
+              <h4 className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+                Rincian Paket
+              </h4>
+              <div className="mt-3 space-y-2">
+                {result.details && result.details.length > 0 && (
+                    <div>
+                    <p className="text-xs text-[var(--muted)]">Paket Utama:</p>
+                    {result.details.map((detail) => (
+                      <div key={detail.id} className="mt-1 space-y-0.5">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-[var(--ink)] font-medium">{detail.packages?.name}</span>
+                          <span className="text-[var(--muted-2)] font-semibold">{formatCurrency(detail.price_at_booking)}</span>
+                        </div>
+                        <p className="text-[10px] text-[var(--muted)]">
+                          {detail.packages?.sub_categories?.categories?.name} · {detail.packages?.sub_categories?.name}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {result.addons && result.addons.length > 0 && (
+                  <div className="border-t border-white/30 pt-2 mt-2">
+                    <p className="text-xs text-[var(--muted)]">Add-on:</p>
+                    {result.addons.map((addon) => (
+                      <div key={addon.id} className="mt-1 flex justify-between text-xs">
+                        <span className="text-[var(--ink)] font-medium">
+                          {addon.add_ons?.name} {addon.qty && addon.qty > 1 ? `× ${addon.qty}` : ''}
+                        </span>
+                        <span className="text-[var(--muted-2)] font-semibold">{formatCurrency(addon.price_at_booking)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -261,52 +289,29 @@ export function StatusSearchPanel() {
               <>
                 <div className="glass rounded-[1.75rem] p-5">
                   <h4 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                    <Brush className="h-3.5 w-3.5" /> Status Retouch Foto
+                    <Brush className="h-3.5 w-3.5" /> Progress Pengerjaan
                   </h4>
                   <div className="mt-3">
                     <Progress
-                      status={progress?.retouch_status ?? "PENDING"}
-                      labels={RETOUCH_STATUS_LABELS}
-                      steps={["PENDING", "IN_PROGRESS", "DONE"]}
+                      status={progress?.progress_status ?? "SHOOTING"}
+                      labels={WORKFLOW_STATUS_LABELS}
+                      steps={["SHOOTING", "EDIT", "PRINTING", "READY", "DELIVERED"]}
                     />
                   </div>
-                  {progress?.retouch_drive_link && (
+                  {progress?.drive_link && (
                     <a
-                      href={progress.retouch_drive_link}
+                      href={progress.drive_link}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100"
                     >
                       <ExternalLink className="h-3.5 w-3.5" />
-                      Buka Link Foto (Google Drive)
+                      Buka Link File (Google Drive)
                     </a>
                   )}
-                  {progress?.retouch_deadline && (
+                  {progress?.expected_date && (
                     <p className="mt-2 text-[11px] text-[var(--muted-2)]">
-                      Target selesai: {formatShortDate(progress.retouch_deadline)}
-                    </p>
-                  )}
-                </div>
-
-                <div className="glass rounded-[1.75rem] p-5">
-                  <h4 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                    <Printer className="h-3.5 w-3.5" /> Status Cetak
-                  </h4>
-                  <div className="mt-3">
-                    <Progress
-                      status={progress?.printing_status ?? "NOT_STARTED"}
-                      labels={PRINTING_STATUS_LABELS}
-                      steps={[
-                        "NOT_STARTED",
-                        "IN_PRINTING",
-                        "READY_FOR_PICKUP",
-                        "DELIVERED",
-                      ]}
-                    />
-                  </div>
-                  {progress?.printing_deadline && (
-                    <p className="mt-2 text-[11px] text-[var(--muted-2)]">
-                      Target selesai: {formatShortDate(progress.printing_deadline)}
+                      Target selesai: {formatShortDate(progress.expected_date)}
                     </p>
                   )}
                 </div>

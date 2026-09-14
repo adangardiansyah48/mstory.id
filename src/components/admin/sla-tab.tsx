@@ -5,14 +5,12 @@ import { createClient } from "@/lib/supabase/client";
 import { Check, ExternalLink, Link as LinkIcon } from "lucide-react";
 import { cn, formatShortDate } from "@/lib/utils";
 import {
-  PRINTING_STATUS_LABELS,
-  RETOUCH_STATUS_LABELS,
   SLA_PRINT_WEEKS,
   SLA_RETOUCH_WEEKS,
+  WORKFLOW_STATUS_LABELS,
 } from "@/lib/types";
 import type {
-  PrintingStatus,
-  RetouchStatus,
+  WorkflowStatus,
 } from "@/lib/types";
 
 interface ProjectRow {
@@ -21,32 +19,25 @@ interface ProjectRow {
   client_name: string;
   event_date: string;
   status: string;
+  client: { full_name: string } | null;
   project_progress: {
     id: number;
-    retouch_deadline: string | null;
-    retouch_status: RetouchStatus;
-    retouch_drive_link: string | null;
-    printing_deadline: string | null;
-    printing_status: PrintingStatus;
+    progress_status: WorkflowStatus;
+    notes?: string | null;
+    drive_link?: string | null;
+    expected_date?: string | null;
   }[];
 }
 
 interface ProgressPayload {
   booking_id: number;
-  retouch_deadline?: string;
-  retouch_status?: RetouchStatus;
-  retouch_drive_link?: string;
-  printing_deadline?: string;
-  printing_status?: PrintingStatus;
+  progress_status?: WorkflowStatus;
+  notes?: string;
+  drive_link?: string | null;
+  expected_date?: string | null;
 }
 
-const RETOUCH_STEPS: RetouchStatus[] = ["PENDING", "IN_PROGRESS", "DONE"];
-const PRINTING_STEPS: PrintingStatus[] = [
-  "NOT_STARTED",
-  "IN_PRINTING",
-  "READY_FOR_PICKUP",
-  "DELIVERED",
-];
+const WORKFLOW_STEPS: WorkflowStatus[] = ["SHOOTING", "EDIT", "PRINTING", "READY", "DELIVERED"];
 
 export function SlaTab() {
   const [rows, setRows] = useState<ProjectRow[]>([]);
@@ -103,38 +94,32 @@ export function SlaTab() {
     const existing = row.project_progress?.[0];
 
     if (existing) {
-      await supabase
+      const { error } = await supabase
         .from("project_progress")
         .update(payload)
         .eq("id", existing.id);
+      if (error) console.error(error);
     } else {
-      await supabase.from("project_progress").insert(payload);
+      const { error } = await supabase.from("project_progress").insert(payload);
+      if (error) console.error(error);
     }
 
-    loadProjects();
+    await loadProjects();
     setSavingId(null);
   }
 
-  async function setRetouchStatus(row: ProjectRow, status: RetouchStatus) {
+  async function setProgressStatus(row: ProjectRow, status: WorkflowStatus) {
     await upsertProgress(row, {
       booking_id: row.id,
-      retouch_status: status,
-      retouch_deadline: calcDeadline(row.event_date, SLA_RETOUCH_WEEKS),
-    });
-  }
-
-  async function setPrintingStatus(row: ProjectRow, status: PrintingStatus) {
-    await upsertProgress(row, {
-      booking_id: row.id,
-      printing_status: status,
-      printing_deadline: calcDeadline(row.event_date, SLA_PRINT_WEEKS),
+      progress_status: status,
+      expected_date: calcDeadline(row.event_date, status === "EDIT" ? SLA_RETOUCH_WEEKS : SLA_PRINT_WEEKS),
     });
   }
 
   async function setDriveLink(row: ProjectRow, link: string) {
     await upsertProgress(row, {
       booking_id: row.id,
-      retouch_drive_link: link,
+      drive_link: link,
     });
   }
 
@@ -160,8 +145,8 @@ export function SlaTab() {
       ) : (
         rows.map((row) => {
           const prog = row.project_progress?.[0];
-          const retouchIdx = RETOUCH_STEPS.indexOf(prog?.retouch_status ?? "PENDING");
-          const printIdx = PRINTING_STEPS.indexOf(prog?.printing_status ?? "NOT_STARTED");
+          const currentIdx = WORKFLOW_STEPS.indexOf(prog?.progress_status ?? "SHOOTING");
+          const clientName = row.client?.full_name ?? row.client_name;
 
           return (
             <div
@@ -171,7 +156,7 @@ export function SlaTab() {
               <div className="flex items-center justify-between gap-3 border-b border-[var(--soft)] px-4 py-3">
                 <div>
                   <p className="text-sm font-bold text-[var(--ink)]">
-                    {(row as unknown as { client_name: string }).client_name || "Client"}
+                    {clientName || "Client"}
                   </p>
                   <p className="font-mono text-[11px] text-[var(--muted)]">
                     {row.invoice_number} · Event {formatShortDate(row.event_date)}
@@ -193,71 +178,39 @@ export function SlaTab() {
                 <div>
                   <div className="flex items-center justify-between">
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-                      Retouch Foto
+                      Progress Pengerjaan
                     </p>
                     <p className="text-[10px] text-[var(--muted-2)]">
-                      Deadline:{" "}
-                      {prog?.retouch_deadline
-                        ? formatShortDate(prog.retouch_deadline)
-                        : formatShortDate(calcDeadline(row.event_date, SLA_RETOUCH_WEEKS))}
+                      Estimasi Selesai:{" "}
+                      {prog?.expected_date
+                        ? formatShortDate(prog.expected_date)
+                        : formatShortDate(calcDeadline(row.event_date, SLA_PRINT_WEEKS))}
                     </p>
                   </div>
-                  <div className="mt-2 flex items-center gap-1">
-                    {RETOUCH_STEPS.map((s, i) => (
+                  <div className="mt-2 flex flex-wrap items-center gap-1">
+                    {WORKFLOW_STEPS.map((s, i) => (
                       <button
                         key={s}
-                        onClick={() => setRetouchStatus(row, s)}
+                        onClick={() => setProgressStatus(row, s)}
                         disabled={savingId === row.id}
                         className={cn(
-                          "flex flex-1 flex-col items-center gap-1 rounded-lg border px-1 py-2 text-[10px] font-semibold transition-colors disabled:opacity-50",
-                          i <= retouchIdx
+                          "flex-1 min-w-[80px] flex flex-col items-center gap-1 rounded-lg border px-1 py-2 text-[10px] font-semibold transition-colors disabled:opacity-50",
+                          i <= currentIdx
                             ? "border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--muted-2)]"
                             : "border-[var(--line)] bg-white text-[var(--muted-2)] hover:border-[var(--brand)]",
                         )}
                       >
-                        {i <= retouchIdx && <Check className="h-3 w-3 text-[var(--muted-2)]" />}
-                        {RETOUCH_STATUS_LABELS[s]}
+                        {i <= currentIdx && <Check className="h-3 w-3 text-[var(--muted-2)]" />}
+                        {WORKFLOW_STATUS_LABELS[s]}
                       </button>
                     ))}
                   </div>
                   <DriveLinkInput
-                    key={`${row.id}-${prog?.retouch_drive_link ?? ""}-${savingId === row.id ? savingId : "idle"}`}
-                    link={prog?.retouch_drive_link ?? ""}
+                    key={`${row.id}-${prog?.drive_link ?? ""}-${savingId === row.id ? savingId : "idle"}`}
+                    link={prog?.drive_link ?? ""}
                     onSave={(link) => setDriveLink(row, link)}
                     disabled={savingId === row.id}
                   />
-                </div>
-
-                <div className="border-t border-dashed border-[var(--line)] pt-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-                      Cetak & Video
-                    </p>
-                    <p className="text-[10px] text-[var(--muted-2)]">
-                      Deadline:{" "}
-                      {prog?.printing_deadline
-                        ? formatShortDate(prog.printing_deadline)
-                        : formatShortDate(calcDeadline(row.event_date, SLA_PRINT_WEEKS))}
-                    </p>
-                  </div>
-                  <div className="mt-2 flex items-center gap-1">
-                    {PRINTING_STEPS.map((s, i) => (
-                      <button
-                        key={s}
-                        onClick={() => setPrintingStatus(row, s)}
-                        disabled={savingId === row.id}
-                        className={cn(
-                          "flex flex-1 flex-col items-center gap-1 rounded-lg border px-1 py-2 text-[10px] font-semibold transition-colors disabled:opacity-50",
-                          i <= printIdx
-                            ? "border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--muted-2)]"
-                            : "border-[var(--line)] bg-white text-[var(--muted-2)] hover:border-[var(--brand)]",
-                        )}
-                      >
-                        {i <= printIdx && <Check className="h-3 w-3 text-[var(--muted-2)]" />}
-                        {PRINTING_STATUS_LABELS[s]}
-                      </button>
-                    ))}
-                  </div>
                 </div>
               </div>
             </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { Check, ChevronRight, Clock, Users } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { AddonIcon, CategoryIcon } from "@/components/ui/icons";
@@ -42,6 +43,37 @@ export function Step1Category({
   selection,
   setSelection,
 }: Step1Props) {
+  const packageSectionRef = useRef<HTMLDivElement>(null);
+  const packagesListRef = useRef<HTMLDivElement>(null);
+  const addonsSectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (selection.category && packageSectionRef.current) {
+      packageSectionRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }, [selection.category]);
+
+  useEffect(() => {
+    if (selection.subCategory && packagesListRef.current) {
+      packagesListRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }, [selection.subCategory]);
+
+  useEffect(() => {
+    if (selection.selectedPackage && addonsSectionRef.current) {
+      addonsSectionRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }, [selection.selectedPackage]);
+
   const subtotal =
     (selection.selectedPackage?.price || 0) +
     selection.addons.reduce((sum, a) => sum + a.price, 0);
@@ -99,7 +131,7 @@ export function Step1Category({
       </div>
 
       {selection.category && (
-        <div className="animate-fade-in">
+        <div ref={packageSectionRef} className="animate-fade-in">
           <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
             2. Pilih Jenis Paket
           </h3>
@@ -132,7 +164,7 @@ export function Step1Category({
       )}
 
       {selection.subCategory && (
-        <div className="animate-fade-in">
+        <div ref={packagesListRef} className="animate-fade-in">
           <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
             3. Pilih Paket {selection.subCategory.name}
           </h3>
@@ -189,7 +221,7 @@ export function Step1Category({
       )}
 
       {selection.selectedPackage && (
-        <div className="animate-fade-in">
+        <div ref={addonsSectionRef} className="animate-fade-in">
           <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
             4. Add-on Tambahan (Opsional)
           </h3>

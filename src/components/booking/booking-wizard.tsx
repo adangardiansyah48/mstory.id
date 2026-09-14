@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check } from "lucide-react";
+import Swal from "sweetalert2";
 import { createClient } from "@/lib/supabase/client";
 import { getBookingData, peekBookingData } from "@/lib/booking-data";
 import { Modal } from "@/components/ui/modal";
@@ -23,7 +24,6 @@ import {
   PAYMENT_BANK,
   WHATSAPP_ADMIN_NUMBER,
   addonIcon,
-  calcDownPayment,
   type WizardClientDetails,
 } from "@/lib/types";
 
@@ -91,6 +91,17 @@ export function BookingWizard({
     invoiceNumber: string;
     waLink: string;
   } | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [step]);
+
+  useEffect(() => {
+    if (submitResult && scrollRef.current) {
+      scrollRef.current.scrollTo({ top: 0 });
+    }
+  }, [submitResult]);
 
   useEffect(() => {
     let cancelled = false;
@@ -122,13 +133,9 @@ export function BookingWizard({
     client.locationType === "LUAR_KOTA" ? TRANSPORT_FEE_LUAR_KOTA : 0;
 
   const grandTotal = subtotal + transportFee;
-  const dpType = selection.selectedPackage?.dp_type ?? "PERCENTAGE";
-  const dpValue = selection.selectedPackage?.dp_value ?? 50;
-  const dpAmount = calcDownPayment(dpType, dpValue, grandTotal);
-  const dpLabel =
-    dpType === "PERCENTAGE"
-      ? `DP (${dpValue}%)`
-      : `DP (${formatCurrency(dpValue)})`;
+  const dpValue = Number(selection.selectedPackage?.dp_value ?? 0);
+  const dpAmount = dpValue;
+  const dpLabel = "DP";
   const remainingBalance = grandTotal - dpAmount;
 
   const filteredSubs = selection.category
@@ -157,10 +164,14 @@ export function BookingWizard({
     const supabase = createClient();
     if (!supabase) {
       setSubmitting(false);
-      alert("Konfigurasi Supabase belum diatur. Isi .env.local terlebih dahulu.");
+      await Swal.fire({
+        icon: "error",
+        title: "Supabase Belum Dikonfigurasi",
+        text: "Isi .env.local terlebih dahulu.",
+      });
       return;
     }
-    const invoiceNumber = generateInvoiceNumber();
+    const invoiceNumber = await generateInvoiceNumber();
     const normalizedPhone = normalizeWhatsAppNumber(client.whatsappNumber);
 
     try {
@@ -218,11 +229,21 @@ export function BookingWizard({
       if (detailError) throw detailError;
 
       const packageDescription = [
-        `${selection.category?.name} - ${selection.subCategory?.name}`,
+        `*KATEGORI*`,
+        `${selection.category?.name}`,
+        ``,
+        `*JENIS PAKET*`,
+        `${selection.subCategory?.name}`,
+        ``,
+        `*PAKET*`,
         `• ${selection.selectedPackage.name} (${formatCurrency(selection.selectedPackage.price)})`,
-        ...selection.addons.map(
-          (a) => `• ${addonIcon(a.name)} ${a.name} (${formatCurrency(a.price)})`,
-        ),
+        ...(selection.addons.length > 0 ? [
+          ``,
+          `*ADD-ONS*`,
+          ...selection.addons.map(
+            (a) => `• ${addonIcon(a.name)} ${a.name} (${formatCurrency(a.price)})`,
+          ),
+        ] : []),
       ].join("\n");
 
       const message = buildInvoiceMessage({
@@ -258,9 +279,11 @@ export function BookingWizard({
       const detail =
         e?.message || e?.details || e?.hint || e?.code || "Unknown error";
       console.error("Failed to submit booking:", JSON.stringify(e), err);
-      alert(
-        `Terjadi kesalahan saat mengirim booking:\n${detail}\n\nSilakan coba lagi.`,
-      );
+      await Swal.fire({
+        icon: "error",
+        title: "Gagal Mengirim Booking",
+        text: `${detail}\n\nSilakan coba lagi.`,
+      });
     } finally {
       setSubmitting(false);
     }
@@ -330,7 +353,7 @@ export function BookingWizard({
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="flex flex-col items-center justify-center gap-3 px-6 py-20">
               <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-[var(--brand)]/30 border-t-[var(--brand)]" />
@@ -346,7 +369,7 @@ export function BookingWizard({
                   <ol className="mt-3 space-y-3 text-sm text-[var(--ink)]">
                     <li className="flex gap-3">
                       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-xs font-bold text-white">1</span>
-                      <span>Buka WhatsApp dan kirim invoice ke admin Mstory.id</span>
+                      <span>Buka WhatsApp dan kirim pesanan paket ini ke admin Mstory.id</span>
                     </li>
                     <li className="flex gap-3">
                       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-xs font-bold text-white">2</span>

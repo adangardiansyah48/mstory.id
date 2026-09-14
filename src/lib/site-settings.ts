@@ -18,6 +18,7 @@ export interface SiteSettings {
   youtube_url: string | null;
   footer_text: string | null;
   city_text: string | null;
+  transport_fee: number | null;
   theme_fanpage: string | null;
   theme_admin: string | null;
   updated_at: string;
@@ -40,6 +41,7 @@ export const DEFAULT_SETTINGS: Omit<SiteSettings, "id" | "updated_at"> = {
   youtube_url: "https://youtube.com/@mstory.id",
   footer_text: "Photography & Videography",
   city_text: "Tasikmalaya",
+  transport_fee: 250000,
   theme_fanpage: "CLASSIC",
   theme_admin: "CLASSIC",
 };
@@ -49,7 +51,7 @@ export const BANNER_FOLDER = "banners";
 export const LOGO_FOLDER = "logos";
 export const GALLERY_FOLDER = "gallery";
 
-const TTL_MS = 10 * 60 * 1000;
+const TTL_MS = 30 * 1000;
 
 let cached: { data: SiteSettings; expiresAt: number } | null = null;
 let inflight: Promise<SiteSettings> | null = null;

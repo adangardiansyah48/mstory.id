@@ -223,9 +223,7 @@ export function LinkTreeContent() {
           </a>
 
           <a
-            href={settings.website_url || "https://mstory.id"}
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/website"
             className="glass fade-in-item group flex min-h-[48px] items-center justify-between rounded-2xl px-4 py-4 text-[13px] font-medium text-[var(--ink)] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
             style={{ animationDelay: "0.4s" }}
           >
@@ -238,10 +236,7 @@ export function LinkTreeContent() {
                   WEBSITE RESMI
                 </span>
                 <span className="mt-0.5 block text-[11px] font-normal normal-case tracking-normal text-[var(--muted)]">
-                  {settings.website_url
-                    ? settings.website_url.replace(/^https?:\/\//, "")
-                    : "mstory.id"}{" "}
-                  • Lihat galeri portofolio lengkap
+                  Galeri Portofolio • Paket & Harga
                 </span>
               </span>
             </span>

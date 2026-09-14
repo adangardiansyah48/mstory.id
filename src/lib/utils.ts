@@ -40,11 +40,29 @@ export function addWeeks(date: Date, weeks: number): Date {
   return d;
 }
 
-export function generateInvoiceNumber(): string {
+import { createClient } from "@/lib/supabase/client";
+
+export async function generateInvoiceNumber(): Promise<string> {
   const now = new Date();
-  const ymd = now.toISOString().slice(0, 10).replace(/-/g, "");
-  const rand = Math.floor(1000 + Math.random() * 9000);
-  return `INV-${ymd}-${rand}`;
+  const dd = String(now.getDate()).padStart(2, "0");
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const yyyy = now.getFullYear();
+  const prefix = `INV-${dd}${mm}${yyyy}-`;
+
+  const supabase = createClient();
+  let last = 0;
+  if (supabase) {
+    const { data } = await supabase
+      .from("bookings")
+      .select("invoice_number")
+      .like("invoice_number", `${prefix}%`)
+      .order("invoice_number", { ascending: false })
+      .limit(1);
+    const match = data?.[0]?.invoice_number?.match(/(\d{4})\s*$/);
+    last = match ? parseInt(match[1], 10) : 0;
+  }
+  const seq = String(last + 1).padStart(4, "0");
+  return `${prefix}${seq}`;
 }
 
 export function normalizeWhatsAppNumber(phone: string): string {
@@ -99,21 +117,21 @@ function invoiceBody(input: InvoiceInput): string[] {
     `No. Invoice: ${input.invoiceNumber}`,
     ``,
     `*DATA KLIEN*`,
-    `Nama: ${input.fullName}`,
-    `WhatsApp: ${input.whatsappNumber}`,
+    `Nama     : ${input.fullName}`,
+    `WhatsApp : ${input.whatsappNumber}`,
     ``,
     `*DETAIL ACARA*`,
-    `Tanggal: ${formatDate(input.eventDate)}`,
-    `Lokasi: ${input.locationLabel}`,
-    `Alamat: ${input.eventAddress}`,
+    `Tanggal  : ${formatDate(input.eventDate)}`,
+    `Lokasi   : ${input.locationLabel}`,
+    `Alamat   : ${input.eventAddress}`,
     ``,
     `*PAKET*`,
     input.packageDescription,
     ``,
     `*RINCIAN BIAYA*`,
-    `Subtotal: ${formatCurrency(input.subtotal)}`,
+    `Subtotal : ${formatCurrency(input.subtotal)}`,
     `Transport: ${formatCurrency(input.transportFee)}`,
-    `Total: ${formatCurrency(input.grandTotal)}`,
+    `Total    : ${formatCurrency(input.grandTotal)}`,
   ];
 }
 
@@ -200,41 +218,16 @@ export function buildInvoiceMessage(input: {
     `No. Invoice: ${input.invoiceNumber}`,
     ``,
     `*DATA KLIEN*`,
-    `Nama: ${input.fullName}`,
-    `WhatsApp: ${input.whatsappNumber}`,
+    `Nama     : ${input.fullName}`,
+    `WhatsApp : ${input.whatsappNumber}`,
     ``,
     `*DETAIL ACARA*`,
-    `Tanggal: ${formatDate(input.eventDate)}`,
-    `Lokasi: ${input.locationLabel}`,
-    `Alamat: ${input.eventAddress}`,
+    `Tanggal  : ${formatDate(input.eventDate)}`,
+    `Lokasi   : ${input.locationLabel}`,
+    `Alamat   : ${input.eventAddress}`,
     ``,
-    `*PAKET YANG DIPILIH*`,
+    `*PAKET*`,
     input.packageDescription,
-    ``,
-    `*RINCIAN BIAYA*`,
-    `Subtotal: ${formatCurrency(input.subtotal)}`,
-    `Transport: ${formatCurrency(input.transportFee)}`,
-    `Total: ${formatCurrency(input.grandTotal)}`,
-    ``,
-    `*PEMBAYARAN*`,
-    `${input.dpLabel}: ${formatCurrency(input.dpAmount)}`,
-    `Sisa Pelunasan: ${formatCurrency(input.remainingBalance)}`,
-    `(Paling lambat H-1 event tanggal)`,
-    ``,
-    `*PEMBAYARAN KE*`,
-    `${input.paymentBank} ${input.paymentAccount}`,
-    `A/n ${input.paymentHolder}`,
-    ``,
-    `*SLA (Estimasi Pengerjaan)*`,
-    `- Retouch foto: Max 1 minggu setelah event`,
-    `- Cetak & video: Max 3 minggu setelah event`,
-    ``,
-    `*KETENTUAN*`,
-    `- DP tidak dapat dikembalikan jika batal setelah invoice dibuat`,
-    `- Transport dikenakan untuk lokasi di luar Kota Tasikmalaya`,
-    ``,
-    `Mohon konfirmasi pembayaran dengan mengirim bukti transfer. 🙏`,
-    `Terima kasih sudah mempercayakan momen berharga Anda kepada Mstory.id!`,
   ];
   return lines.join("\n");
 }
