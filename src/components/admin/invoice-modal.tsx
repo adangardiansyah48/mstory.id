@@ -1,14 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Check,
-  ClipboardCopy,
-  Download,
-  FileDown,
-  Printer,
-  Send,
-} from "lucide-react";
+import { Download, FileDown, Send } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { cn } from "@/lib/utils";
 import {
@@ -51,7 +44,6 @@ export function InvoiceModal({
   defaultKind = "DP",
 }: InvoiceModalProps) {
   const [kind, setKind] = useState<InvoiceKind>(defaultKind);
-  const [copied, setCopied] = useState(false);
 
   const pkg = booking.details?.[0]?.packages;
   const dpLabel = "DP";
@@ -102,61 +94,6 @@ export function InvoiceModal({
     message,
   );
   const canWa = !!booking.client?.whatsapp_number;
-
-  async function handleCopy() {
-    try {
-      await navigator.clipboard.writeText(message);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      setCopied(false);
-    }
-  }
-
-  function handleDownloadTxt() {
-    const blob = new Blob([message], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${booking.invoice_number}-${kind.toLowerCase()}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  }
-
-  function handlePrint() {
-    const title =
-      kind === "DP" ? "TAGIHAN DP" : kind === "PELUNASAN" ? "TAGIHAN PELUNASAN" : "TANDA TERIMA LUNAS";
-    const html = `<!doctype html>
-<html>
-<head>
-<meta charset="utf-8"/>
-<title>${title} - ${booking.invoice_number}</title>
-<style>
-  body { font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif; color: #1A1A1A; background:#fff; margin:0; padding:32px; }
-  .brand { font-size:20px; font-weight:700; letter-spacing:0.04em; }
-  .rule { border:none; border-top:1px solid #C0B29E; margin:12px 0; }
-  h1 { font-size:14px; letter-spacing:0.18em; text-transform:uppercase; color:#7A7369; margin:0 0 4px; }
-  pre { font-family:"JetBrains Mono", ui-monospace, monospace; font-size:12px; line-height:1.7; white-space:pre-wrap; word-break:break-word; }
-  .muted { color:#666666; }
-</style>
-</head>
-<body>
-  <div class="brand">Mstory.id</div>
-  <div class="muted" style="font-size:12px;">Photography &amp; Videography Studio</div>
-  <hr class="rule"/>
-  <h1>${title}</h1>
-  <pre>${message.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>
-</body>
-</html>`;
-    const w = window.open("", "_blank", "width=440,height=640");
-    if (!w) return;
-    w.document.write(html);
-    w.document.close();
-    w.focus();
-    setTimeout(() => w.print(), 350);
-  }
 
   return (
     <Modal open={open} onClose={onClose}>
@@ -228,31 +165,6 @@ export function InvoiceModal({
             <Send className="h-3.5 w-3.5" />
             Kirim ke WA
           </a>
-          <button
-            onClick={handleCopy}
-            className="glass-inset inline-flex h-10 items-center gap-2 rounded-full px-4 text-xs font-semibold uppercase tracking-widest text-[var(--ink)]"
-          >
-            {copied ? (
-              <Check className="h-3.5 w-3.5 text-emerald-500" />
-            ) : (
-              <ClipboardCopy className="h-3.5 w-3.5" />
-            )}
-            {copied ? "Tersalin" : "Salin"}
-          </button>
-          <button
-            onClick={handlePrint}
-            className="glass-inset inline-flex h-10 items-center gap-2 rounded-full px-4 text-xs font-semibold uppercase tracking-widest text-[var(--ink)]"
-          >
-            <Printer className="h-3.5 w-3.5" />
-            Cetak
-          </button>
-          <button
-            onClick={handleDownloadTxt}
-            className="glass-inset inline-flex h-10 items-center gap-2 rounded-full px-4 text-xs font-semibold uppercase tracking-widest text-[var(--ink)]"
-          >
-            <Download className="h-3.5 w-3.5" />
-            Unduh
-          </button>
         </div>
       </div>
     </Modal>
