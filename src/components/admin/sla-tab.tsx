@@ -120,8 +120,10 @@ export function SlaTab() {
   }
 
   async function setDriveLink(row: ProjectRow, link: string) {
+    const currentStatus = row.project_progress?.[0]?.progress_status ?? "SHOOTING";
     await upsertProgress(row, {
       booking_id: row.id,
+      progress_status: currentStatus,
       drive_link: link,
     });
   }
