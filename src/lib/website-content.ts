@@ -177,20 +177,24 @@ async function fetchWebsiteContent(): Promise<WebsiteContent> {
   }
 
   // Fallback: hero dari linktree_settings (banner) bila tabel website_settings kosong/belum ada
-  if (settings.hero_slides.length === 0) {
+  if (settings.hero_slides.length === 0 || !settings.logo_url) {
     try {
       const { getWebsiteSettings } = await import("@/lib/website");
       const base = await getWebsiteSettings();
-      const urls = (Array.isArray(base.banner_urls) && base.banner_urls.length > 0
-        ? base.banner_urls
-        : base.banner_url
-          ? [base.banner_url]
-          : []
-      )
-        .map((u) => getStoredPublicUrl(u))
-        .filter((u): u is string => Boolean(u));
-      settings.hero_slides = urls;
-      settings.logo_url = settings.logo_url ?? getStoredPublicUrl(base.logo_url);
+      if (settings.hero_slides.length === 0) {
+        const urls = (Array.isArray(base.banner_urls) && base.banner_urls.length > 0
+          ? base.banner_urls
+          : base.banner_url
+            ? [base.banner_url]
+            : []
+        )
+          .map((u) => getStoredPublicUrl(u))
+          .filter((u): u is string => Boolean(u));
+        settings.hero_slides = urls;
+      }
+      if (!settings.logo_url) {
+        settings.logo_url = getStoredPublicUrl(base.logo_url);
+      }
       settings.wa_number = settings.wa_number || "6281234567890";
       if (!settings.wa_number || settings.wa_number === "6281234567890") settings.wa_number = base.wa_number || settings.wa_number;
       if (!settings.instagram_url || settings.instagram_url === "https://instagram.com/mstory.id") {
