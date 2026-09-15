@@ -39,7 +39,7 @@ async function fetchBookingData(): Promise<BookingData> {
 
   const bookedCounts: Record<string, number> = {};
   for (const booking of bookingRes.data ?? []) {
-    const dateKey = new Date(booking.event_date).toISOString().slice(0, 10);
+    const dateKey = String(booking.event_date).slice(0, 10);
     bookedCounts[dateKey] = (bookedCounts[dateKey] ?? 0) + 1;
   }
 

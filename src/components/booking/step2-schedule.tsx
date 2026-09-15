@@ -23,6 +23,13 @@ interface Step2Props {
   setClient: React.Dispatch<React.SetStateAction<WizardClientDetails>>;
 }
 
+function toLocalDateKey(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 export function Step2Schedule({
   bookedCounts,
   client,
@@ -46,12 +53,8 @@ export function Step2Schedule({
     }
   }, [client.eventDate]);
 
-  function toDateKey(date: Date) {
-    return date.toISOString().slice(0, 10);
-  }
-
   function bookingCount(date: Date) {
-    return bookedCounts[toDateKey(date)] ?? 0;
+    return bookedCounts[toLocalDateKey(date)] ?? 0;
   }
 
   function isDateFull(date: Date) {
@@ -83,7 +86,7 @@ export function Step2Schedule({
 
   function selectDate(date: Date) {
     if (!isDateSelectable(date)) return;
-    setClient({ ...client, eventDate: date.toISOString().slice(0, 10) });
+    setClient({ ...client, eventDate: toLocalDateKey(date) });
   }
 
   function changeMonth(delta: number) {
@@ -149,7 +152,7 @@ export function Step2Schedule({
                 <span key={`empty-${i}`} />
               ) : (
                 <button
-                  key={date.toISOString()}
+                  key={toLocalDateKey(date)}
                   onClick={() => selectDate(date)}
                   disabled={!isDateSelectable(date)}
                   className={cn(
@@ -157,10 +160,10 @@ export function Step2Schedule({
                     !isDateSelectable(date) &&
                       "cursor-not-allowed text-[var(--muted-4)] line-through",
                     isDateSelectable(date) &&
-                      client.eventDate === date.toISOString().slice(0, 10) &&
+                      client.eventDate === toLocalDateKey(date) &&
                       "bg-[var(--brand)] font-bold text-white shadow-sm",
                     isDateSelectable(date) &&
-                      client.eventDate !== date.toISOString().slice(0, 10) &&
+                      client.eventDate !== toLocalDateKey(date) &&
                       "text-[#9ca3af] hover:bg-white/70",
                     isDateFull(date) && !isDateInPast(date) &&
                       "bg-[var(--brand)] text-white line-through",

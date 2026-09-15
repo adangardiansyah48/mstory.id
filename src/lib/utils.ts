@@ -15,8 +15,16 @@ export function formatCurrency(value: number | string): string {
   }).format(num);
 }
 
+function parseLocalDate(input: string | Date): Date {
+  if (input instanceof Date) return input;
+  const s = String(input);
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return new Date(s);
+}
+
 export function formatDate(date: string | Date): string {
-  const d = typeof date === "string" ? new Date(date) : date;
+  const d = parseLocalDate(date);
   return d.toLocaleDateString("id-ID", {
     weekday: "long",
     day: "numeric",
@@ -26,7 +34,7 @@ export function formatDate(date: string | Date): string {
 }
 
 export function formatShortDate(date: string | Date): string {
-  const d = typeof date === "string" ? new Date(date) : date;
+  const d = parseLocalDate(date);
   return d.toLocaleDateString("id-ID", {
     day: "numeric",
     month: "short",
