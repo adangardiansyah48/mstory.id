@@ -23,6 +23,9 @@ export default function WebsitePage() {
   const [zoom, setZoom] = useState(1);
   const [navLogoUrl, setNavLogoUrl] = useState<string | null>(null);
   const [navLogoPos, setNavLogoPos] = useState({ x: 50, y: 30 });
+  const [albumLightboxIdx, setAlbumLightboxIdx] = useState<number | null>(null);
+  const [albumPhotoIdx, setAlbumPhotoIdx] = useState(0);
+  const [albumZoom, setAlbumZoom] = useState(1);
 
   useEffect(() => {
     (async () => {
@@ -68,6 +71,8 @@ export default function WebsitePage() {
 
   const heroDurationMs = Math.max(1200, settings.hero_duration_ms);
 
+  const filteredAlbums = (content?.albums ?? []).filter((a) => activeCategory === null || a.category_id === activeCategory);
+
   const filteredGallery = activeCategory !== null
     ? gallery.filter((g) => g.category_id === activeCategory)
     : gallery;
@@ -110,17 +115,18 @@ export default function WebsitePage() {
   }, [bannerSlides.length, heroDurationMs]);
 
   useEffect(() => {
-    if (lightboxIdx === null) return;
-    const len = paddedGalleryItems.length || 1;
+    if (albumLightboxIdx === null) return;
+    const album = content?.albums?.find((a) => a.id === albumLightboxIdx);
+    const len = album?.photos.length || 1;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { setLightboxIdx(null); setZoom(1); }
-      if (e.key === "ArrowRight") setLightboxIdx((i) => i !== null ? (i + 1) % len : i);
-      if (e.key === "ArrowLeft") setLightboxIdx((i) => i !== null ? (i - 1 + len) % len : i);
+      if (e.key === "Escape") { setAlbumLightboxIdx(null); setAlbumZoom(1); }
+      if (e.key === "ArrowRight") setAlbumPhotoIdx((i) => (i + 1) % len);
+      if (e.key === "ArrowLeft") setAlbumPhotoIdx((i) => (i - 1 + len) % len);
     };
     document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKey);
     return () => { document.body.style.overflow = ""; window.removeEventListener("keydown", onKey); };
-  }, [lightboxIdx, paddedGalleryItems.length]);
+  }, [albumLightboxIdx, content?.albums]);
 
   if (loading) {
     return (
@@ -298,7 +304,7 @@ export default function WebsitePage() {
         <div className="mx-auto h-px w-[180px] bg-[#D8D5CC] sm:w-[220px]" />
       </div>
 
-      <section id="paket" className="mx-auto max-w-[1200px] px-4 py-8 sm:px-6 sm:py-10">
+<section id="paket" className="mx-auto max-w-[1200px] px-4 py-8 sm:px-6 sm:py-10">
         {cats.length > 0 && (
           <div className="mb-6 flex flex-wrap justify-center gap-2">
             <button
@@ -320,14 +326,35 @@ export default function WebsitePage() {
             ))}
           </div>
         )}
-        {featureItems.length === 0 ? (
-          <div className="rounded-[10px] border border-dashed border-[#D8D5CC] bg-white px-6 py-14 text-center">
-            <p className="font-serif text-sm tracking-[0.14em] uppercase text-[#1C1C1A]/60">Belum ada portfolio</p>
-            <p className="mx-auto mt-2 max-w-[520px] text-sm font-light text-[#1C1C1A]/60">
-              Tambah item di Admin → <strong>Website</strong> → Galeri Portfolio.
-            </p>
+
+        {filteredAlbums.length > 0 ? (
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+            {filteredAlbums.map((album) => (
+              <button
+                key={album.id}
+                type="button"
+                onClick={() => { setAlbumLightboxIdx(album.id); setAlbumPhotoIdx(0); setAlbumZoom(1); }}
+                className="group relative overflow-hidden rounded-[10px] bg-white text-left ring-1 ring-[#D8D5CC]/60 transition hover:ring-[#B9AA96]/70"
+              >
+                <div className="relative h-[320px] overflow-hidden bg-[#F3F2EE]">
+                  {album.cover_image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={album.cover_image_url} alt={album.couple_name} className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.06]" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-[#B9AA96]">{album.couple_name.slice(0, 1)}</div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/0 to-transparent opacity-90 transition group-hover:from-black/60" />
+                  <div className="absolute inset-x-0 bottom-0 p-5 text-center">
+                    <p className="font-serif text-[18px] tracking-[-0.01em] text-white drop-shadow">{album.couple_name}</p>
+                    <p className="mt-1 text-[11px] font-light tracking-[0.18em] text-white/85 uppercase">
+                      {cats.find((c) => c.id === album.category_id)?.name ?? album.title} · {album.photos.length} foto
+                    </p>
+                  </div>
+                </div>
+              </button>
+            ))}
           </div>
-        ) : (
+        ) : galleryItems.length > 0 ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-5">
             {paddedGalleryItems.map((it, idx) => (
               <button
@@ -339,19 +366,11 @@ export default function WebsitePage() {
                 <div className="relative h-[300px] overflow-hidden bg-[#F3F2EE] sm:h-[320px]">
                   {it.img ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={it.img}
-                      alt={it.title}
-                      className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.06]"
-                      style={{ objectPosition: `${it.pos.x}% ${it.pos.y}%` }}
-                    />
+                    <img src={it.img} alt={it.title} className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.06]" style={{ objectPosition: `${it.pos.x}% ${it.pos.y}%` }} />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-[#B9AA96]">{it.title.slice(0, 1)}</div>
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/0 to-transparent opacity-90 transition group-hover:from-black/60" />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition group-hover:bg-black/10 group-hover:opacity-100">
-                    <span className="rounded-full bg-white/90 px-3 py-1.5 text-[11px] tracking-[0.14em] uppercase"><ZoomIn className="mr-1.5 inline h-3.5 w-3.5" />Zoom</span>
-                  </div>
                   <div className="absolute inset-x-0 bottom-0 p-5 text-center">
                     <p className="font-serif text-[18px] tracking-[-0.01em] text-white drop-shadow">{it.title}</p>
                     <p className="mt-1 text-[11px] font-light tracking-[0.18em] text-white/85 uppercase">{it.subtitle}</p>
@@ -359,6 +378,13 @@ export default function WebsitePage() {
                 </div>
               </button>
             ))}
+          </div>
+        ) : (
+          <div className="rounded-[10px] border border-dashed border-[#D8D5CC] bg-white px-6 py-14 text-center">
+            <p className="font-serif text-sm tracking-[0.14em] uppercase text-[#1C1C1A]/60">Belum ada portfolio</p>
+            <p className="mx-auto mt-2 max-w-[520px] text-sm font-light text-[#1C1C1A]/60">
+              Tambah album atau foto di Admin → <strong>Website</strong> → Galeri Portfolio / Album Portfolio.
+            </p>
           </div>
         )}
       </section>
@@ -554,6 +580,69 @@ export default function WebsitePage() {
           <p className="pb-3 text-center text-xs tracking-[0.14em] uppercase text-white/60">{lightboxIdx + 1} / {paddedGalleryItems.length} • klik foto untuk zoom • Esc tutup • ← → navigasi</p>
         </div>
       )}
+
+      {/* Album Lightbox */}
+      {albumLightboxIdx !== null && (() => {
+        const album = content?.albums?.find((a) => a.id === albumLightboxIdx);
+        if (!album || album.photos.length === 0) return null;
+        const photos = album.photos;
+        const catLabel = cats.find((c) => c.id === album.category_id)?.name ?? album.title;
+        return (
+          <div
+            className="fixed inset-0 z-[100] flex flex-col bg-black/85 backdrop-blur-sm"
+            onClick={() => { setAlbumLightboxIdx(null); setAlbumZoom(1); }}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="flex items-center justify-between px-4 py-3 text-white sm:px-6" onClick={(e) => e.stopPropagation()}>
+              <p className="truncate font-serif text-sm tracking-wide">
+                {album.couple_name} <span className="font-sans text-xs opacity-60">— {catLabel}</span>
+              </p>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => setAlbumZoom((z) => Math.max(1, +(z - 0.25).toFixed(2)))} className="rounded-full bg-white/15 p-2 hover:bg-white/25" aria-label="Zoom out"><ZoomOut className="h-4 w-4" /></button>
+                <button type="button" onClick={() => setAlbumZoom((z) => Math.min(3, +(z + 0.25).toFixed(2)))} className="rounded-full bg-white/15 p-2 hover:bg-white/25" aria-label="Zoom in"><ZoomIn className="h-4 w-4" /></button>
+                <button type="button" onClick={() => { setAlbumLightboxIdx(null); setAlbumZoom(1); }} className="rounded-full bg-white p-2 text-black hover:bg-zinc-100" aria-label="Close"><X className="h-4 w-4" /></button>
+              </div>
+            </div>
+
+            <div className="relative flex flex-1 items-center justify-center overflow-hidden p-4 sm:p-8" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                onClick={() => { setAlbumPhotoIdx((i) => (i - 1 + photos.length) % photos.length); setAlbumZoom(1); }}
+                className="absolute left-2 z-10 rounded-full bg-white/15 p-2 text-white backdrop-blur hover:bg-white/25 sm:left-6"
+                aria-label="Prev"
+              ><ChevronLeft className="h-6 w-6" /></button>
+
+              <div className="max-h-[78vh] max-w-[92vw] overflow-auto sm:max-h-[82vh]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={photos[albumPhotoIdx].image_path}
+                  alt={`${album.couple_name} - ${albumPhotoIdx + 1}`}
+                  className="max-h-[78vh] max-w-[92vw] cursor-zoom-in select-none rounded-[8px] object-contain shadow-2xl transition duration-300 will-change-transform sm:max-h-[82vh]"
+                  style={{ transform: `scale(${albumZoom})`, animation: "lbIn 260ms ease-out" }}
+                  onClick={() => setAlbumZoom((z) => (z >= 2 ? 1 : +(z + 0.5).toFixed(2)))}
+                  draggable={false}
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => { setAlbumPhotoIdx((i) => (i + 1) % photos.length); setAlbumZoom(1); }}
+                className="absolute right-2 z-10 rounded-full bg-white/15 p-2 text-white backdrop-blur hover:bg-white/25 sm:right-6"
+                aria-label="Next"
+              ><ChevronRight className="h-6 w-6" /></button>
+            </div>
+
+            <div className="flex justify-center gap-2 px-4 pb-4" onClick={(e) => e.stopPropagation()}>
+              {photos.slice(0, 15).map((_, i) => (
+                <button key={i} type="button" onClick={() => { setAlbumPhotoIdx(i); setAlbumZoom(1); }}
+                  className={`h-1.5 rounded-full transition-all ${i === albumPhotoIdx ? "w-8 bg-white" : "w-3 bg-white/40 hover:bg-white/70"}`} aria-label={`Go ${i+1}`} />
+              ))}
+            </div>
+            <p className="pb-3 text-center text-xs tracking-[0.14em] uppercase text-white/60">{albumPhotoIdx + 1} / {photos.length} • klik foto untuk zoom • Esc tutup • ← → navigasi</p>
+          </div>
+        );
+      })()}
     </div>
   );
 }

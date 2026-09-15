@@ -49,6 +49,38 @@ export interface WebsiteGalleryRow {
   updated_at: string;
 }
 
+export interface WebsiteAlbumRow {
+  id: number;
+  title: string;
+  couple_name: string;
+  category_id: number | null;
+  cover_image_path: string;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WebsiteAlbumPhotoRow {
+  id: number;
+  album_id: number;
+  image_path: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface WebsiteAlbumItem {
+  id: number;
+  title: string;
+  couple_name: string;
+  category_id: number | null;
+  cover_image_url: string;
+  is_active: boolean;
+  sort_order: number;
+  photos: WebsiteAlbumPhotoRow[];
+}
+
 export interface WebsiteResolvedSettings {
   site_name: string;
   logo_url: string | null;
@@ -87,6 +119,7 @@ export interface WebsiteGalleryItem {
 export interface WebsiteContent {
   settings: WebsiteResolvedSettings;
   gallery: WebsiteGalleryItem[];
+  albums: WebsiteAlbumItem[];
 }
 
 export const WEBSITE_DEFAULTS: Omit<WebsiteResolvedSettings, "updated_at"> = {
@@ -117,19 +150,30 @@ export const WEBSITE_DEFAULTS: Omit<WebsiteResolvedSettings, "updated_at"> = {
 
 const TTL_MS = 30 * 1000;
 
-let cache: { settings?: WebsiteResolvedSettings; gallery?: WebsiteGalleryItem[]; expiresAt: number } | null = null;
+let cache: { settings?: WebsiteResolvedSettings; gallery?: WebsiteGalleryItem[]; albums?: WebsiteAlbumItem[]; expiresAt: number } | null = null;
 let inflight: Promise<WebsiteContent> | null = null;
 
 async function fetchWebsiteContent(): Promise<WebsiteContent> {
   const supabase = createClient();
   const settings: WebsiteResolvedSettings = { ...WEBSITE_DEFAULTS, updated_at: new Date().toISOString() };
   let gallery: WebsiteGalleryItem[] = [];
+  let albums: WebsiteAlbumItem[] = [];
 
   if (supabase) {
-    const [settingsRs, galleryRs] = await Promise.allSettled([
+    const [settingsRs, galleryRs, albumsRs, albumPhotosRs] = await Promise.allSettled([
       supabase.from("website_settings").select("*").maybeSingle(),
       supabase
         .from("website_gallery_items")
+        .select("*")
+        .order("sort_order", { ascending: true })
+        .order("id", { ascending: true }),
+      supabase
+        .from("website_albums")
+        .select("*")
+        .order("sort_order", { ascending: true })
+        .order("id", { ascending: true }),
+      supabase
+        .from("website_album_photos")
         .select("*")
         .order("sort_order", { ascending: true })
         .order("id", { ascending: true }),
@@ -173,6 +217,27 @@ async function fetchWebsiteContent(): Promise<WebsiteContent> {
           sort_order: r.sort_order,
           is_active: r.is_active,
         }));
+    }
+
+    if ((albumsRs.status === "fulfilled" && albumsRs.value.data) && (albumPhotosRs.status === "fulfilled" && albumPhotosRs.value.data)) {
+      const albumRows = (albumsRs.value.data as WebsiteAlbumRow[]).filter((r) => r.is_active);
+      const photos = (albumPhotosRs.value.data as WebsiteAlbumPhotoRow[]).filter((r) => r.is_active);
+      albums = albumRows.map((r) => ({
+        id: r.id,
+        title: r.title,
+        couple_name: r.couple_name,
+        category_id: r.category_id ?? null,
+        cover_image_url: getStoredPublicUrl(r.cover_image_path) ?? r.cover_image_path,
+        is_active: r.is_active,
+        sort_order: r.sort_order,
+        photos: photos
+          .filter((p) => p.album_id === r.id)
+          .sort((a, b) => a.sort_order - b.sort_order)
+          .map((p) => ({
+            ...p,
+            image_path: getStoredPublicUrl(p.image_path) ?? p.image_path,
+          })),
+      }));
     }
   }
 
@@ -226,7 +291,7 @@ async function fetchWebsiteContent(): Promise<WebsiteContent> {
     }
   }
 
-  return { settings, gallery };
+  return { settings, gallery, albums };
 }
 
 export function getWebsiteContent(): Promise<WebsiteContent> {
@@ -234,6 +299,7 @@ export function getWebsiteContent(): Promise<WebsiteContent> {
     return Promise.resolve({
       settings: cache.settings!,
       gallery: cache.gallery!,
+      albums: cache.albums!,
     });
   }
   if (!inflight) {
@@ -242,6 +308,7 @@ export function getWebsiteContent(): Promise<WebsiteContent> {
         cache = {
           settings: data.settings,
           gallery: data.gallery,
+          albums: data.albums,
           expiresAt: Date.now() + TTL_MS,
         };
         return data;
@@ -395,4 +462,128 @@ export async function deleteWebsiteImage(url: string): Promise<void> {
   if (idx === -1) return;
   const path = base.slice(idx + marker.length);
   await supabase.storage.from(FANSPAGE_BUCKET).remove([path]);
+}
+
+// ==========================================
+// ALBUM PORTFOLIO (1 card = 1 album pasangan)
+// ==========================================
+
+export async function fetchWebsiteAlbums(): Promise<WebsiteAlbumRow[]> {
+  const supabase = createClient();
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("website_albums")
+    .select("*")
+    .order("sort_order", { ascending: true })
+    .order("id", { ascending: true });
+  if (error || !data) return [];
+  return data as WebsiteAlbumRow[];
+}
+
+export async function fetchWebsiteAlbumPhotos(albumId?: number): Promise<WebsiteAlbumPhotoRow[]> {
+  const supabase = createClient();
+  if (!supabase) return [];
+  let query = supabase
+    .from("website_album_photos")
+    .select("*")
+    .order("sort_order", { ascending: true })
+    .order("id", { ascending: true });
+  if (albumId) query = query.eq("album_id", albumId);
+  const { data, error } = await query;
+  if (error || !data) return [];
+  return data as WebsiteAlbumPhotoRow[];
+}
+
+export async function addWebsiteAlbum(item: {
+  title: string;
+  couple_name: string;
+  category_id: number | null;
+  cover_image_path: string;
+}): Promise<{ ok: boolean; error?: string; id?: number }> {
+  const supabase = createClient();
+  if (!supabase) return { ok: false, error: "Supabase tidak dikonfigurasi." };
+  const { count } = await supabase
+    .from("website_albums")
+    .select("id", { count: "exact", head: true });
+  const { data, error } = await supabase
+    .from("website_albums")
+    .insert({
+      title: item.title,
+      couple_name: item.couple_name,
+      category_id: item.category_id,
+      cover_image_path: item.cover_image_path,
+      sort_order: count ?? 0,
+      is_active: true,
+    })
+    .select()
+    .single();
+  if (error) return { ok: false, error: error.message };
+  clearWebsiteContentCache();
+  return { ok: true, id: data?.id };
+}
+
+export async function updateWebsiteAlbum(
+  id: number,
+  patch: Partial<Pick<WebsiteAlbumRow, "title" | "couple_name" | "category_id" | "cover_image_path" | "is_active" | "sort_order">>,
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = createClient();
+  if (!supabase) return { ok: false, error: "Supabase tidak dikonfigurasi." };
+  const { error } = await supabase
+    .from("website_albums")
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  clearWebsiteContentCache();
+  return { ok: true };
+}
+
+export async function deleteWebsiteAlbum(id: number): Promise<{ ok: boolean; error?: string }> {
+  const supabase = createClient();
+  if (!supabase) return { ok: false, error: "Supabase tidak dikonfigurasi." };
+  const { error } = await supabase.from("website_albums").delete().eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  clearWebsiteContentCache();
+  return { ok: true };
+}
+
+export async function addWebsiteAlbumPhoto(
+  albumId: number,
+  image_path: string,
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = createClient();
+  if (!supabase) return { ok: false, error: "Supabase tidak dikonfigurasi." };
+  const { count } = await supabase
+    .from("website_album_photos")
+    .select("id", { count: "exact", head: true })
+    .eq("album_id", albumId);
+  const { error } = await supabase.from("website_album_photos").insert({
+    album_id: albumId,
+    image_path: image_path,
+    sort_order: count ?? 0,
+    is_active: true,
+  });
+  if (error) return { ok: false, error: error.message };
+  clearWebsiteContentCache();
+  return { ok: true };
+}
+
+export async function updateWebsiteAlbumPhoto(
+  id: number,
+  patch: Partial<Pick<WebsiteAlbumPhotoRow, "sort_order" | "is_active">>,
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = createClient();
+  if (!supabase) return { ok: false, error: "Supabase tidak dikonfigurasi." };
+  const { error } = await supabase.from("website_album_photos").update(patch).eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  clearWebsiteContentCache();
+  return { ok: true };
+}
+
+export async function deleteWebsiteAlbumPhoto(id: number): Promise<{ ok: boolean; error?: string }> {
+  const supabase = createClient();
+  if (!supabase) return { ok: false, error: "Supabase tidak dikonfigurasi." };
+  const { error } = await supabase.from("website_album_photos").delete().eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  clearWebsiteContentCache();
+  return { ok: true };
 }

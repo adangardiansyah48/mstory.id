@@ -7,14 +7,23 @@ import {
 import {
   WebsiteSettingsRow,
   WebsiteGalleryRow,
+  WebsiteAlbumRow,
+  WebsiteAlbumPhotoRow,
   fetchWebsiteSettingsRow,
   fetchWebsiteGalleryRows,
+  fetchWebsiteAlbums,
+  fetchWebsiteAlbumPhotos,
   updateWebsiteSettings,
   addWebsiteGalleryItem,
   updateWebsiteGalleryItem,
   deleteWebsiteGalleryItem,
   uploadWebsiteImage,
   deleteWebsiteImage,
+  addWebsiteAlbum,
+  updateWebsiteAlbum,
+  deleteWebsiteAlbum,
+  addWebsiteAlbumPhoto,
+  deleteWebsiteAlbumPhoto,
   WEBSITE,
 } from "@/lib/website-content";
 import { getPackages } from "@/lib/website";
@@ -30,20 +39,32 @@ export function WebsiteTab() {
   const [uploading, setUploading] = useState<string | null>(null);
   const [newGalleryCategory, setNewGalleryCategory] = useState<number | null>(null);
   const [filterCategory, setFilterCategory] = useState<number | null>(null);
+  const [albums, setAlbums] = useState<WebsiteAlbumRow[]>([]);
+  const [albumPhotos, setAlbumPhotos] = useState<WebsiteAlbumPhotoRow[]>([]);
+  const [albumUploading, setAlbumUploading] = useState<string | null>(null);
+  const [newAlbum, setNewAlbum] = useState({ title: "", couple_name: "", category_id: null as number | null });
+  const [expandedAlbum, setExpandedAlbum] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const [settings, galleryRows, pkgs] = await Promise.all([
+        const [settings, galleryRows, pkgs, albumRows] = await Promise.all([
           fetchWebsiteSettingsRow(),
           fetchWebsiteGalleryRows(),
           getPackages(),
+          fetchWebsiteAlbums(),
         ]);
         if (!cancelled) {
           setRow(settings);
           setGallery(galleryRows);
           setCats(pkgs.categories);
+          setAlbums(albumRows);
+          // load all photos
+          if (albumRows.length > 0) {
+            const allPhotos = await fetchWebsiteAlbumPhotos();
+            if (!cancelled) setAlbumPhotos(allPhotos);
+          }
         }
       } catch (e) {
         console.error("Gagal load website content:", e);
@@ -441,6 +462,188 @@ export function WebsiteTab() {
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
           Simpan Konten Website
         </button>
+      </div>
+
+      {/* === ALBUM PORTFOLIO === */}
+      <div className="rounded-2xl p-5 glass">
+        <h3 className="mb-2 font-serif text-sm font-semibold text-[var(--ink)]">
+          Album Portfolio
+        </h3>
+        <p className="mb-4 text-[11px] text-[var(--muted-3)]">
+          1 album = 1 card di halaman /website. Setiap album berisi nama pasangan + cover + beberapa foto (10-20 foto). Klik card untuk membuka album galeri.
+        </p>
+
+        {/* Form tambah album baru */}
+        <div className="mb-4 rounded-xl border border-dashed border-[var(--line)] p-4">
+          <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <Field label="Nama Pasangan">
+              <input type="text" placeholder="Pasangan & Mempelai" value={newAlbum.couple_name}
+                onChange={(e) => setNewAlbum({ ...newAlbum, couple_name: e.target.value })}
+                className="w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-xs text-[var(--ink)] outline-none focus:border-[var(--brand)]" />
+            </Field>
+            <Field label="Judul Album">
+              <input type="text" placeholder="Wedding, Prewedding..." value={newAlbum.title}
+                onChange={(e) => setNewAlbum({ ...newAlbum, title: e.target.value })}
+                className="w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-xs text-[var(--ink)] outline-none focus:border-[var(--brand)]" />
+            </Field>
+            <Field label="Kategori">
+              <select value={newAlbum.category_id ?? ""} onChange={(e) => setNewAlbum({ ...newAlbum, category_id: e.target.value ? Number(e.target.value) : null })}
+                className="w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-xs text-[var(--ink)] outline-none focus:border-[var(--brand)]">
+                <option value="">Pilih Kategori</option>
+                {cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </Field>
+          </div>
+          <button
+            type="button"
+            disabled={!newAlbum.couple_name.trim() || albumUploading !== null}
+            onClick={async () => {
+              setAlbumUploading("creating");
+              const { ok, error, id } = await addWebsiteAlbum({
+                title: newAlbum.title || "Album",
+                couple_name: newAlbum.couple_name,
+                category_id: newAlbum.category_id,
+                cover_image_path: "",
+              });
+              if (!ok) { setMessage(error ?? "Gagal buat album"); setAlbumUploading(null); return; }
+              const albumRows = await fetchWebsiteAlbums();
+              setAlbums(albumRows);
+              setNewAlbum({ title: "", couple_name: "", category_id: null });
+              setExpandedAlbum(id ?? null);
+              setMessage(`Album "${newAlbum.couple_name}" berhasil dibuat. Upload cover & foto sekarang.`);
+              setAlbumUploading(null);
+            }}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--brand)] px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-white hover:bg-[var(--brand-hover)] disabled:opacity-50"
+          >
+            {albumUploading === "creating" ? <Loader2 className="h-3 w-3 animate-spin" /> : <ImagePlus className="h-3 w-3" />}
+            Buat Album
+          </button>
+        </div>
+
+        {/* List albums */}
+        {albums.length === 0 ? (
+          <p className="py-6 text-center text-[11px] text-[var(--muted-3)]">Belum ada album.</p>
+        ) : (
+          <div className="space-y-3">
+            {albums.map((album) => {
+              const isExpanded = expandedAlbum === album.id;
+              const photos = albumPhotos.filter((p) => p.album_id === album.id);
+              return (
+                <div key={album.id} className="rounded-xl border border-[var(--line)] bg-white">
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    {album.cover_image_path ? (
+                      <img src={getStoredPublicUrl(album.cover_image_path) ?? album.cover_image_path} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" />
+                    ) : (
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-[var(--soft)] text-[var(--muted-3)]">
+                        <ImagePlus className="h-5 w-5" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="truncate text-xs font-bold text-[var(--ink)]">{album.couple_name}</p>
+                      <p className="text-[10px] text-[var(--muted)]">
+                        {cats.find((c) => c.id === album.category_id)?.name ?? "Tanpa kategori"} · {photos.length} foto
+                      </p>
+                    </div>
+                    <button type="button" onClick={() => setExpandedAlbum(isExpanded ? null : album.id)}
+                      className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[10px] font-semibold text-[var(--muted)] hover:border-[var(--brand)] hover:text-[var(--brand)]">
+                      {isExpanded ? "Tutup" : "Kelola"}
+                    </button>
+                    <button type="button" onClick={async () => {
+                      await deleteWebsiteAlbum(album.id);
+                      setAlbums((prev) => prev.filter((a) => a.id !== album.id));
+                      if (expandedAlbum === album.id) setExpandedAlbum(null);
+                      setMessage(`Album "${album.couple_name}" dihapus.`);
+                    }} className="rounded-lg bg-red-50 p-1.5 text-red-500 hover:bg-red-100">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+
+                  {isExpanded && (
+                    <div className="border-t border-[var(--soft)] px-4 py-4 space-y-4">
+                      {/* Edit identitas */}
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        <input type="text" value={album.couple_name} placeholder="Nama Pasangan"
+                          onChange={(e) => { const v = e.target.value; setAlbums((prev) => prev.map((a) => a.id === album.id ? { ...a, couple_name: v } : a)); }}
+                          className="rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-xs text-[var(--ink)] outline-none focus:border-[var(--brand)]" />
+                        <input type="text" value={album.title} placeholder="Judul Album"
+                          onChange={(e) => { const v = e.target.value; setAlbums((prev) => prev.map((a) => a.id === album.id ? { ...a, title: v } : a)); }}
+                          className="rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-xs text-[var(--ink)] outline-none focus:border-[var(--brand)]" />
+                        <select value={album.category_id ?? ""} onChange={(e) => { const v = e.target.value ? Number(e.target.value) : null; setAlbums((prev) => prev.map((a) => a.id === album.id ? { ...a, category_id: v } : a)); }}
+                          className="rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-xs text-[var(--ink)] outline-none focus:border-[var(--brand)]">
+                          <option value="">Tanpa Kategori</option>
+                          {cats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-[10px] font-semibold text-[var(--muted)]">Aktif:</label>
+                        <input type="checkbox" checked={album.is_active} onChange={(e) => { const v = e.target.checked; setAlbums((prev) => prev.map((a) => a.id === album.id ? { ...a, is_active: v } : a)); updateWebsiteAlbum(album.id, { is_active: v }); }} />
+                      </div>
+                      <button onClick={async () => { await updateWebsiteAlbum(album.id, { title: album.title, couple_name: album.couple_name, category_id: album.category_id ?? null }); setMessage(`Album "${album.couple_name}" disimpan.`); }}
+                        className="rounded-lg bg-[var(--brand)] px-4 py-2 text-[11px] font-bold uppercase text-white hover:bg-[var(--brand-hover)]">Simpan Album</button>
+
+                      {/* Cover image */}
+                      <div>
+                        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">Cover Album</p>
+                        {album.cover_image_path ? (
+                          <div className="relative inline-block">
+                            <img src={getStoredPublicUrl(album.cover_image_path) ?? album.cover_image_path} alt="" className="h-28 w-28 rounded-lg object-cover" />
+                            <button onClick={() => { updateWebsiteAlbum(album.id, { cover_image_path: "" }); setAlbums((prev) => prev.map((a) => a.id === album.id ? { ...a, cover_image_path: "" } : a)); }}
+                              className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600">
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-dashed border-[var(--line)] px-4 py-3 text-[10px] font-semibold text-[var(--muted)] hover:border-[var(--brand)] hover:text-[var(--brand)]">
+                            {albumUploading === `cover-${album.id}` ? <Loader2 className="h-3 w-3 animate-spin" /> : <ImagePlus className="h-3 w-3" />}
+                            Upload Cover
+                            <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                              const f = e.target.files?.[0]; if (!f) return;
+                              setAlbumUploading(`cover-${album.id}`);
+                              const { url } = await uploadWebsiteImage(f, WEBSITE.GALLERY_FOLDER);
+                              if (url) { await updateWebsiteAlbum(album.id, { cover_image_path: url }); setAlbums((prev) => prev.map((a) => a.id === album.id ? { ...a, cover_image_path: url } : a)); }
+                              setAlbumUploading(null);
+                              e.target.value = "";
+                            }} />
+                          </label>
+                        )}
+                      </div>
+
+                      {/* Photos */}
+                      <div>
+                        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">Foto Album ({photos.length})</p>
+                        <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-dashed border-[var(--line)] px-4 py-2 text-[10px] font-semibold text-[var(--muted)] hover:border-[var(--brand)] hover:text-[var(--brand)]">
+                          {albumUploading === `photo-${album.id}` ? <Loader2 className="h-3 w-3 animate-spin" /> : <ImagePlus className="h-3 w-3" />}
+                          Tambah Foto
+                          <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                            const f = e.target.files?.[0]; if (!f) return;
+                            setAlbumUploading(`photo-${album.id}`);
+                            const { url } = await uploadWebsiteImage(f, WEBSITE.GALLERY_FOLDER);
+                            if (url) { await addWebsiteAlbumPhoto(album.id, url); setAlbumPhotos(await fetchWebsiteAlbumPhotos()); }
+                            setAlbumUploading(null);
+                            e.target.value = "";
+                          }} />
+                        </label>
+                        {photos.length > 0 && (
+                          <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6">
+                            {photos.map((photo) => (
+                              <div key={photo.id} className="group relative">
+                                <img src={photo.image_path} alt="" className="h-20 w-full rounded-lg object-cover sm:h-24" />
+                                <button onClick={async () => { await deleteWebsiteAlbumPhoto(photo.id); setAlbumPhotos((prev) => prev.filter((p) => p.id !== photo.id)); }}
+                                  className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white opacity-0 transition-opacity group-hover:opacity-100">
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
