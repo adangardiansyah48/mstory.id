@@ -108,9 +108,25 @@ export function SlaTab() {
         title: "Gagal Simpan Progress",
         text: error.message || "Pastikan Anda login sebagai Admin.",
       });
+    } else {
+      // Update local state immediately so UI reflects change instantly
+      setRows((prev) =>
+        prev.map((r) => {
+          if (r.id === row.id) {
+            const newProg = [{
+              id: r.project_progress?.[0]?.id ?? 0,
+              booking_id: row.id,
+              progress_status: payload.progress_status ?? r.project_progress?.[0]?.progress_status ?? "SHOOTING",
+              drive_link: payload.drive_link !== undefined ? payload.drive_link : r.project_progress?.[0]?.drive_link,
+              expected_date: payload.expected_date ?? r.project_progress?.[0]?.expected_date,
+            }];
+            return { ...r, project_progress: newProg };
+          }
+          return r;
+        })
+      );
     }
 
-    await loadProjects();
     setSavingId(null);
   }
 
@@ -124,10 +140,19 @@ export function SlaTab() {
 
   async function setDriveLink(row: ProjectRow, link: string) {
     const currentStatus = row.project_progress?.[0]?.progress_status ?? "SHOOTING";
+    const currentExpected = row.project_progress?.[0]?.expected_date ?? calcDeadline(row.event_date, SLA_PRINT_WEEKS);
     await upsertProgress(row, {
       booking_id: row.id,
       progress_status: currentStatus,
-      drive_link: link,
+      expected_date: currentExpected,
+      drive_link: link.trim(),
+    });
+    await Swal.fire({
+      icon: "success",
+      title: "Link Tersimpan",
+      text: "Link Google Drive berhasil diperbarui.",
+      timer: 1500,
+      showConfirmButton: false,
     });
   }
 

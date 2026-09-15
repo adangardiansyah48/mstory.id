@@ -298,9 +298,9 @@ export function StatusSearchPanel() {
                       steps={["SHOOTING", "EDIT", "PRINTING", "READY", "DELIVERED"]}
                     />
                   </div>
-                  {progress?.drive_link && (
+                  {progress?.drive_link && progress.drive_link.trim().length > 0 && (
                     <a
-                      href={progress.drive_link}
+                      href={progress.drive_link.startsWith("http") ? progress.drive_link : `https://${progress.drive_link}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100"
