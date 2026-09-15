@@ -148,7 +148,7 @@ export function buildDpInvoice(input: InvoiceInput): string {
     ...invoiceHeader("DP"),
     ...invoiceBody(input),
     ``,
-    `*YANG HARUS DIBAYAR (DP)*`,
+    `*YANG HARUS DIBAYAR*`,
     `${input.dpLabel}: ${formatCurrency(input.dpAmount)}`,
     ``,
     `*PEMBAYARAN KE*`,

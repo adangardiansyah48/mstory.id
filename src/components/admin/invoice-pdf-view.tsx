@@ -170,7 +170,7 @@ export function InvoicePdfDocument({ booking, kind, logoUrl }: Props) {
           )}
           {kind === "MENUNGGU_DP" && (
             <View style={s.sumRow}>
-              <Text style={s.grandLabel}>YANG HARUS DIBAYAR (DP)</Text>
+              <Text style={s.grandLabel}>YANG HARUS DIBAYAR</Text>
               <Text style={s.grandValue}>{fmt(dpAmount)}</Text>
             </View>
           )}
