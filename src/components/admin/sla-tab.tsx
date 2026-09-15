@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Check, ExternalLink, Link as LinkIcon } from "lucide-react";
+import Swal from "sweetalert2";
+
 import { cn, formatShortDate } from "@/lib/utils";
 import {
   SLA_PRINT_WEEKS,
@@ -101,10 +103,24 @@ export function SlaTab() {
         .from("project_progress")
         .update(payload)
         .eq("id", existing.id);
-      if (error) console.error(error);
+      if (error) {
+        console.error("Gagal update progress:", error);
+        await Swal.fire({
+          icon: "error",
+          title: "Gagal Update",
+          text: error.message || "Pastikan Anda login sebagai Admin.",
+        });
+      }
     } else {
       const { error } = await supabase.from("project_progress").insert(payload);
-      if (error) console.error(error);
+      if (error) {
+        console.error("Gagal insert progress:", error);
+        await Swal.fire({
+          icon: "error",
+          title: "Gagal Simpan Progress",
+          text: error.message || "Pastikan Anda login sebagai Admin.",
+        });
+      }
     }
 
     await loadProjects();
