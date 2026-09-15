@@ -28,6 +28,8 @@ export function WebsiteTab() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [uploading, setUploading] = useState<string | null>(null);
+  const [newGalleryCategory, setNewGalleryCategory] = useState<number | null>(null);
+  const [filterCategory, setFilterCategory] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -124,10 +126,11 @@ export function WebsiteTab() {
       const { url, error } = await uploadWebsiteImage(file, WEBSITE.GALLERY_FOLDER);
       if (error || !url) { setMessage(error ?? "Upload gagal."); return; }
       const name = file.name.replace(/\.[^.]+$/, "").slice(0, 22) || "Gallery";
-      const { ok, error: err2 } = await addWebsiteGalleryItem({ title: name, subtitle: "portfolio", image_path: url });
+      const { ok, error: err2 } = await addWebsiteGalleryItem({ title: name, subtitle: "portfolio", image_path: url, category_id: newGalleryCategory ?? null });
       if (!ok) { setMessage(err2 ?? "Gagal tambah galeri."); return; }
       const galleryRows = await fetchWebsiteGalleryRows();
       setGallery(galleryRows);
+      setNewGalleryCategory(null);
       setMessage(`Foto galeri "${name}" berhasil ditambahkan.`);
     } finally { setUploading(null); }
   }
@@ -349,17 +352,52 @@ export function WebsiteTab() {
           Galeri Portfolio (Grid #paket)
         </h3>
         <p className="mb-4 text-[11px] text-[var(--muted-3)]">
-          Upload & urutkan item yang tampil di grid 3×3 halaman /website. Edit langsung nama & subtitle, klik simpan ganda — setiap perubahan disimpan otomatis.
+          Upload & urutkan item yang tampil di grid 3×3 halaman /website. Tentukan kategori foto (Wedding / Prewedding / Engagement / Event / WCC) — kategori digunakan untuk filter di menu Portfolio. Edit nama & subtitle, klik Simpan untuk menyimpan.
         </p>
-        <div className="mb-4">
-          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--line)] py-3 text-[11px] font-semibold text-[var(--muted)] hover:border-[var(--brand)] hover:text-[var(--brand)]">
+
+        {/* Filter per kategori */}
+        {cats.length > 0 && (
+          <div className="mb-4 flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">Filter:</span>
+            <button
+              type="button"
+              onClick={() => setFilterCategory(null)}
+              className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest transition ${filterCategory === null ? "bg-[var(--brand)] text-white" : "border border-[var(--line)] bg-white text-[var(--muted)] hover:border-[var(--brand)]"}`}
+            >
+              Semua
+            </button>
+            {cats.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => setFilterCategory(c.id)}
+                className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest transition ${filterCategory === c.id ? "bg-[var(--brand)] text-white" : "border border-[var(--line)] bg-white text-[var(--muted)] hover:border-[var(--brand)]"}`}
+              >
+                {c.name}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end">
+          <label className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--line)] py-3 text-[11px] font-semibold text-[var(--muted)] hover:border-[var(--brand)] hover:text-[var(--brand)]">
             {uploading === "gallery" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
             Tambah foto galeri
             <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleGalleryUpload(f); e.target.value = ""; }} />
           </label>
+          <select
+            value={newGalleryCategory ?? ""}
+            onChange={(e) => setNewGalleryCategory(e.target.value ? Number(e.target.value) : null)}
+            className="rounded-lg border border-[var(--line)] bg-white px-3 py-2.5 text-xs font-semibold text-[var(--muted)] outline-none focus:border-[var(--brand)]"
+          >
+            <option value="">Kategori (opsional)</option>
+            {cats.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
         </div>
         <div className="space-y-2">
-          {gallery.map((g, idx) => (
+          {gallery.filter((g) => filterCategory === null || g.category_id === filterCategory).map((g, idx) => (
             <div key={g.id} className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-white p-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={getStoredPublicUrl(g.image_path) ?? g.image_path} alt={g.title} className="h-14 w-14 shrink-0 rounded object-cover" />
