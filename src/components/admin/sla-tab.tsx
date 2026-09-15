@@ -96,31 +96,18 @@ export function SlaTab() {
       setSavingId(null);
       return;
     }
-    const existing = row.project_progress?.[0];
 
-    if (existing) {
-      const { error } = await supabase
-        .from("project_progress")
-        .update(payload)
-        .eq("id", existing.id);
-      if (error) {
-        console.error("Gagal update progress:", error);
-        await Swal.fire({
-          icon: "error",
-          title: "Gagal Update",
-          text: error.message || "Pastikan Anda login sebagai Admin.",
-        });
-      }
-    } else {
-      const { error } = await supabase.from("project_progress").insert(payload);
-      if (error) {
-        console.error("Gagal insert progress:", error);
-        await Swal.fire({
-          icon: "error",
-          title: "Gagal Simpan Progress",
-          text: error.message || "Pastikan Anda login sebagai Admin.",
-        });
-      }
+    const { error } = await supabase
+      .from("project_progress")
+      .upsert(payload, { onConflict: "booking_id" });
+
+    if (error) {
+      console.error("Gagal simpan progress:", error);
+      await Swal.fire({
+        icon: "error",
+        title: "Gagal Simpan Progress",
+        text: error.message || "Pastikan Anda login sebagai Admin.",
+      });
     }
 
     await loadProjects();
