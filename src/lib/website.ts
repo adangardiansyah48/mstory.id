@@ -147,13 +147,26 @@ export async function compressAndUploadImage(
                 .substring(2, 8)}.${ext}`;
               const path = fileName;
 
-              supabase.storage.from(bucket).upload(path, compressedFile, {
-                upsert: true,
-                cacheControl: "3600",
-              });
-
-              const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-              resolve(data.publicUrl);
+              (async () => {
+                try {
+                  const { error: upErr } = await supabase.storage
+                    .from(bucket)
+                    .upload(path, compressedFile, {
+                      upsert: true,
+                      cacheControl: "3600",
+                    });
+                  if (upErr) {
+                    resolve(null);
+                    return;
+                  }
+                  const { data } = supabase.storage
+                    .from(bucket)
+                    .getPublicUrl(path);
+                  resolve(data.publicUrl);
+                } catch {
+                  resolve(null);
+                }
+              })();
             } else resolve(null);
           },
           "image/webp",
