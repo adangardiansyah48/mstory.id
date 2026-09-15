@@ -236,7 +236,7 @@ export function LinkTreeContent() {
                   WEBSITE RESMI
                 </span>
                 <span className="mt-0.5 block text-[11px] font-normal normal-case tracking-normal text-[var(--muted)]">
-                  Galeri Portofolio • Paket & Harga
+                  Galeri Portofolio • Telusuri karya kami
                 </span>
               </span>
             </span>
