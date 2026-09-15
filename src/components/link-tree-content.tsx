@@ -147,24 +147,24 @@ export function LinkTreeContent() {
         <main className="mt-6 flex w-full flex-col gap-3.5 px-4">
           <button
             onClick={() => setBookingOpen(true)}
-            className="animate-pulse-glow fade-in-item group relative flex w-full min-h-[48px] cursor-pointer items-center justify-between rounded-2xl bg-[var(--brand)] px-4 py-4 text-[13px] font-medium text-white shadow-md transition-all duration-300 hover:scale-[1.02] hover:bg-[var(--brand-hover)] active:scale-[0.98]"
+            className="glass fade-in-item group flex min-h-[48px] cursor-pointer items-center justify-between rounded-2xl px-4 py-4 text-[13px] font-medium text-[var(--ink)] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
             style={{ animationDelay: "0.1s" }}
           >
             <span className="flex items-center gap-3.5">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/20 shadow-inner">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[var(--line-2)] bg-[var(--soft)]">
                 <CalendarCheck className="h-5 w-5" />
               </span>
               <span className="text-left">
-                <span className="block text-[12px] font-bold uppercase leading-tight tracking-wider">
+                <span className="block text-[12px] font-bold uppercase leading-tight tracking-wider text-[var(--ink)]">
                   BOOKING ONLINE &amp; KALKULATOR ESTIMASI
                 </span>
-                <span className="mt-0.5 block text-[10.5px] font-normal normal-case tracking-normal text-white/80">
+                <span className="mt-0.5 block text-[11px] font-normal normal-case tracking-normal text-[var(--muted)]">
                   {bookingLabel}
                 </span>
               </span>
             </span>
-            <span className="ml-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/20 transition-transform duration-300 group-hover:translate-x-1">
-              <svg className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+            <span className="ml-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--ink)]/5 text-[var(--muted-2)] transition-all duration-300 group-hover:bg-[var(--ink)] group-hover:text-white group-hover:translate-x-1">
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                 <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </span>
@@ -236,7 +236,7 @@ export function LinkTreeContent() {
                   WEBSITE RESMI
                 </span>
                 <span className="mt-0.5 block text-[11px] font-normal normal-case tracking-normal text-[var(--muted)]">
-                  Galeri Portofolio • Telusuri karya-karya kami
+                  Galeri Portofolio & Telusuri karya-karya kami
                 </span>
               </span>
             </span>
