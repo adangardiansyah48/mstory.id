@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowLeft, Home } from "lucide-react";
 import { StatusSearchContent } from "@/components/status-checker";
+import { NavLogo } from "@/components/ui/nav-logo";
 import { useFanpageSettings } from "@/lib/use-site-settings";
 
 export default function StatusPage() {
@@ -27,6 +28,7 @@ export default function StatusPage() {
             <ArrowLeft className="h-4 w-4" />
             Beranda
           </Link>
+          <NavLogo size="sm" />
           <span className="font-serif text-base font-semibold tracking-tight text-[var(--ink)]">
             Mstory.id
           </span>
