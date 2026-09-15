@@ -75,11 +75,16 @@ CREATE TABLE IF NOT EXISTS public.website_gallery_items (
     subtitle TEXT DEFAULT 'portfolio',
     image_path TEXT NOT NULL,                 -- full public URL (folder website/gallery/)
     link_url TEXT,                            -- opsional: href tujuan
+    category_id BIGINT REFERENCES categories(id) ON DELETE SET NULL,
     sort_order INT DEFAULT 0,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
+
+-- Kolom kategori untuk galeri (idempotent saat tabel sudah ada)
+ALTER TABLE public.website_gallery_items
+    ADD COLUMN IF NOT EXISTS category_id BIGINT REFERENCES categories(id) ON DELETE SET NULL;
 
 CREATE INDEX IF NOT EXISTS idx_website_gallery_active ON public.website_gallery_items(is_active, sort_order);
 

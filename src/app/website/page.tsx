@@ -9,17 +9,20 @@ import {
   type WebsiteContent,
   type WebsiteResolvedSettings,
 } from "@/lib/website-content";
-import { parseObjectPosition } from "@/lib/site-settings";
+import { getStoredPublicUrl, parseObjectPosition, getSiteSettings } from "@/lib/site-settings";
 import { getPackages } from "@/lib/website";
 
 export default function WebsitePage() {
   const [content, setContent] = useState<WebsiteContent | null>(null);
   const [cats, setCats] = useState<{ id: number; name: string }[]>([]);
+  const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [slide, setSlide] = useState(0);
   const [navOpen, setNavOpen] = useState(false);
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
   const [zoom, setZoom] = useState(1);
+  const [navLogoUrl, setNavLogoUrl] = useState<string | null>(null);
+  const [navLogoPos, setNavLogoPos] = useState({ x: 50, y: 30 });
 
   useEffect(() => {
     (async () => {
@@ -27,6 +30,19 @@ export default function WebsitePage() {
         const [wc, pkgs] = await Promise.all([getWebsiteContent(), getPackages()]);
         setContent(wc);
         setCats(pkgs.categories);
+        // Resolve nav logo: prefer website_settings, fallback to linktree_settings
+        let logo = wc.settings.logo_url;
+        if (!logo) {
+          try {
+            const base = await getSiteSettings();
+            const raw = base.logo_url;
+            logo = getStoredPublicUrl(raw);
+          } catch { /* fallback kosong */ }
+        }
+        // Ensure full public URL if stored as bucket path
+        const full = logo ? (getStoredPublicUrl(logo) ?? logo) : null;
+        setNavLogoUrl(full);
+        if (full) setNavLogoPos(parseObjectPosition(full, 50, 30));
       } catch (e) {
         console.error(e);
       } finally {
@@ -43,7 +59,7 @@ export default function WebsitePage() {
     } as WebsiteResolvedSettings);
   const gallery = content?.gallery ?? [];
   const year = new Date().getFullYear();
-  const logoUrl = settings.logo_url ?? null;
+  const logoUrl = navLogoUrl ?? settings.logo_url ?? null;
 
   const bannerSlides = (() => {
     const urls = settings.hero_slides.filter(Boolean) as string[];
@@ -52,22 +68,17 @@ export default function WebsitePage() {
 
   const heroDurationMs = Math.max(1200, settings.hero_duration_ms);
 
-  const galleryItems = gallery.length > 0
-    ? gallery.slice(0, 9).map((g) => ({
-        title: g.title,
-        subtitle: g.subtitle,
-        href: g.link_url ?? "/website#paket",
-        img: g.image_url,
-        pos: { x: 50, y: 50 },
-      }))
+  const filteredGallery = activeCategory !== null
+    ? gallery.filter((g) => g.category_id === activeCategory)
+    : gallery;
+
+  // Sumber galeri: kategori aktif bila ada, fallback semua item bila kategori kosong
+  const sourceGallery = (activeCategory !== null && filteredGallery.length === 0) || gallery.length > 0
+    ? (filteredGallery.length > 0 ? filteredGallery : gallery)
     : [];
 
-  const paddedGalleryItems = galleryItems.length > 0 && galleryItems.length < 9
-    ? [...galleryItems, ...Array.from({ length: 9 - galleryItems.length }, (_, k) => galleryItems[k % galleryItems.length])]
-    : galleryItems;
-
-  const featureItems = gallery.length > 0
-    ? gallery.slice(0, 9).map((g) => ({
+  const galleryItems = sourceGallery.length > 0
+    ? sourceGallery.map((g) => ({
         title: g.title,
         subtitle: g.subtitle,
         href: g.link_url ?? "/website#paket",
@@ -75,7 +86,7 @@ export default function WebsitePage() {
         pos: { x: 50, y: 50 },
       }))
     : bannerSlides.length > 0
-      ? bannerSlides.slice(0, 9).map((b) => ({
+      ? bannerSlides.map((b) => ({
           title: settings.site_name || "Gallery",
           subtitle: "portfolio",
           href: "/website#paket",
@@ -84,9 +95,13 @@ export default function WebsitePage() {
         }))
       : [];
 
-  while (featureItems.length < 9 && featureItems.length > 0) {
-    featureItems.push({ ...featureItems[featureItems.length % Math.max(featureItems.length, 1)] });
-  }
+  const paddedGalleryItems = galleryItems.length > 0 && galleryItems.length < 9
+    ? [...galleryItems, ...Array.from({ length: 9 - galleryItems.length }, (_, k) => galleryItems[k % galleryItems.length])]
+    : galleryItems;
+
+  const featureItems = galleryItems.length > 0
+    ? galleryItems.slice()
+    : [];
 
   useEffect(() => {
     if (bannerSlides.length <= 1) return;
@@ -133,22 +148,37 @@ export default function WebsitePage() {
                 Portfolio <span className="text-[10px]">▾</span>
               </button>
               <div className="absolute left-0 top-full hidden min-w-[200px] border border-[#D8D5CC] bg-[#F3F2EE] py-2 shadow-sm group-hover:block">
+                <button
+                  type="button"
+                  onClick={() => setActiveCategory(null)}
+                  className={`block w-full px-4 py-2 text-left text-[12px] tracking-[0.14em] uppercase hover:bg-white ${activeCategory === null ? "bg-white font-semibold" : ""}`}
+                >
+                  Semua
+                </button>
                 {cats.slice(0, 6).map((c) => (
-                  <a key={c.id} href="#paket" className="block px-4 py-2 text-[12px] tracking-[0.14em] uppercase hover:bg-white">
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      setActiveCategory(c.id);
+                      document.getElementById("paket")?.scrollIntoView({ behavior: "smooth" });
+                    }}
+                    className={`block w-full px-4 py-2 text-left text-[12px] tracking-[0.14em] uppercase hover:bg-white ${activeCategory === c.id ? "bg-white font-semibold" : ""}`}
+                  >
                     {c.name}
-                  </a>
+                  </button>
                 ))}
                 {cats.length === 0 && (
                   <>
-                    <a href="#paket" className="block px-4 py-2 text-[12px] tracking-[0.14em] uppercase hover:bg-white">
+                    <button type="button" onClick={() => { setActiveCategory(null); document.getElementById("paket")?.scrollIntoView({ behavior: "smooth" }); }} className="block w-full px-4 py-2 text-left text-[12px] tracking-[0.14em] uppercase hover:bg-white">
                       Wedding
-                    </a>
-                    <a href="#paket" className="block px-4 py-2 text-[12px] tracking-[0.14em] uppercase hover:bg-white">
+                    </button>
+                    <button type="button" onClick={() => { setActiveCategory(null); document.getElementById("paket")?.scrollIntoView({ behavior: "smooth" }); }} className="block w-full px-4 py-2 text-left text-[12px] tracking-[0.14em] uppercase hover:bg-white">
                       Couple Session
-                    </a>
-                    <a href="#paket" className="block px-4 py-2 text-[12px] tracking-[0.14em] uppercase hover:bg-white">
+                    </button>
+                    <button type="button" onClick={() => { setActiveCategory(null); document.getElementById("paket")?.scrollIntoView({ behavior: "smooth" }); }} className="block w-full px-4 py-2 text-left text-[12px] tracking-[0.14em] uppercase hover:bg-white">
                       Prewedding
-                    </a>
+                    </button>
                   </>
                 )}
               </div>
@@ -159,7 +189,7 @@ export default function WebsitePage() {
             <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-white ring-1 ring-[#D8D5CC]">
               {logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={logoUrl} alt={settings.site_name} className="h-full w-full object-contain p-1.5" />
+                <img src={logoUrl} alt={settings.site_name} className="h-full w-full object-contain p-1.5" style={{ objectPosition: `${navLogoPos.x}% ${navLogoPos.y}%` }} />
               ) : (
                 <span className="font-serif text-xs tracking-[0.18em]">M</span>
               )}
@@ -179,7 +209,7 @@ export default function WebsitePage() {
             <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white ring-1 ring-[#D8D5CC]">
               {logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={logoUrl} alt={settings.site_name} className="h-full w-full object-contain p-1.5" />
+                <img src={logoUrl} alt={settings.site_name} className="h-full w-full object-contain p-1.5" style={{ objectPosition: `${navLogoPos.x}% ${navLogoPos.y}%` }} />
               ) : (
                 <span className="font-serif text-xs">M</span>
               )}
@@ -269,6 +299,27 @@ export default function WebsitePage() {
       </div>
 
       <section id="paket" className="mx-auto max-w-[1200px] px-4 py-8 sm:px-6 sm:py-10">
+        {cats.length > 0 && (
+          <div className="mb-6 flex flex-wrap justify-center gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveCategory(null)}
+              className={`rounded-full border px-5 py-2 text-xs font-medium uppercase tracking-[0.14em] transition ${activeCategory === null ? "border-[#1C1C1A] bg-[#1C1C1A] text-white" : "border-[#D8D5CC] bg-white text-[#1C1C1A]/70 hover:bg-[#F3F2EE]"}`}
+            >
+              Semua
+            </button>
+            {cats.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => setActiveCategory(c.id)}
+                className={`rounded-full border px-5 py-2 text-xs font-medium uppercase tracking-[0.14em] transition ${activeCategory === c.id ? "border-[#1C1C1A] bg-[#1C1C1A] text-white" : "border-[#D8D5CC] bg-white text-[#1C1C1A]/70 hover:bg-[#F3F2EE]"}`}
+              >
+                {c.name}
+              </button>
+            ))}
+          </div>
+        )}
         {featureItems.length === 0 ? (
           <div className="rounded-[10px] border border-dashed border-[#D8D5CC] bg-white px-6 py-14 text-center">
             <p className="font-serif text-sm tracking-[0.14em] uppercase text-[#1C1C1A]/60">Belum ada portfolio</p>

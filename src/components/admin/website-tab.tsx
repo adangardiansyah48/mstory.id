@@ -17,11 +17,13 @@ import {
   deleteWebsiteImage,
   WEBSITE,
 } from "@/lib/website-content";
+import { getPackages } from "@/lib/website";
 import { Check, ImagePlus, Loader2, Trash2, X, ArrowUp, ArrowDown } from "lucide-react";
 
 export function WebsiteTab() {
   const [row, setRow] = useState<WebsiteSettingsRow | null>(null);
   const [gallery, setGallery] = useState<WebsiteGalleryRow[]>([]);
+  const [cats, setCats] = useState<{ id: number; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -31,13 +33,15 @@ export function WebsiteTab() {
     let cancelled = false;
     (async () => {
       try {
-        const [settings, galleryRows] = await Promise.all([
+        const [settings, galleryRows, pkgs] = await Promise.all([
           fetchWebsiteSettingsRow(),
           fetchWebsiteGalleryRows(),
+          getPackages(),
         ]);
         if (!cancelled) {
           setRow(settings);
           setGallery(galleryRows);
+          setCats(pkgs.categories);
         }
       } catch (e) {
         console.error("Gagal load website content:", e);
@@ -364,6 +368,16 @@ export function WebsiteTab() {
                   className="w-full rounded border border-[var(--line)] bg-white px-2 py-1 text-xs text-[var(--ink)] outline-none focus:border-[var(--brand)]" />
                 <input type="text" value={g.subtitle} onChange={(e) => { const v = e.target.value; setGallery((prev) => prev.map((r) => r.id === g.id ? { ...r, subtitle: v } : r)); }}
                   className="w-full rounded border border-[var(--line)] bg-white px-2 py-1 text-xs text-[var(--ink)] outline-none focus:border-[var(--brand)]" />
+                <select
+                  value={g.category_id ?? ""}
+                  onChange={(e) => { const v = e.target.value ? Number(e.target.value) : null; setGallery((prev) => prev.map((r) => r.id === g.id ? { ...r, category_id: v } : r)); }}
+                  className="w-full rounded border border-[var(--line)] bg-white px-2 py-1 text-xs text-[var(--ink)] outline-none focus:border-[var(--brand)]"
+                >
+                  <option value="">Tanpa Kategori</option>
+                  {cats.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
                 <input type="text" value={g.link_url ?? ""} onChange={(e) => { const v = e.target.value; setGallery((prev) => prev.map((r) => r.id === g.id ? { ...r, link_url: v } : r)); }}
                   placeholder="link (opsional)"
                   className="w-full rounded border border-[var(--line)] bg-white px-2 py-1 text-xs text-[var(--ink)] outline-none focus:border-[var(--brand)] placeholder:text-[var(--muted-3)]" />
@@ -373,7 +387,7 @@ export function WebsiteTab() {
                   <input type="checkbox" checked={g.is_active} onChange={(e) => handleGalleryToggle(g.id, e.target.checked)} />
                   aktif
                 </label>
-                <button type="button" onClick={async () => { await updateWebsiteGalleryItem(g.id, { title: g.title, subtitle: g.subtitle, link_url: g.link_url }); setMessage(`Item "${g.title}" disimpan.`); }} className="rounded border border-[var(--line)] px-2 py-0.5 text-[10px] font-semibold text-[var(--muted)] hover:bg-[var(--soft)]">Simpan</button>
+                <button type="button" onClick={async () => { await updateWebsiteGalleryItem(g.id, { title: g.title, subtitle: g.subtitle, link_url: g.link_url, category_id: g.category_id ?? null }); setMessage(`Item "${g.title}" disimpan.`); }} className="rounded border border-[var(--line)] px-2 py-0.5 text-[10px] font-semibold text-[var(--muted)] hover:bg-[var(--soft)]">Simpan</button>
               </div>
               <button type="button" onClick={() => handleGalleryMove(g.id, -1)} disabled={idx === 0} className="rounded p-1 hover:bg-[var(--soft)] disabled:opacity-30"><ArrowUp className="h-3 w-3" /></button>
               <button type="button" onClick={() => handleGalleryMove(g.id, 1)} disabled={idx === gallery.length - 1} className="rounded p-1 hover:bg-[var(--soft)] disabled:opacity-30"><ArrowDown className="h-3 w-3" /></button>

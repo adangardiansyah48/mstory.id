@@ -327,6 +327,7 @@ export async function addWebsiteGalleryItem(item: {
   subtitle?: string;
   image_path: string;
   link_url?: string | null;
+  category_id?: number | null;
 }): Promise<{ ok: boolean; error?: string }> {
   const supabase = createClient();
   if (!supabase) return { ok: false, error: "Supabase tidak dikonfigurasi." };
@@ -338,6 +339,7 @@ export async function addWebsiteGalleryItem(item: {
     subtitle: item.subtitle ?? "portfolio",
     image_path: item.image_path,
     link_url: item.link_url ?? null,
+    category_id: item.category_id ?? null,
     sort_order: count ?? 0,
     is_active: true,
   });
@@ -348,7 +350,7 @@ export async function addWebsiteGalleryItem(item: {
 
 export async function updateWebsiteGalleryItem(
   id: number,
-  patch: Partial<Pick<WebsiteGalleryItem, "title" | "subtitle" | "link_url" | "sort_order" | "is_active">>,
+  patch: Partial<Pick<WebsiteGalleryItem, "title" | "subtitle" | "link_url" | "sort_order" | "is_active" | "category_id">>,
 ): Promise<{ ok: boolean; error?: string }> {
   const supabase = createClient();
   if (!supabase) return { ok: false, error: "Supabase tidak dikonfigurasi." };
