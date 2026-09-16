@@ -82,7 +82,9 @@ export function SlaTab() {
     return () => clearTimeout(t);
   }, []);
 
-  function calcDeadline(eventDate: string, weeks: number): string {
+  useEffect(() => {
+    if (!savingId) loadProjects();
+  }, [savingId]);
     const d = new Date(eventDate + "T00:00:00");
     d.setDate(d.getDate() + weeks * 7);
     const y = d.getFullYear();
