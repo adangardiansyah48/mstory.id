@@ -50,7 +50,7 @@ export function OverviewTab({
 
       try {
         const [bookingCount, clientCount] = await Promise.all([
-          supabase.from("bookings").select("status, grand_total, event_date, dp_amount, dp_paid_at, paid_at"),
+          supabase.from("bookings").select("status, grand_total, event_date, dp_amount, dp_paid_at, paid_at").limit(2000),
           supabase.from("clients").select("id", { count: "exact", head: true }),
         ]);
 

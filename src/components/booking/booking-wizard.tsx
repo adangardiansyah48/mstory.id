@@ -16,7 +16,9 @@ import {
   buildWhatsAppLink,
   formatCurrency,
   generateInvoiceNumber,
+  isValidWhatsAppNumber,
   normalizeWhatsAppNumber,
+  whatsAppValidationMessage,
 } from "@/lib/utils";
 import {
   PAYMENT_ACCOUNT,
@@ -154,11 +156,16 @@ export function BookingWizard({
     !!selection.selectedPackage &&
     !!client.eventDate &&
     !!client.fullName.trim() &&
-    !!client.whatsappNumber.trim() &&
+    isValidWhatsAppNumber(client.whatsappNumber) &&
     !!client.eventAddress.trim();
 
   async function handleSubmit() {
     if (!selection.selectedPackage) return;
+    const waError = whatsAppValidationMessage(client.whatsappNumber);
+    if (waError) {
+      await Swal.fire({ icon: "error", title: "No. WhatsApp Tidak Valid", text: waError });
+      return;
+    }
     setSubmitting(true);
 
     const supabase = createClient();
@@ -174,59 +181,65 @@ export function BookingWizard({
     const invoiceNumber = await generateInvoiceNumber();
     const normalizedPhone = normalizeWhatsAppNumber(client.whatsappNumber);
 
-    try {
-      const { data: clientData, error: clientError } = await supabase
-        .from("clients")
-        .insert({
-          full_name: client.fullName,
-          whatsapp_number: normalizedPhone,
-        })
-        .select()
-        .single();
+     try {
+       const { data: clientData, error: clientError } = await supabase
+         .from("clients")
+         .insert({
+           full_name: client.fullName,
+           whatsapp_number: normalizedPhone,
+         })
+         .select()
+         .single();
 
-      if (clientError) throw clientError;
+       if (clientError) throw clientError;
 
-      const { data: bookingData, error: bookingError } = await supabase
-        .from("bookings")
-        .insert({
-          invoice_number: invoiceNumber,
-          client_id: clientData.id,
-          event_date: client.eventDate,
-          location_type: client.locationType,
-          event_address: client.eventAddress,
-          subtotal: subtotal,
-          transport_fee: transportFee,
-          grand_total: grandTotal,
-          dp_amount: dpAmount,
-          status: "MENUNGGU_DP",
-          notes: client.notes || null,
-        })
-        .select()
-        .single();
+       let bookingData;
+       try {
+         const { data: bd, error: be } = await supabase
+           .from("bookings")
+           .insert({
+             invoice_number: invoiceNumber,
+             client_id: clientData.id,
+             event_date: client.eventDate,
+             location_type: client.locationType,
+             event_address: client.eventAddress,
+             subtotal: subtotal,
+             transport_fee: transportFee,
+             grand_total: grandTotal,
+             dp_amount: dpAmount,
+             status: "MENUNGGU_DP",
+             notes: client.notes || null,
+           })
+           .select()
+           .single();
+         if (be) throw be;
+         bookingData = bd;
+       } catch (bookingErr) {
+         await supabase.from("clients").delete().eq("id", clientData.id);
+         throw bookingErr;
+       }
 
-      if (bookingError) throw bookingError;
+       const detailInsert = supabase
+         .from("booking_details")
+         .insert({
+           booking_id: bookingData.id,
+           package_id: selection.selectedPackage.id,
+           price_at_booking: selection.selectedPackage.price,
+         });
 
-      const detailInsert = supabase
-        .from("booking_details")
-        .insert({
-          booking_id: bookingData.id,
-          package_id: selection.selectedPackage.id,
-          price_at_booking: selection.selectedPackage.price,
-        });
+       if (selection.addons.length > 0) {
+         await supabase.from("booking_addons").insert(
+           selection.addons.map((a) => ({
+             booking_id: bookingData.id,
+             addon_id: a.id,
+             price_at_booking: a.price,
+             qty: 1,
+           })),
+         );
+       }
 
-      if (selection.addons.length > 0) {
-        await supabase.from("booking_addons").insert(
-          selection.addons.map((a) => ({
-            booking_id: bookingData.id,
-            addon_id: a.id,
-            price_at_booking: a.price,
-            qty: 1,
-          })),
-        );
-      }
-
-      const { error: detailError } = await detailInsert;
-      if (detailError) throw detailError;
+       const { error: detailError } = await detailInsert;
+       if (detailError) throw detailError;
 
       const packageDescription = [
         `*KATEGORI*`,

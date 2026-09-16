@@ -111,7 +111,7 @@ export function BookingTab({
       `,
       )
       .order("created_at", { ascending: false })
-      .limit(50);
+      .range(0, 49);
 
     if (error) {
       console.error(error);

@@ -41,13 +41,17 @@ const STATUS_STYLES: Record<string, string> = {
 export function StatusSearchPanel() {
   const [query, setQuery] = useState("");
   const [searchState, setSearchState] = useState<SearchState>("idle");
-  const [result, setResult] = useState<SearchResult>(null);
+  const [results, setResults] = useState<BookingWithRelations[]>([]);
+  const [selectedIdx, setSelectedIdx] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
+
+  const result: SearchResult = results[selectedIdx] ?? null;
 
   async function handleSearch() {
     if (!query.trim()) return;
     setSearchState("loading");
-    setResult(null);
+    setResults([]);
+    setSelectedIdx(0);
     setErrorMsg("");
 
     const supabase = createClient();
@@ -56,38 +60,56 @@ export function StatusSearchPanel() {
       setErrorMsg("Supabase belum dikonfigurasi. Isi .env.local terlebih dahulu.");
       return;
     }
-    const normalized = normalizeWhatsAppNumber(query.trim());
+
+    const trimmed = query.trim();
+    const normalized = normalizeWhatsAppNumber(trimmed);
 
     try {
-      const bookingQuery = supabase
+      const { data: invoiceData } = await supabase
         .from("bookings")
         .select(
           `
           *,
           client:clients(*),
-          details:booking_details(*, packages:packages(*)),
+          details:booking_details(*, packages:packages(*, sub_categories:sub_categories(*, categories:categories(*)))),
           addons:booking_addons(*, add_ons:addons(*)),
           project_progress(*)
         `,
         )
-        .or(`invoice_number.eq.${query.trim().toUpperCase()}`)
-        .single();
+        .eq("invoice_number", trimmed.toUpperCase())
+        .order("created_at", { ascending: false })
+        .limit(5);
 
-      const { data, error } = await bookingQuery;
+      if (invoiceData && invoiceData.length > 0) {
+        setResults(invoiceData as unknown as BookingWithRelations[]);
+        setSearchState("found");
+        return;
+      }
 
-      if (error || !data) {
-        const clientRes = await supabase
+      const cleanDigits = trimmed.replace(/\D/g, "");
+      const isPhoneLike = cleanDigits.length >= 8;
+      if (!isPhoneLike) {
+        setSearchState("notfound");
+        return;
+      }
+
+      const { data: clients } = await supabase
+        .from("clients")
+        .select("id")
+        .eq("whatsapp_number", normalized);
+
+      if (!clients || clients.length === 0) {
+        const alt = cleanDigits.startsWith("62") ? "0" + cleanDigits.slice(2) : normalized;
+        const { data: altClients } = await supabase
           .from("clients")
           .select("id")
-          .eq("whatsapp_number", normalized)
-          .maybeSingle();
-
-        if (!clientRes.data) {
+          .eq("whatsapp_number", alt);
+        if (!altClients || altClients.length === 0) {
           setSearchState("notfound");
           return;
         }
-
-        const { data: bookingData, error: bookingError } = await supabase
+        const altIds = altClients.map((c: { id: number }) => c.id);
+        const { data: altBookings } = await supabase
           .from("bookings")
           .select(
             `
@@ -98,21 +120,40 @@ export function StatusSearchPanel() {
             project_progress(*)
           `,
           )
-          .eq("client_id", clientRes.data.id)
+          .in("client_id", altIds)
           .order("created_at", { ascending: false })
-          .limit(1)
-          .single();
-
-        if (bookingError) {
+          .limit(5);
+        if (!altBookings || altBookings.length === 0) {
           setSearchState("notfound");
           return;
         }
+        setResults(altBookings as unknown as BookingWithRelations[]);
         setSearchState("found");
-        setResult(bookingData);
-      } else {
-        setSearchState("found");
-        setResult(data);
+        return;
       }
+
+      const clientIds = clients.map((c: { id: number }) => c.id);
+      const { data: bookings } = await supabase
+        .from("bookings")
+        .select(
+          `
+          *,
+          client:clients(*),
+          details:booking_details(*, packages:packages(*, sub_categories:sub_categories(*, categories:categories(*)))),
+          addons:booking_addons(*, add_ons:addons(*)),
+          project_progress(*)
+        `,
+        )
+        .in("client_id", clientIds)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (!bookings || bookings.length === 0) {
+        setSearchState("notfound");
+        return;
+      }
+      setResults(bookings as unknown as BookingWithRelations[]);
+      setSearchState("found");
     } catch (err) {
       console.error(err);
       setSearchState("error");
@@ -193,6 +234,19 @@ export function StatusSearchPanel() {
 
         {searchState === "found" && result && (
           <div className="space-y-4">
+            {results.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {results.map((r, i) => (
+                  <button
+                    key={r.id}
+                    onClick={() => setSelectedIdx(i)}
+                    className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${i === selectedIdx ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-[var(--line)] bg-white text-[var(--muted)] hover:border-[var(--brand)]"}`}
+                  >
+                    {r.invoice_number}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="glass rounded-[1.75rem] p-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -241,7 +295,6 @@ export function StatusSearchPanel() {
                </div>
             </div>
 
-            {/* Rincian Paket */}
             <div className="glass rounded-[1.75rem] p-5">
               <h4 className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
                 Rincian Paket

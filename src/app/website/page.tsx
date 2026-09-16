@@ -104,10 +104,6 @@ export default function WebsitePage() {
     ? [...galleryItems, ...Array.from({ length: 9 - galleryItems.length }, (_, k) => galleryItems[k % galleryItems.length])]
     : galleryItems;
 
-  const featureItems = galleryItems.length > 0
-    ? galleryItems.slice()
-    : [];
-
   useEffect(() => {
     if (bannerSlides.length <= 1) return;
     const id = window.setInterval(() => setSlide((i) => (i + 1) % bannerSlides.length), heroDurationMs);

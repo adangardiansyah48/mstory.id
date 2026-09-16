@@ -34,12 +34,19 @@ export function FinanceTab() {
         setLoading(false);
         return;
       }
+      const start = `${month}-01`;
+      const endDate = new Date(`${month}-01`);
+      endDate.setMonth(endDate.getMonth() + 1);
+      const end = endDate.toISOString().slice(0, 10);
+
       const { data, error } = await supabase
         .from("bookings")
         .select("id, invoice_number, event_date, grand_total, dp_amount, status, booking_date, client:clients(full_name)")
         .neq("status", "CANCELLED")
+        .gte("event_date", start)
+        .lt("event_date", end)
         .order("event_date", { ascending: true })
-        .limit(500);
+        .limit(1000);
 
       if (cancelled) return;
 
@@ -47,10 +54,7 @@ export function FinanceTab() {
         console.error("loadData finance error:", error.message);
         setRows([]);
       } else {
-        const filtered = (data as unknown as FinanceRow[])?.filter(
-          (r) => String(r.event_date).slice(0, 7) === month,
-        );
-        setRows(filtered ?? []);
+        setRows((data as unknown as FinanceRow[]) ?? []);
       }
       setLoading(false);
     })();

@@ -148,7 +148,7 @@ export const WEBSITE_DEFAULTS: Omit<WebsiteResolvedSettings, "updated_at"> = {
   footer_copyright: "Hak cipta dilindungi",
 };
 
-const TTL_MS = 30 * 1000;
+const TTL_MS = 60 * 1000;
 
 let cache: { settings?: WebsiteResolvedSettings; gallery?: WebsiteGalleryItem[]; albums?: WebsiteAlbumItem[]; expiresAt: number } | null = null;
 let inflight: Promise<WebsiteContent> | null = null;

@@ -9,10 +9,11 @@ export interface BookingData {
   bookedCounts: Record<string, number>;
 }
 
-const TTL_MS = 30 * 1000;
+const TTL_MS = 60 * 1000;
 
 let cached: { data: BookingData; expiresAt: number } | null = null;
 let inflight: Promise<BookingData> | null = null;
+let lastFetchAt = 0;
 
 async function fetchBookingData(): Promise<BookingData> {
   const supabase = createClient();
@@ -59,6 +60,7 @@ export function getBookingData(): Promise<BookingData> {
   }
 
   if (!inflight) {
+    lastFetchAt = Date.now();
     inflight = fetchBookingData()
       .then((data) => {
         cached = { data, expiresAt: Date.now() + TTL_MS };
@@ -82,4 +84,13 @@ export function peekBookingData(): BookingData | null {
 export function clearBookingDataCache() {
   cached = null;
   inflight = null;
+  lastFetchAt = 0;
+}
+
+export function revalidateBookingData(): Promise<BookingData> {
+  if (Date.now() - lastFetchAt < 5000 && cached) {
+    return Promise.resolve(cached.data);
+  }
+  cached = null;
+  return getBookingData();
 }

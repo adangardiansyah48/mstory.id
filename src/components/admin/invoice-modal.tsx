@@ -89,10 +89,10 @@ export function InvoiceModal({
         ? buildPelunasanInvoice(base)
         : buildLunasInvoice(base);
 
-  const waLink = buildWhatsAppLink(
-    normalizeWhatsAppNumber(booking.client?.whatsapp_number ?? ""),
-    message,
-  );
+const waLink = buildWhatsAppLink(
+     normalizeWhatsAppNumber(booking.client?.whatsapp_number ?? ""),
+     message,
+   );
   const canWa = !!booking.client?.whatsapp_number;
 
   return (

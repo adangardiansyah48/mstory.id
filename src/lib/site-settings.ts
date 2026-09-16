@@ -51,7 +51,7 @@ export const BANNER_FOLDER = "banners";
 export const LOGO_FOLDER = "logos";
 export const GALLERY_FOLDER = "gallery";
 
-const TTL_MS = 30 * 1000;
+const TTL_MS = 60 * 1000;
 
 let cached: { data: SiteSettings; expiresAt: number } | null = null;
 let inflight: Promise<SiteSettings> | null = null;

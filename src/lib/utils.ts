@@ -84,6 +84,24 @@ export function normalizeWhatsAppNumber(phone: string): string {
   return cleaned;
 }
 
+export function isValidWhatsAppNumber(phone: string): boolean {
+  const normalized = normalizeWhatsAppNumber(phone);
+  if (!/^62\d+$/.test(normalized)) return false;
+  if (normalized.length < 11 || normalized.length > 15) return false;
+  if (!normalized.startsWith("628")) return false;
+  return true;
+}
+
+export function whatsAppValidationMessage(phone: string): string | null {
+  const trimmed = phone.trim();
+  if (!trimmed) return "No. WhatsApp wajib diisi.";
+  const digits = trimmed.replace(/[^0-9]/g, "");
+  if (digits.length < 10) return "No. WhatsApp terlalu pendek. Minimal 10 digit (contoh: 08123456789).";
+  if (digits.length > 15) return "No. WhatsApp terlalu panjang. Maksimal 15 digit.";
+  if (!isValidWhatsAppNumber(phone)) return "Format No. WhatsApp tidak valid. Gunakan format 08xxxxxxxxxx.";
+  return null;
+}
+
 export function buildWhatsAppLink(
   phoneNumber: string,
   message: string,
@@ -242,8 +260,10 @@ export function buildInvoiceMessage(input: {
 
 export function slugify(input: string): string {
   return input
-    .toUpperCase()
+    .toLowerCase()
     .trim()
-    .replace(/\s+/g, "_")
-    .replace(/[^A-Z0-9_]/g, "");
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
 }

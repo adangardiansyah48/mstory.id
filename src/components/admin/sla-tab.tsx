@@ -46,10 +46,6 @@ export function SlaTab() {
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<number | null>(null);
 
-  useEffect(() => {
-    loadProjects();
-  }, []);
-
   async function loadProjects() {
     setLoading(true);
     const supabase = createClient();
@@ -70,7 +66,8 @@ export function SlaTab() {
       `,
       )
       .in("status", ["LUNAS", "MENUNGGU_PELUNASAN"])
-      .order("event_date", { ascending: false });
+      .order("event_date", { ascending: false })
+      .limit(200);
 
     if (error) {
       console.error(error);
@@ -79,6 +76,11 @@ export function SlaTab() {
     }
     setLoading(false);
   }
+
+  useEffect(() => {
+    const t = setTimeout(loadProjects, 0);
+    return () => clearTimeout(t);
+  }, []);
 
   function calcDeadline(eventDate: string, weeks: number): string {
     const d = new Date(eventDate + "T00:00:00");

@@ -9,7 +9,7 @@ import {
   MessageCircle,
   User,
 } from "lucide-react";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency, whatsAppValidationMessage } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import {
   MAX_BOOKINGS_PER_DATE,
@@ -238,6 +238,7 @@ export function Step2Schedule({
             label="No. WhatsApp"
             type="tel"
             inputMode="numeric"
+            error={client.whatsappNumber ? whatsAppValidationMessage(client.whatsappNumber) ?? undefined : undefined}
           />
         </div>
       </div>
