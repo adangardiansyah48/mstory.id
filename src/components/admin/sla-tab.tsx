@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Check, ExternalLink, Link as LinkIcon } from "lucide-react";
 import Swal from "sweetalert2";
@@ -45,6 +45,7 @@ export function SlaTab() {
   const [rows, setRows] = useState<ProjectRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<number | null>(null);
+  const didMount = useRef(false);
 
   async function loadProjects() {
     setLoading(true);
@@ -78,9 +79,16 @@ export function SlaTab() {
   }
 
   useEffect(() => {
-    const t = setTimeout(loadProjects, 0);
-    return () => clearTimeout(t);
+    if (!didMount.current) {
+      didMount.current = true;
+      const t = setTimeout(loadProjects, 0);
+      return () => clearTimeout(t);
+    }
   }, []);
+
+  useEffect(() => {
+    if (didMount.current && !savingId) loadProjects();
+  }, [savingId]);
 
   function calcDeadline(eventDate: string, weeks: number): string {
     const d = new Date(eventDate + "T00:00:00");
