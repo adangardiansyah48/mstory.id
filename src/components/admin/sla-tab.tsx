@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Check, ExternalLink, Link as LinkIcon } from "lucide-react";
+import { Check, ExternalLink, Link as LinkIcon, Trash2 } from "lucide-react";
 import Swal from "sweetalert2";
 
 import { cn, formatShortDate } from "@/lib/utils";
@@ -45,7 +45,6 @@ export function SlaTab() {
   const [rows, setRows] = useState<ProjectRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<number | null>(null);
-  const didMount = useRef(false);
 
   async function loadProjects() {
     setLoading(true);
@@ -79,16 +78,9 @@ export function SlaTab() {
   }
 
   useEffect(() => {
-    if (!didMount.current) {
-      didMount.current = true;
-      const t = setTimeout(loadProjects, 0);
-      return () => clearTimeout(t);
-    }
+    const t = setTimeout(loadProjects, 0);
+    return () => clearTimeout(t);
   }, []);
-
-  useEffect(() => {
-    if (didMount.current && !savingId) loadProjects();
-  }, [savingId]);
 
   function calcDeadline(eventDate: string, weeks: number): string {
     const d = new Date(eventDate + "T00:00:00");
@@ -162,6 +154,33 @@ export function SlaTab() {
       title: "Link Tersimpan",
       text: "Link Google Drive berhasil diperbarui.",
       timer: 1500,
+      showConfirmButton: false,
+    });
+  }
+
+  async function deleteDriveLink(row: ProjectRow) {
+    const confirmed = await Swal.fire({
+      icon: "warning",
+      title: "Hapus Link?",
+      text: "Link Google Drive akan dihapus.",
+      showCancelButton: true,
+      confirmButtonText: "Hapus",
+      cancelButtonText: "Batal",
+      confirmButtonColor: "#dc2626",
+    });
+    if (!confirmed.isConfirmed) return;
+    const currentStatus = row.project_progress?.[0]?.progress_status ?? "SHOOTING";
+    const currentExpected = row.project_progress?.[0]?.expected_date ?? calcDeadline(row.event_date, SLA_PRINT_WEEKS);
+    await upsertProgress(row, {
+      booking_id: row.id,
+      progress_status: currentStatus,
+      expected_date: currentExpected,
+      drive_link: null,
+    });
+    await Swal.fire({
+      icon: "success",
+      title: "Link Dihapus",
+      timer: 1200,
       showConfirmButton: false,
     });
   }
@@ -252,6 +271,7 @@ export function SlaTab() {
                     key={`${row.id}-${prog?.drive_link ?? ""}-${savingId === row.id ? savingId : "idle"}`}
                     link={prog?.drive_link ?? ""}
                     onSave={(link) => setDriveLink(row, link)}
+                    onDelete={() => deleteDriveLink(row)}
                     disabled={savingId === row.id}
                   />
                 </div>
@@ -267,10 +287,12 @@ export function SlaTab() {
 function DriveLinkInput({
   link,
   onSave,
+  onDelete,
   disabled,
 }: {
   link: string;
   onSave: (link: string) => void;
+  onDelete: () => void;
   disabled?: boolean;
 }) {
   const [dirty, setDirty] = useState(false);
@@ -300,15 +322,25 @@ function DriveLinkInput({
           Simpan
         </button>
       ) : link ? (
-        <a
-          href={link}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex h-9 shrink-0 items-center gap-1 rounded-lg bg-blue-50 px-3 text-[11px] font-semibold text-blue-700 hover:bg-blue-100"
-        >
-          <ExternalLink className="h-3 w-3" />
-          Buka
-        </a>
+        <>
+          <a
+            href={link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex h-9 shrink-0 items-center gap-1 rounded-lg bg-blue-50 px-3 text-[11px] font-semibold text-blue-700 hover:bg-blue-100"
+          >
+            <ExternalLink className="h-3 w-3" />
+            Buka
+          </a>
+          <button
+            onClick={onDelete}
+            disabled={disabled}
+            title="Hapus link"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-40"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </>
       ) : null}
     </div>
   );
