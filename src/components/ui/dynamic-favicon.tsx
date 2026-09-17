@@ -16,8 +16,6 @@ export function DynamicFavicon() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      if (!supabaseUrl) return;
       try {
         const settings = await getSiteSettings();
         if (cancelled) return;
@@ -27,9 +25,21 @@ export function DynamicFavicon() {
         if (!url) return;
         const ext = (url.split("?")[0].split(".").pop() ?? "").toLowerCase();
         const type = MIME_BY_EXT[ext] ?? "image/png";
-        document.querySelectorAll<HTMLLinkElement>('link[rel="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"]').forEach((el) => {
+        const setOrCreate = (rel: string) => {
+          let el = document.querySelector<HTMLLinkElement>(`link[rel="${rel}"]`);
+          if (!el) {
+            el = document.createElement("link");
+            el.rel = rel;
+            document.head.appendChild(el);
+          }
           el.href = url;
           if (type) el.type = type;
+        };
+        setOrCreate("icon");
+        setOrCreate("shortcut icon");
+        setOrCreate("apple-touch-icon");
+        document.querySelectorAll<HTMLLinkElement>('link[rel="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"]').forEach((el) => {
+          if (el.href !== url) el.href = url;
         });
       } catch {
         /* fallback: favicon default tetap dipakai */
