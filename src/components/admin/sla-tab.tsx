@@ -53,27 +53,42 @@ export function SlaTab() {
       setLoading(false);
       return;
     }
-    const { data, error } = await supabase
+    const { data: bookings, error: bookingErr } = await supabase
       .from("bookings")
-      .select(
-        `
-        id,
-        invoice_number,
-        event_date,
-        status,
-        client:clients(full_name),
-        project_progress(*)
-      `,
-      )
+      .select("id, invoice_number, event_date, status, client:clients(full_name)")
       .in("status", ["LUNAS", "MENUNGGU_PELUNASAN"])
       .order("event_date", { ascending: false })
       .limit(200);
 
-    if (error) {
-      console.error(error);
-    } else {
-      setRows((data as unknown as ProjectRow[]) ?? []);
+    if (bookingErr) {
+      console.error(bookingErr);
+      setLoading(false);
+      return;
     }
+    if (!bookings || bookings.length === 0) {
+      setRows([]);
+      setLoading(false);
+      return;
+    }
+    const ids = bookings.map((b) => b.id);
+    const { data: progresses, error: progErr } = await supabase
+      .from("project_progress")
+      .select("*")
+      .in("booking_id", ids);
+
+    if (progErr) console.error(progErr);
+
+    const progByBooking = new Map<number, typeof progresses extends (infer U)[] | null ? U : never>();
+    (progresses ?? []).forEach((p: unknown) => {
+      const row = p as { booking_id: number };
+      progByBooking.set(row.booking_id, p as never);
+    });
+
+    const merged: ProjectRow[] = (bookings as unknown as ProjectRow[]).map((b) => ({
+      ...b,
+      project_progress: progByBooking.has(b.id) ? [progByBooking.get(b.id) as unknown as ProjectRow["project_progress"][number]] : [],
+    }));
+    setRows(merged);
     setLoading(false);
   }
 
@@ -81,13 +96,6 @@ export function SlaTab() {
     const t = setTimeout(loadProjects, 0);
     return () => clearTimeout(t);
   }, []);
-
-  useEffect(() => {
-    if (!savingId) {
-      const t = setTimeout(loadProjects, 0);
-      return () => clearTimeout(t);
-    }
-  }, [savingId]);
 
   function calcDeadline(eventDate: string, weeks: number): string {
     const d = new Date(eventDate + "T00:00:00");
@@ -106,36 +114,46 @@ export function SlaTab() {
       return;
     }
 
-    const { error } = await supabase
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) {
+      await Swal.fire({ icon: "error", title: "Sesi habis", text: "Silakan login ulang di /admin/login." });
+      setSavingId(null);
+      return;
+    }
+
+    const { data, error } = await supabase
       .from("project_progress")
-      .upsert(payload, { onConflict: "booking_id" });
+      .upsert(payload, { onConflict: "booking_id" })
+      .select()
+      .single();
 
     if (error) {
       console.error("Gagal simpan progress:", error);
       await Swal.fire({
         icon: "error",
         title: "Gagal Simpan Progress",
-        text: error.message || "Pastikan Anda login sebagai Admin.",
+        text: `${error.message} (${error.code ?? ""})`,
       });
-    } else {
-      // Update local state immediately so UI reflects change instantly
-      setRows((prev) =>
-        prev.map((r) => {
-          if (r.id === row.id) {
-            const newProg = [{
-              id: r.project_progress?.[0]?.id ?? 0,
-              booking_id: row.id,
-              progress_status: payload.progress_status ?? r.project_progress?.[0]?.progress_status ?? "SHOOTING",
-              drive_link: payload.drive_link !== undefined ? payload.drive_link : r.project_progress?.[0]?.drive_link,
-              expected_date: payload.expected_date ?? r.project_progress?.[0]?.expected_date,
-            }];
-            return { ...r, project_progress: newProg };
-          }
-          return r;
-        })
-      );
+      setSavingId(null);
+      return;
     }
 
+    setRows((prev) =>
+      prev.map((r) => {
+        if (r.id === row.id) {
+          return {
+            ...r,
+            project_progress: [{
+              id: (data as { id: number }).id ?? r.project_progress?.[0]?.id ?? 0,
+              progress_status: (data as { progress_status: WorkflowStatus }).progress_status ?? payload.progress_status ?? "SHOOTING",
+              drive_link: (data as { drive_link: string | null }).drive_link ?? payload.drive_link ?? null,
+              expected_date: (data as { expected_date: string | null }).expected_date ?? payload.expected_date ?? null,
+            }],
+          };
+        }
+        return r;
+      })
+    );
     setSavingId(null);
   }
 
