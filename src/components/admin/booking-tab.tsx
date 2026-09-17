@@ -83,6 +83,9 @@ export function BookingTab({
   const [invoiceKind, setInvoiceKind] = useState<InvoiceKind>("DP");
   const [pdfFor, setPdfFor] = useState<{ booking: BookingRow; kind: InvoicePdfKind } | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<BookingStatus | "ALL">("ALL");
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 20;
 
   useEffect(() => {
     loadBookings();
@@ -100,7 +103,7 @@ export function BookingTab({
       setLoading(false);
       return;
     }
-    const { data, error } = await supabase
+    let query = supabase
       .from("bookings")
       .select(
         `
@@ -109,9 +112,16 @@ export function BookingTab({
         details:booking_details(price_at_booking, packages:packages(name, dp_value)),
         addons:booking_addons(add_ons:addons(name), price_at_booking, qty)
       `,
+        { count: "exact" }
       )
       .order("created_at", { ascending: false })
-      .range(0, 49);
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+    if (statusFilter !== "ALL") {
+      query = query.eq("status", statusFilter);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error(error);
@@ -120,6 +130,10 @@ export function BookingTab({
     }
     setLoading(false);
   }
+
+  useEffect(() => {
+    loadBookings();
+  }, [page, statusFilter]);
 
   async function patchBooking(
     id: number,
@@ -246,15 +260,17 @@ export function BookingTab({
     }
   }
 
-  const filtered = bookings.filter((b) => {
+const filtered = bookings.filter((b) => {
     const q = search.trim().toLowerCase();
-    if (!q) return true;
-    return (
+    const matchesStatus = statusFilter === "ALL" || b.status === statusFilter;
+    const matchesQuery = !q ||
       b.invoice_number.toLowerCase().includes(q) ||
       b.client?.full_name.toLowerCase().includes(q) ||
-      b.client?.whatsapp_number.toLowerCase().includes(q)
-    );
+      b.client?.whatsapp_number.toLowerCase().includes(q);
+    return matchesStatus && matchesQuery;
   });
+
+  function resetPage() { setPage(0); }
 
   function openInvoice(booking: BookingRow, kind: InvoiceKind) {
     setInvoiceFor(booking);
@@ -268,11 +284,25 @@ export function BookingTab({
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-2)]" />
           <input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); resetPage(); }}
             placeholder="Cari invoice / nama / no. WA..."
             className="h-11 w-full rounded-xl border border-[var(--line)] bg-white pl-9 pr-4 text-sm text-[var(--ink)] placeholder:text-[var(--muted-5)] focus:border-[var(--brand)] focus:outline-none"
           />
         </div>
+        <select
+          value={statusFilter}
+          onChange={(e) => {
+            setStatusFilter(e.target.value as BookingStatus | "ALL");
+            resetPage();
+          }}
+          className="h-11 rounded-xl border border-[var(--line)] bg-white px-3 text-sm text-[var(--ink)] focus:border-[var(--brand)] focus:outline-none"
+        >
+          <option value="ALL">Semua Status</option>
+          <option value="MENUNGGU_DP">Menunggu DP</option>
+          <option value="MENUNGGU_PELUNASAN">Menunggu Pelunasan</option>
+          <option value="LUNAS">Lunas</option>
+          <option value="CANCELLED">Dibatalkan</option>
+        </select>
         <div className="flex items-center gap-2">
           <input
             type="date"

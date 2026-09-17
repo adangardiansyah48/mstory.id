@@ -45,6 +45,9 @@ export function SlaTab() {
   const [rows, setRows] = useState<ProjectRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const [workflowFilter, setWorkflowFilter] = useState<WorkflowStatus | "ALL">("ALL");
 
   async function loadProjects() {
     setLoading(true);
@@ -88,7 +91,10 @@ export function SlaTab() {
       ...b,
       project_progress: progByBooking.has(b.id) ? [progByBooking.get(b.id) as unknown as ProjectRow["project_progress"][number]] : [],
     }));
-    setRows(merged);
+    let filtered = merged;
+    if (workflowFilter !== "ALL") { filtered = filtered.filter((r) => r.project_progress?.[0]?.progress_status === workflowFilter); }
+    if (search.trim()) { const q = search.trim().toLowerCase(); filtered = filtered.filter((r) => r.invoice_number.toLowerCase().includes(q) || r.client?.full_name?.toLowerCase().includes(q)); }
+    setRows(filtered);
     setLoading(false);
   }
 
@@ -96,6 +102,7 @@ export function SlaTab() {
     const t = setTimeout(loadProjects, 0);
     return () => clearTimeout(t);
   }, []);
+  const resetPage = () => setPage(0);
 
   function calcDeadline(eventDate: string, weeks: number): string {
     const d = new Date(eventDate + "T00:00:00");
@@ -220,6 +227,15 @@ export function SlaTab() {
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative flex-1">
+          <input value={search} onChange={(e) => { setSearch(e.target.value); resetPage(); }} placeholder="Cari invoice / nama..." className="h-10 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm text-[var(--ink)] focus:border-[var(--brand)] focus:outline-none" />
+        </div>
+        <select value={workflowFilter} onChange={(e) => { setWorkflowFilter(e.target.value as WorkflowStatus | "ALL"); resetPage(); }} className="h-10 rounded-xl border border-[var(--line)] bg-white px-3 text-sm text-[var(--ink)] focus:border-[var(--brand)] focus:outline-none">
+          <option value="ALL">Semua Tahapan</option>
+          {WORKFLOW_STEPS.map((s) => (<option key={s} value={s}>{WORKFLOW_STATUS_LABELS[s]}</option>))}
+        </select>
+      </div>
       <p className="text-xs leading-relaxed text-[var(--muted)]">
         SLA: Retouch foto maksimal {SLA_RETOUCH_WEEKS} minggu setelah event ·
         Cetak/video maksimal {SLA_PRINT_WEEKS} minggu setelah event.
@@ -230,7 +246,7 @@ export function SlaTab() {
           Tidak ada project aktif (status LUNAS / MENUNGGU PELUNASAN).
         </div>
       ) : (
-        rows.map((row) => {
+        rows.slice(page * 20, (page + 1) * 20).map((row) => {
           const prog = row.project_progress?.[0];
           const currentIdx = WORKFLOW_STEPS.indexOf(prog?.progress_status ?? "SHOOTING");
           const clientName = row.client?.full_name ?? row.client_name;
@@ -305,6 +321,13 @@ export function SlaTab() {
           );
         })
       )}
+      {rows.length > 20 ? (
+        <div className="flex items-center justify-between gap-3 pt-2">
+          <button type="button" onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0} className="rounded-full border border-[var(--line)] bg-white px-4 py-2 text-xs font-semibold text-[var(--muted)] hover:border-[var(--brand)] disabled:opacity-40">Sebelumnya</button>
+          <span className="text-xs font-semibold text-[var(--muted)]">Halaman {page + 1} dari {Math.ceil(rows.length / 20)} ({rows.length} data)</span>
+          <button type="button" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * 20 >= rows.length} className="rounded-full border border-[var(--line)] bg-white px-4 py-2 text-xs font-semibold text-[var(--muted)] hover:border-[var(--brand)] disabled:opacity-40">Berikutnya</button>
+        </div>
+      ) : null}
     </div>
   );
 }
