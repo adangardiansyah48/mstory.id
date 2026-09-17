@@ -1,6 +1,46 @@
 import type { Metadata } from "next";
 import { Playfair_Display, Plus_Jakarta_Sans } from "next/font/google";
+import { createClient } from "@/lib/supabase/server";
+import { DynamicFavicon } from "@/components/ui/dynamic-favicon";
 import "./globals.css";
+
+async function resolveFanpageUrl(
+  field: "logo_url" | "banner_url",
+): Promise<string | null> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!supabaseUrl) return null;
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("linktree_settings")
+      .select(field)
+      .maybeSingle();
+    const row = data as Record<string, string | null> | null;
+    const raw = row?.[field];
+    if (!raw) return null;
+    return /^(https?:)?\/\//.test(raw)
+      ? raw
+      : `${supabaseUrl}/storage/v1/object/public/${raw}`;
+  } catch {
+    return null;
+  }
+}
+
+const faviconCache: { url: string | null; expiresAt: number } = {
+  url: null,
+  expiresAt: 0,
+};
+
+async function getCachedFavicon(): Promise<string | null> {
+  const now = Date.now();
+  if (faviconCache.url !== null || faviconCache.expiresAt > now) {
+    if (faviconCache.expiresAt > now) return faviconCache.url;
+  }
+  const url = await resolveFanpageUrl("logo_url");
+  faviconCache.url = url;
+  faviconCache.expiresAt = now + 60_000;
+  return url;
+}
 
 const playfair = Playfair_Display({
   variable: "--font-serif",
@@ -14,17 +54,28 @@ const plusJakarta = Plus_Jakarta_Sans({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "Mstory.id — Photography & Videography",
-  description:
-    "Abadikan momen berharga Anda bersama Mstory.id. Photography & Videography profesional di Tasikmalaya. Booking online & kalkulator estimasi mudah.",
-  openGraph: {
+export async function generateMetadata(): Promise<Metadata> {
+  const favicon = await getCachedFavicon();
+  const base: Metadata = {
     title: "Mstory.id — Photography & Videography",
     description:
-      "Abadikan momen berharga Anda bersama Mstory.id. Booking online & kalkulator estimasi mudah.",
-    type: "website",
-  },
-};
+      "Abadikan momen berharga Anda bersama Mstory.id. Photography & Videography profesional di Tasikmalaya. Booking online & kalkulator estimasi mudah.",
+    openGraph: {
+      title: "Mstory.id — Photography & Videography",
+      description:
+        "Abadikan momen berharga Anda bersama Mstory.id. Booking online & kalkulator estimasi mudah.",
+      type: "website",
+    },
+  };
+  if (favicon) {
+    base.icons = {
+      icon: [{ url: favicon, type: "image/png" }],
+      shortcut: favicon,
+      apple: favicon,
+    };
+  }
+  return base;
+}
 
 // Atribut yang disisipkan ekstensi browser (Bitdefender/Urban VPN/audio-reader,
 // dll.) sebelum React hydrasi menyebabkan mismatch hydration warning.
@@ -83,6 +134,7 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <script dangerouslySetInnerHTML={{ __html: EXTENSION_ATTR_STRIP_SCRIPT }} />
+        <DynamicFavicon />
         {children}
       </body>
     </html>
