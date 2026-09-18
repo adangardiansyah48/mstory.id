@@ -761,7 +761,7 @@ const filtered = bookings.filter((b) => {
                         </p>
                         <p>
                           <span className="text-[var(--muted)]">Transport:</span>{" "}
-                          {formatCurrency(booking.transport_fee ?? 0)}{booking.location_type === "LUAR_KOTA" ? " · Luar Kota" : " · Kota Tasik"}
+                          {formatCurrency(booking.transport_fee ?? 0)}
                         </p>
                         <p>
                           <span className="text-[var(--muted)]">Grand Total:</span>{" "}
