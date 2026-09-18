@@ -88,6 +88,8 @@ export function PackagesTab() {
   const [newCatIcon, setNewCatIcon] = useState("Gem");
   const [newSubName, setNewSubName] = useState("");
   const [newSubCat, setNewSubCat] = useState("");
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [editingSubCategory, setEditingSubCategory] = useState<SubCategory | null>(null);
 
   const [newPackage, setNewPackage] = useState<NewPackage>({ ...EMPTY_PACKAGE });
   const [editingPackageId, setEditingPackageId] = useState<number | null>(null);
@@ -158,6 +160,88 @@ export function PackagesTab() {
       await Swal.fire({ icon: "success", title: "Kategori Ditambahkan", timer: 1000, showConfirmButton: false });
       clearBookingDataCache();
     }
+  }
+
+  function startEditCategory(cat: Category) {
+    setEditingCategory(cat);
+    setNewCatName(cat.name);
+    setNewCatIcon(cat.icon ?? "Gem");
+    setShowCatModal(true);
+  }
+
+  async function saveCategory() {
+    if (editingCategory) {
+      if (!newCatName.trim()) {
+        await Swal.fire({ icon: "error", title: "Nama Kategori Kosong", text: "Nama kategori wajib diisi." });
+        return;
+      }
+      const supabase = createClient();
+      if (!supabase) return;
+      const { error } = await supabase
+        .from("categories")
+        .update({ name: newCatName.trim().toUpperCase(), icon: newCatIcon })
+        .eq("id", editingCategory.id);
+      if (error) {
+        await Swal.fire({ icon: "error", title: "Gagal Memperbarui Kategori", text: error.message });
+        return;
+      }
+      setCategories((prev) =>
+        prev.map((c) =>
+          c.id === editingCategory.id
+            ? { ...c, name: newCatName.trim().toUpperCase(), icon: newCatIcon }
+            : c,
+        ),
+      );
+      setShowCatModal(false);
+      setEditingCategory(null);
+      setNewCatName("");
+      setNewCatIcon("Gem");
+      await Swal.fire({ icon: "success", title: "Kategori Diperbarui", timer: 1000, showConfirmButton: false });
+      clearBookingDataCache();
+      return;
+    }
+    await addCategory();
+  }
+
+  function startEditSubCategory(sub: SubCategory) {
+    setEditingSubCategory(sub);
+    setNewSubName(sub.name);
+    setNewSubCat(String(sub.category_id));
+    setShowSubModal(true);
+  }
+
+  async function saveSubCategory() {
+    if (editingSubCategory) {
+      if (!newSubName.trim() || !newSubCat) {
+        await Swal.fire({ icon: "error", title: "Data Tidak Lengkap", text: "Nama sub-kategori dan kategori induk wajib diisi." });
+        return;
+      }
+      const supabase = createClient();
+      if (!supabase) return;
+      const { error } = await supabase
+        .from("sub_categories")
+        .update({ name: newSubName.trim(), category_id: Number(newSubCat) })
+        .eq("id", editingSubCategory.id);
+      if (error) {
+        await Swal.fire({ icon: "error", title: "Gagal Memperbarui Sub-Kategori", text: error.message });
+        return;
+      }
+      setSubCategories((prev) =>
+        prev.map((s) =>
+          s.id === editingSubCategory.id
+            ? { ...s, name: newSubName.trim(), category_id: Number(newSubCat) }
+            : s,
+        ),
+      );
+      setShowSubModal(false);
+      setEditingSubCategory(null);
+      setNewSubName("");
+      setNewSubCat("");
+      await Swal.fire({ icon: "success", title: "Sub-Kategori Diperbarui", timer: 1000, showConfirmButton: false });
+      clearBookingDataCache();
+      return;
+    }
+    await addSubCategory();
   }
 
   async function addSubCategory() {
@@ -501,7 +585,15 @@ export function PackagesTab() {
                   <span className="text-sm font-bold text-[var(--ink)]">{cat.name}</span>
                   <div className="flex items-center gap-2">
                     <button
+                      onClick={() => startEditCategory(cat)}
+                      className="text-[var(--muted)] hover:text-[var(--ink)]"
+                      title="Edit kategori"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
                       onClick={() => {
+                        setEditingSubCategory(null);
                         setNewSubCat(String(cat.id));
                         setShowSubModal(true);
                       }}
@@ -549,12 +641,21 @@ export function PackagesTab() {
                               {packages.filter((p) => p.sub_category_id === sub.id).length} paket
                             </p>
                           </div>
-                          <button
-                            onClick={() => deleteRow("sub_categories", sub.id)}
-                            className="text-red-400 hover:text-red-600"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => startEditSubCategory(sub)}
+                              className="text-[var(--muted)] hover:text-[var(--ink)]"
+                              title="Edit sub-kategori"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => deleteRow("sub_categories", sub.id)}
+                              className="text-red-400 hover:text-red-600"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         </div>
                       ))}
                   </div>
@@ -822,10 +923,12 @@ export function PackagesTab() {
       )}
 
       {showCatModal && (
-        <Modal open={true} onClose={() => { setShowCatModal(false); setNewCatName(""); setNewCatIcon("Gem"); }}>
+        <Modal open={true} onClose={() => { setShowCatModal(false); setNewCatName(""); setNewCatIcon("Gem"); setEditingCategory(null); }}>
           <div className="flex flex-col overflow-hidden">
             <div className="border-b border-white/40 px-6 pb-4 pt-6">
-              <h2 className="font-serif text-xl font-semibold text-[var(--ink)]">Tambah Kategori</h2>
+              <h2 className="font-serif text-xl font-semibold text-[var(--ink)]">
+                {editingCategory ? "Edit Kategori" : "Tambah Kategori"}
+              </h2>
             </div>
             <div className="flex-1 overflow-y-auto px-6 py-6">
               <div className="space-y-4">
@@ -868,18 +971,20 @@ export function PackagesTab() {
               </div>
             </div>
             <div className="flex items-center justify-end gap-3 border-t border-white/40 px-6 py-4">
-              <button onClick={() => { setShowCatModal(false); setNewCatName(""); setNewCatIcon("Gem"); }} className="h-11 rounded-xl border border-[var(--line)] px-5 text-sm font-bold uppercase text-[var(--muted)]">Batal</button>
-              <button onClick={addCategory} className="h-11 rounded-xl bg-[var(--brand)] px-5 text-sm font-bold uppercase text-white shadow-lg">Simpan</button>
+              <button onClick={() => { setShowCatModal(false); setNewCatName(""); setNewCatIcon("Gem"); setEditingCategory(null); }} className="h-11 rounded-xl border border-[var(--line)] px-5 text-sm font-bold uppercase text-[var(--muted)]">Batal</button>
+              <button onClick={saveCategory} className="h-11 rounded-xl bg-[var(--brand)] px-5 text-sm font-bold uppercase text-white shadow-lg">Simpan</button>
             </div>
           </div>
         </Modal>
       )}
 
       {showSubModal && (
-        <Modal open={true} onClose={() => { setShowSubModal(false); setNewSubName(""); }}>
+        <Modal open={true} onClose={() => { setShowSubModal(false); setNewSubName(""); setNewSubCat(""); setEditingSubCategory(null); }}>
           <div className="flex flex-col overflow-hidden">
             <div className="border-b border-white/40 px-6 pb-4 pt-6">
-              <h2 className="font-serif text-xl font-semibold text-[var(--ink)]">Tambah Sub-Kategori</h2>
+              <h2 className="font-serif text-xl font-semibold text-[var(--ink)]">
+                {editingSubCategory ? "Edit Sub-Kategori" : "Tambah Sub-Kategori"}
+              </h2>
             </div>
             <div className="flex-1 overflow-y-auto px-6 py-6">
               <div className="space-y-4">
@@ -908,8 +1013,8 @@ export function PackagesTab() {
               </div>
             </div>
             <div className="flex items-center justify-end gap-3 border-t border-white/40 px-6 py-4">
-              <button onClick={() => { setShowSubModal(false); setNewSubName(""); }} className="h-11 rounded-xl border border-[var(--line)] px-5 text-sm font-bold uppercase text-[var(--muted)]">Batal</button>
-              <button onClick={addSubCategory} className="h-11 rounded-xl bg-[var(--brand)] px-5 text-sm font-bold uppercase text-white shadow-lg">Simpan</button>
+              <button onClick={() => { setShowSubModal(false); setNewSubName(""); setNewSubCat(""); setEditingSubCategory(null); }} className="h-11 rounded-xl border border-[var(--line)] px-5 text-sm font-bold uppercase text-[var(--muted)]">Batal</button>
+              <button onClick={saveSubCategory} className="h-11 rounded-xl bg-[var(--brand)] px-5 text-sm font-bold uppercase text-white shadow-lg">Simpan</button>
             </div>
           </div>
         </Modal>
