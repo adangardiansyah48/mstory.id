@@ -115,6 +115,7 @@ export function Step1Category({
             >
               <CategoryIcon
                 name={cat.name}
+                icon={(cat as Category & { icon?: string | null }).icon}
                 className={cn(
                   "h-6 w-6",
                   selection.category?.id === cat.id

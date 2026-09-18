@@ -9,6 +9,7 @@ export type WorkflowStatus = "SHOOTING" | "EDIT" | "PRINTING" | "READY" | "DELIV
 export interface Category {
   id: number;
   name: string;
+  icon?: string | null;
 }
 
 export interface SubCategory {

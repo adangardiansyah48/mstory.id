@@ -8,6 +8,7 @@ import { Modal } from "@/components/ui/modal";
 import { cn, formatCurrency } from "@/lib/utils";
 import Swal from "sweetalert2";
 import type { Addon, Category, Package as PackageRow, SubCategory } from "@/lib/types";
+import { AVAILABLE_CATEGORY_ICONS, CategoryIcon } from "@/components/ui/icons";
 
 type EntityType = "categories" | "packages" | "addons";
 
@@ -84,6 +85,7 @@ export function PackagesTab() {
   const [activeSection, setActiveSection] = useState<EntityType>("categories");
 
   const [newCatName, setNewCatName] = useState("");
+  const [newCatIcon, setNewCatIcon] = useState("Gem");
   const [newSubName, setNewSubName] = useState("");
   const [newSubCat, setNewSubCat] = useState("");
 
@@ -143,6 +145,7 @@ export function PackagesTab() {
     if (!supabase) return;
     const { data, error } = await insertRowRetry(supabase, "categories", {
       name: newCatName.trim().toUpperCase(),
+      icon: newCatIcon,
     });
     if (error) {
       await Swal.fire({ icon: "error", title: "Gagal Menambah", text: error.message });
@@ -819,24 +822,53 @@ export function PackagesTab() {
       )}
 
       {showCatModal && (
-        <Modal open={true} onClose={() => { setShowCatModal(false); setNewCatName(""); }}>
+        <Modal open={true} onClose={() => { setShowCatModal(false); setNewCatName(""); setNewCatIcon("Gem"); }}>
           <div className="flex flex-col overflow-hidden">
             <div className="border-b border-white/40 px-6 pb-4 pt-6">
               <h2 className="font-serif text-xl font-semibold text-[var(--ink)]">Tambah Kategori</h2>
             </div>
             <div className="flex-1 overflow-y-auto px-6 py-6">
-              <div>
-                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Nama Kategori</p>
-                <input
-                  value={newCatName}
-                  onChange={(e) => setNewCatName(e.target.value)}
-                  placeholder="Contoh: WEDDING"
-                  className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none"
-                />
+              <div className="space-y-4">
+                <div>
+                  <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Nama Kategori</p>
+                  <input
+                    value={newCatName}
+                    onChange={(e) => setNewCatName(e.target.value)}
+                    placeholder="Contoh: WEDDING"
+                    className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Icon</p>
+                    <span className="rounded-full bg-[var(--soft)] px-2.5 py-1 text-xs font-semibold text-[var(--ink)]">
+                      <CategoryIcon name="" icon={newCatIcon} className="inline h-4 w-4 text-[var(--brand)] mr-1" />
+                      {newCatIcon}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
+                    {AVAILABLE_CATEGORY_ICONS.map((ic) => (
+                      <button
+                        key={ic.key}
+                        type="button"
+                        onClick={() => setNewCatIcon(ic.key)}
+                        className={cn(
+                          "flex flex-col items-center gap-1 rounded-xl border-2 p-2 text-center transition-all",
+                          newCatIcon === ic.key
+                            ? "border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--brand)]"
+                            : "border-[var(--line)] text-[var(--muted)] hover:border-[var(--brand)]",
+                        )}
+                        title={ic.label}
+                      >
+                        <CategoryIcon name="" icon={ic.key} className="h-5 w-5" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
             <div className="flex items-center justify-end gap-3 border-t border-white/40 px-6 py-4">
-              <button onClick={() => { setShowCatModal(false); setNewCatName(""); }} className="h-11 rounded-xl border border-[var(--line)] px-5 text-sm font-bold uppercase text-[var(--muted)]">Batal</button>
+              <button onClick={() => { setShowCatModal(false); setNewCatName(""); setNewCatIcon("Gem"); }} className="h-11 rounded-xl border border-[var(--line)] px-5 text-sm font-bold uppercase text-[var(--muted)]">Batal</button>
               <button onClick={addCategory} className="h-11 rounded-xl bg-[var(--brand)] px-5 text-sm font-bold uppercase text-white shadow-lg">Simpan</button>
             </div>
           </div>

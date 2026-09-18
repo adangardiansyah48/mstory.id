@@ -46,13 +46,53 @@ const ADDON_ICON_MAP: Record<string, LucideIcon> = {
   "PENAMBAHAN_MINI_STUDIO_6X6": Home,
 };
 
+const ICON_BY_NAME: Record<string, LucideIcon> = {
+  Gem,
+  Camera,
+  Heart,
+  Clapperboard,
+  GraduationCap,
+  PartyPopper,
+  Bath,
+  Film,
+  Frame,
+  Home,
+  Palette,
+  Plane,
+  Shirt,
+  Sparkles,
+};
+
+export const AVAILABLE_CATEGORY_ICONS: { key: string; label: string }[] = [
+  { key: "Gem", label: "Berlian" },
+  { key: "Camera", label: "Kamera" },
+  { key: "Heart", label: "Hati" },
+  { key: "PartyPopper", label: "Pesta" },
+  { key: "Clapperboard", label: "Clapperboard" },
+  { key: "GraduationCap", label: "Toga" },
+  { key: "Film", label: "Film" },
+  { key: "Frame", label: "Frame" },
+  { key: "Sparkles", label: "Sparkles" },
+  { key: "Shirt", label: "Shirt" },
+  { key: "Palette", label: "Palette" },
+  { key: "Home", label: "Home" },
+  { key: "Plane", label: "Plane" },
+  { key: "Bath", label: "Bath" },
+];
+
 export function CategoryIcon({
   name,
   className,
+  icon,
 }: {
   name: string;
   className?: string;
+  icon?: string | null;
 }) {
+  if (icon) {
+    const Icon = ICON_BY_NAME[icon] ?? Camera;
+    return <Icon className={className} aria-hidden="true" />;
+  }
   const Icon = CATEGORY_ICON_MAP[name.toUpperCase()] ?? Camera;
   return <Icon className={className} aria-hidden="true" />;
 }
