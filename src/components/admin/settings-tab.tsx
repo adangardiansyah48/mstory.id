@@ -23,6 +23,7 @@ import {
   type SiteSettings,
 } from "@/lib/site-settings";
 import { Camera, Check, ImagePlus, Loader2, Trash2 } from "lucide-react";
+import Swal from "sweetalert2";
 
 const TEXT_FIELDS: {
   key: keyof Omit<SiteSettings, "id" | "updated_at">;
@@ -243,7 +244,13 @@ export function SettingsTab({ onThemeChanged }: { onThemeChanged?: (theme: strin
     const { ok, error } = await updateSiteSettings(patch);
     setSaving(false);
     if (ok) {
-      setMessage("Pengaturan berhasil disimpan.");
+      await Swal.fire({
+        icon: "success",
+        title: "Tersimpan",
+        text: "Pengaturan berhasil diperbarui.",
+        timer: 1500,
+        showConfirmButton: false,
+      });
     } else {
       setMessage(`Gagal menyimpan: ${error ?? "terjadi kesalahan"}`);
     }
