@@ -81,6 +81,7 @@ export function BookingWizard({
     fullName: "",
     whatsappNumber: "",
     locationType: "KOTA_TASIK",
+    travelHours: "",
     eventAddress: "",
     eventDate: "",
     notes: "",
@@ -133,8 +134,10 @@ export function BookingWizard({
     (selection.selectedPackage?.price || 0) +
     selection.addons.reduce((sum, a) => sum + a.price, 0);
 
+  const ratePerJam = transportFeeDefault ?? TRANSPORT_FEE_LUAR_KOTA;
+  const jam = Math.max(0, Number(client.travelHours) || 0);
   const transportFee =
-    client.locationType === "LUAR_KOTA" ? (transportFeeDefault ?? TRANSPORT_FEE_LUAR_KOTA) : 0;
+    client.locationType === "LUAR_KOTA" ? Math.round(jam * ratePerJam) : 0;
 
   const grandTotal = subtotal + transportFee;
   const dpValue = Number(selection.selectedPackage?.dp_value ?? 0);
@@ -159,7 +162,8 @@ export function BookingWizard({
     !!client.eventDate &&
     !!client.fullName.trim() &&
     isValidWhatsAppNumber(client.whatsappNumber) &&
-    !!client.eventAddress.trim();
+    !!client.eventAddress.trim() &&
+    (client.locationType !== "LUAR_KOTA" || (Number(client.travelHours) || 0) > 0);
 
   async function handleSubmit() {
     if (!selection.selectedPackage) return;

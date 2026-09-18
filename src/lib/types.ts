@@ -103,6 +103,7 @@ export interface WizardClientDetails {
   fullName: string;
   whatsappNumber: string;
   locationType: "KOTA_TASIK" | "LUAR_KOTA";
+  travelHours: string;
   eventAddress: string;
   eventDate: string;
   notes: string;

@@ -260,7 +260,11 @@ export function Step2Schedule({
             <button
               key={opt.value}
               onClick={() =>
-                setClient({ ...client, locationType: opt.value })
+                setClient({
+                  ...client,
+                  locationType: opt.value,
+                  travelHours: opt.value === "KOTA_TASIK" ? "" : client.travelHours,
+                })
               }
               className={cn(
                 "rounded-[1.5rem] border-2 px-3 py-3 text-xs font-semibold transition-all",
@@ -281,9 +285,22 @@ export function Step2Schedule({
           ))}
         </div>
         {client.locationType === "LUAR_KOTA" && (
-          <div className="mt-3 rounded-[1.5rem] border border-white/50 bg-white/60 px-4 py-3 text-xs text-[var(--muted)] backdrop-blur-md">
-            Biaya transport <strong>{FEE_LABEL}</strong>{" "}
-            berlaku untuk lokasi di luar Kota Tasikmalaya.
+          <div className="mt-3 space-y-3">
+            <Input
+              label="Waktu Jarak Tempuh (jam)"
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="0.5"
+              placeholder="Contoh: 2"
+              value={client.travelHours}
+              onChange={(e) =>
+                setClient({ ...client, travelHours: e.target.value })
+              }
+            />
+            <div className="rounded-[1.5rem] border border-white/50 bg-white/60 px-4 py-3 text-xs text-[var(--muted)] backdrop-blur-md">
+              Tarif: {FEE_LABEL}/jam × {client.travelHours || "0"} jam = <strong>{formatCurrency((Number(client.travelHours) || 0) * (transportFeeDefault ?? OUTSIDE_CITY_TRANSPORT_FEE))}</strong>
+            </div>
           </div>
         )}
         <div className="mt-3">
