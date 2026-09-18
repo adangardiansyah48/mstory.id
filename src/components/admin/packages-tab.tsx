@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { clearBookingDataCache } from "@/lib/booking-data";
 import { ChevronDown, ChevronUp, Pencil, Plus, Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -9,6 +10,37 @@ import Swal from "sweetalert2";
 import type { Addon, Category, Package as PackageRow, SubCategory } from "@/lib/types";
 
 type EntityType = "categories" | "packages" | "addons";
+
+type DbClient = NonNullable<ReturnType<typeof createClient>>;
+
+async function insertRowRetry(
+  supabase: DbClient,
+  table: string,
+  payload: Record<string, unknown>,
+) {
+  const first = await supabase.from(table).insert(payload).select().single();
+  if (!first.error) return first;
+  if ((first.error as { code?: string }).code !== "23505") return first;
+  console.warn("Insert retry triggered:", first.error);
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const { data: maxRow } = await supabase
+      .from(table)
+      .select("id")
+      .order("id", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const nextId = Number((maxRow as { id?: number } | null)?.id ?? 0) + 1 + attempt;
+    const retry = await supabase
+      .from(table)
+      .insert({ ...payload, id: nextId })
+      .select()
+      .single();
+    if (!retry.error) return retry;
+    if ((retry.error as { code?: string }).code !== "23505") return retry;
+    console.warn("Insert retry attempt", attempt + 1, "failed:", retry.error);
+  }
+  return first;
+}
 
 interface NewPackage {
   id: number;
@@ -109,11 +141,9 @@ export function PackagesTab() {
     }
     const supabase = createClient();
     if (!supabase) return;
-    const { data, error } = await supabase
-      .from("categories")
-      .insert({ name: newCatName.trim().toUpperCase() })
-      .select()
-      .single();
+    const { data, error } = await insertRowRetry(supabase, "categories", {
+      name: newCatName.trim().toUpperCase(),
+    });
     if (error) {
       await Swal.fire({ icon: "error", title: "Gagal Menambah", text: error.message });
       return;
@@ -123,6 +153,7 @@ export function PackagesTab() {
       setNewCatName("");
       setShowCatModal(false);
       await Swal.fire({ icon: "success", title: "Kategori Ditambahkan", timer: 1000, showConfirmButton: false });
+      clearBookingDataCache();
     }
   }
 
@@ -133,11 +164,10 @@ export function PackagesTab() {
     }
     const supabase = createClient();
     if (!supabase) return;
-    const { data, error } = await supabase
-      .from("sub_categories")
-      .insert({ name: newSubName.trim(), category_id: Number(newSubCat) })
-      .select()
-      .single();
+    const { data, error } = await insertRowRetry(supabase, "sub_categories", {
+      name: newSubName.trim(),
+      category_id: Number(newSubCat),
+    });
     if (error) {
       await Swal.fire({ icon: "error", title: "Gagal Menambah", text: error.message });
       return;
@@ -147,6 +177,7 @@ export function PackagesTab() {
       setNewSubName("");
       setShowSubModal(false);
       await Swal.fire({ icon: "success", title: "Sub-Kategori Ditambahkan", timer: 1000, showConfirmButton: false });
+      clearBookingDataCache();
     }
   }
 
@@ -170,23 +201,59 @@ export function PackagesTab() {
         .from("packages")
         .update(payload)
         .eq("id", editingPackageId);
-      if (!error) {
-        setPackages((prev) =>
-          prev.map((p) => (p.id === editingPackageId ? { ...p, ...payload } : p)),
-        );
+      if (error) {
+        await Swal.fire({
+          icon: "error",
+          title: "Gagal Memperbarui Paket",
+          text: error.message,
+          confirmButtonColor: "#A8967A",
+        });
+      } else {
+        setPackages((prev) => prev.map((p) => (p.id === editingPackageId ? { ...p, ...payload } : p)),);
         cancelPackageEdit();
+        await Swal.fire({
+          icon: "success",
+          title: "Paket Diperbarui",
+          timer: 1000,
+          showConfirmButton: false,
+        });
+        clearBookingDataCache();
       }
       return;
     }
 
-    const { data, error } = await supabase
-      .from("packages")
-      .insert(payload)
-      .select()
-      .single();
+    // Validate numeric fields before insertion
+    const priceNum = Number(newPackage.price);
+    const dpNum = Number(newPackage.dp_value || 0);
+    const durationNum = newPackage.duration_hours ? Number(newPackage.duration_hours) : null;
+    if (isNaN(priceNum) || isNaN(dpNum) || (durationNum !== null && isNaN(durationNum))) {
+      await Swal.fire({ icon: "error", title: "Data Tidak Valid", text: "Harga, DP, dan durasi harus berupa angka yang valid." });
+      return;
+    }
+
+    const { data, error } = await insertRowRetry(supabase, "packages", {
+      ...payload,
+      price: priceNum,
+      dp_value: dpNum,
+      duration_hours: durationNum,
+    });
     if (!error && data) {
       setPackages((prev) => [...prev, data]);
       setNewPackage({ ...EMPTY_PACKAGE });
+      await Swal.fire({
+        icon: "success",
+        title: "Paket Ditambahkan",
+        timer: 1000,
+        showConfirmButton: false,
+      });
+      clearBookingDataCache();
+    } else if (error) {
+      await Swal.fire({
+        icon: "error",
+        title: "Gagal Menambah",
+        text: error.message,
+        confirmButtonColor: "#A8967A",
+      });
     }
   }
 
@@ -225,9 +292,14 @@ export function PackagesTab() {
     }
     const supabase = createClient();
     if (!supabase) return;
+    const priceNum = Number(newAddon.price);
+    if (isNaN(priceNum)) {
+      await Swal.fire({ icon: "error", title: "Data Tidak Valid", text: "Harga harus berupa angka yang valid." });
+      return;
+    }
     const payload = {
       name: newAddon.name.trim().toUpperCase(),
-      price: Number(newAddon.price),
+      price: priceNum,
       is_active: newAddon.is_active,
     };
 
@@ -236,24 +308,46 @@ export function PackagesTab() {
         .from("addons")
         .update(payload)
         .eq("id", editingAddonId);
-      if (!error) {
-        setAddons((prev) =>
-          prev.map((a) => (a.id === editingAddonId ? { ...a, ...payload } : a)),
-        );
+      if (error) {
+        await Swal.fire({
+          icon: "error",
+          title: "Gagal Memperbarui Add-on",
+          text: error.message,
+          confirmButtonColor: "#A8967A",
+        });
+      } else {
+        setAddons((prev) => prev.map((a) => (a.id === editingAddonId ? { ...a, ...payload } : a)),);
         setEditingAddonId(null);
         setNewAddon({ id: 0, name: "", price: "", is_active: true });
+        await Swal.fire({
+          icon: "success",
+          title: "Add-on Diperbarui",
+          timer: 1000,
+          showConfirmButton: false,
+        });
+        clearBookingDataCache();
       }
       return;
     }
 
-    const { data, error } = await supabase
-      .from("addons")
-      .insert(payload)
-      .select()
-      .single();
+    const { data, error } = await insertRowRetry(supabase, "addons", payload);
     if (!error && data) {
       setAddons((prev) => [...prev, data]);
       setNewAddon({ id: 0, name: "", price: "", is_active: true });
+      await Swal.fire({
+        icon: "success",
+        title: "Add-on Ditambahkan",
+        timer: 1000,
+        showConfirmButton: false,
+      });
+      clearBookingDataCache();
+    } else if (error) {
+      await Swal.fire({
+        icon: "error",
+        title: "Gagal Menambah Add-on",
+        text: error.message,
+        confirmButtonColor: "#A8967A",
+      });
     }
   }
 
@@ -290,22 +384,26 @@ export function PackagesTab() {
     const { error } = await supabase.from(table).delete().eq("id", id);
     if (error) {
       console.error(error);
-      await Swal.fire({ icon: "error", title: "Gagal Menghapus", text: error.message });
+      await Swal.fire({ icon: "error", title: "Gagal Menghapus", text: error.message, confirmButtonColor: "#A8967A" });
       return;
     }
     if (table === "categories") {
-        setCategories((prev) => prev.filter((c) => c.id !== id));
-        setSubCategories((prev) => prev.filter((s) => s.category_id !== id));
-        setPackages((prev) => prev.filter((p) => !subCategories.find((s) => s.category_id === id && s.id === p.sub_category_id)));
-      } else if (table === "sub_categories") {
-        setSubCategories((prev) => prev.filter((s) => s.id !== id));
-        setPackages((prev) => prev.filter((p) => p.sub_category_id !== id));
-      } else if (table === "packages") {
-        setPackages((prev) => prev.filter((p) => p.id !== id));
-      } else if (table === "addons") {
-        setAddons((prev) => prev.filter((a) => a.id !== id));
-      }
+      const subsInCat = subCategories.filter((s) => s.category_id === id);
+      setCategories((prev) => prev.filter((c) => c.id !== id));
+      setSubCategories((prev) => prev.filter((s) => s.category_id !== id));
+      setPackages((prev) =>
+        prev.filter((p) => !subsInCat.find((s) => s.id === p.sub_category_id))
+      );
+    } else if (table === "sub_categories") {
+      setSubCategories((prev) => prev.filter((s) => s.id !== id));
+      setPackages((prev) => prev.filter((p) => p.sub_category_id !== id));
+    } else if (table === "packages") {
+      setPackages((prev) => prev.filter((p) => p.id !== id));
+    } else if (table === "addons") {
+      setAddons((prev) => prev.filter((a) => a.id !== id));
+    }
     await Swal.fire({ icon: "success", title: "Item Dihapus", timer: 1000, showConfirmButton: false });
+    clearBookingDataCache();
   }
 
   async function toggleActive(table: "packages" | "addons", id: number, is_active: boolean) {
@@ -315,11 +413,25 @@ export function PackagesTab() {
       .from(table)
       .update({ is_active: !is_active })
       .eq("id", id);
-    if (!error) {
+    if (error) {
+      await Swal.fire({
+        icon: "error",
+        title: "Gagal Memperbarui Status",
+        text: error.message,
+        confirmButtonColor: "#A8967A",
+      });
+    } else {
       if (table === "packages")
         setPackages((prev) => prev.map((p) => (p.id === id ? { ...p, is_active: !is_active } : p)));
       else
         setAddons((prev) => prev.map((a) => (a.id === id ? { ...a, is_active: !is_active } : a)));
+      await Swal.fire({
+        icon: "success",
+        title: "Status Diperbarui",
+        timer: 1000,
+        showConfirmButton: false,
+      });
+      clearBookingDataCache();
     }
   }
 

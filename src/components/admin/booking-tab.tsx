@@ -3,14 +3,19 @@
 import { useEffect, useState, type ComponentProps } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
+  CalendarOff,
   CalendarX2,
+  Car,
   Check,
   ChevronDown,
   ChevronUp,
   Download,
   FileDown,
   MessageCircle,
+  Pencil,
+  Plus,
   Search,
+  Trash2,
   X,
 } from "lucide-react";
 import { cn, formatCurrency, formatShortDate } from "@/lib/utils";
@@ -25,6 +30,7 @@ import { getSiteSettings, getStoredPublicUrl } from "@/lib/site-settings";
 interface BookingRow {
   id: number;
   invoice_number: string;
+  client_id: number;
   booking_date?: string | null;
   event_date: string;
   location_type: "KOTA_TASIK" | "LUAR_KOTA";
@@ -38,6 +44,8 @@ interface BookingRow {
   dp_paid_at?: string | null;
   paid_at?: string | null;
   client: { full_name: string; whatsapp_number: string };
+  source: string;
+  vendor_name: string;
   details: {
     price_at_booking: number;
     packages: { name: string; dp_value?: number };
@@ -87,6 +95,38 @@ export function BookingTab({
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 20;
 
+  const [showBookingForm, setShowBookingForm] = useState(false);
+  const [editingBooking, setEditingBooking] = useState<BookingRow | null>(null);
+  const [formData, setFormData] = useState<{
+    full_name: string;
+    whatsapp_number: string;
+    event_date: string;
+    location_type: "KOTA_TASIK" | "LUAR_KOTA";
+    event_address: string;
+    subtotal: string;
+    transport_fee: string;
+    grand_total: string;
+    dp_amount: string;
+    status: BookingStatus;
+    notes: string;
+    is_vendor: boolean;
+    vendor_name: string;
+  }>({
+    full_name: "",
+    whatsapp_number: "",
+    event_date: "",
+    location_type: "KOTA_TASIK",
+    event_address: "",
+    subtotal: "0",
+    transport_fee: "0",
+    grand_total: "0",
+    dp_amount: "0",
+    status: "MENUNGGU_DP",
+    notes: "",
+    is_vendor: false,
+    vendor_name: "",
+  });
+
   useEffect(() => {
     loadBookings();
     getSiteSettings()
@@ -133,7 +173,190 @@ export function BookingTab({
 
   useEffect(() => {
     loadBookings();
-  }, [page, statusFilter]);
+  }, [page, statusFilter, statusFilter]); // tetap dependency array eksplisit
+
+  async function addBooking() {
+    const supabase = createClient();
+    if (!supabase) return;
+    if (!formData.full_name.trim() || !formData.event_date || !formData.event_address.trim()) {
+      await Swal.fire({ icon: "error", title: "Data Tidak Lengkap", text: "Nama, tanggal, dan alamat wajib diisi." });
+      return;
+    }
+    const { data: clientData, error: clientErr } = await supabase
+      .from("clients")
+      .insert({
+        full_name: formData.full_name.trim(),
+        whatsapp_number: formData.whatsapp_number.trim() || "",
+      })
+      .select()
+      .single();
+    if (clientErr || !clientData) {
+      await Swal.fire({ icon: "error", title: "Gagal Menambah Klien", text: clientErr?.message ?? "Terjadi kesalahan." });
+      return;
+    }
+    const { data: bookingData, error: bookingErr } = await supabase
+      .from("bookings")
+      .insert({
+        invoice_number: `ADMIN-${Date.now()}`,
+        client_id: clientData.id,
+        event_date: formData.event_date,
+        location_type: formData.location_type,
+        event_address: formData.event_address.trim(),
+        subtotal: Number(formData.subtotal) || 0,
+        transport_fee: Number(formData.transport_fee) || 0,
+        grand_total: Number(formData.grand_total) || 0,
+        dp_amount: Number(formData.dp_amount) || 0,
+        status: formData.status,
+        notes: formData.notes.trim() || null,
+        source: "CLIENT",
+        vendor_name: null,
+      })
+      .select()
+      .single();
+    if (bookingErr || !bookingData) {
+      await supabase.from("clients").delete().eq("id", clientData.id);
+      await Swal.fire({ icon: "error", title: "Gagal Menambah Booking", text: bookingErr?.message ?? "Terjadi kesalahan." });
+      return;
+    }
+    await Swal.fire({ icon: "success", title: "Booking Ditambahkan", timer: 1200, showConfirmButton: false });
+    setShowBookingForm(false);
+    setFormData({ full_name: "", whatsapp_number: "", event_date: "", location_type: "KOTA_TASIK", event_address: "", subtotal: "0", transport_fee: "0", grand_total: "0", dp_amount: "0", status: "MENUNGGU_DP", notes: "", is_vendor: false, vendor_name: "" });
+    loadBookings();
+    onChanged();
+  }
+
+  async function addVendorBooking() {
+    const supabase = createClient();
+    if (!supabase) return;
+    if (!formData.vendor_name.trim() || !formData.event_date || !formData.event_address.trim()) {
+      await Swal.fire({ icon: "error", title: "Data Tidak Lengkap", text: "Nama vendor, tanggal, dan alamat wajib diisi." });
+      return;
+    }
+    const { data: clientData, error: clientErr } = await supabase
+      .from("clients")
+      .insert({
+        full_name: `[VENDOR] ${formData.vendor_name.trim()}`,
+        whatsapp_number: formData.whatsapp_number.trim() || "",
+      })
+      .select()
+      .single();
+    if (clientErr || !clientData) {
+      await Swal.fire({ icon: "error", title: "Gagal Menambah Vendor", text: clientErr?.message ?? "Terjadi kesalahan." });
+      return;
+    }
+    const { data: bookingData, error: bookingErr } = await supabase
+      .from("bookings")
+      .insert({
+        invoice_number: `VEND-${Date.now()}`,
+        client_id: clientData.id,
+        event_date: formData.event_date,
+        location_type: formData.location_type,
+        event_address: formData.event_address.trim(),
+        subtotal: Number(formData.subtotal) || 0,
+        transport_fee: Number(formData.transport_fee) || 0,
+        grand_total: Number(formData.grand_total) || 0,
+        dp_amount: Number(formData.dp_amount) || 0,
+        status: formData.status,
+        notes: formData.notes.trim() || null,
+        source: "VENDOR",
+        vendor_name: formData.vendor_name.trim(),
+      })
+      .select()
+      .single();
+    if (bookingErr || !bookingData) {
+      await supabase.from("clients").delete().eq("id", clientData.id);
+      await Swal.fire({ icon: "error", title: "Gagal Menambah Booking Vendor", text: bookingErr?.message ?? "Terjadi kesalahan." });
+      return;
+    }
+    await Swal.fire({ icon: "success", title: "Booking Vendor Ditambahkan", timer: 1200, showConfirmButton: false });
+    setShowBookingForm(false);
+    setFormData({ full_name: "", whatsapp_number: "", event_date: "", location_type: "KOTA_TASIK", event_address: "", subtotal: "0", transport_fee: "0", grand_total: "0", dp_amount: "0", status: "MENUNGGU_DP", notes: "", is_vendor: false, vendor_name: "" });
+    loadBookings();
+    onChanged();
+  }
+
+  async function saveEditedBooking() {
+    if (!editingBooking) return;
+    const supabase = createClient();
+    if (!supabase) return;
+    const { error: bookingErr } = await supabase
+      .from("bookings")
+      .update({
+        event_date: formData.event_date,
+        location_type: formData.location_type,
+        event_address: formData.event_address.trim(),
+        subtotal: Number(formData.subtotal) || 0,
+        transport_fee: Number(formData.transport_fee) || 0,
+        grand_total: Number(formData.grand_total) || 0,
+        dp_amount: Number(formData.dp_amount) || 0,
+        status: formData.status,
+        notes: formData.notes.trim() || null,
+      })
+      .eq("id", editingBooking.id);
+    if (bookingErr) {
+      await Swal.fire({ icon: "error", title: "Gagal Memperbarui", text: bookingErr.message });
+      return;
+    }
+    if (editingBooking.client) {
+      const { error: clientErr } = await supabase
+        .from("clients")
+        .update({
+          full_name: formData.full_name.trim(),
+          whatsapp_number: formData.whatsapp_number.trim(),
+        })
+        .eq("id", editingBooking.client_id);
+      if (clientErr) console.error(clientErr);
+    }
+    await Swal.fire({ icon: "success", title: "Booking Diperbarui", timer: 1200, showConfirmButton: false });
+    setEditingBooking(null);
+    setShowBookingForm(false);
+    setFormData({ full_name: "", whatsapp_number: "", event_date: "", location_type: "KOTA_TASIK", event_address: "", subtotal: "0", transport_fee: "0", grand_total: "0", dp_amount: "0", status: "MENUNGGU_DP", notes: "", is_vendor: false, vendor_name: "" });
+    loadBookings();
+    onChanged();
+  }
+
+  async function deleteBooking(id: number, name: string) {
+    const confirmed = await Swal.fire({
+      icon: "warning",
+      title: "Hapus Booking?",
+      text: `Hapus booking dari "${name}"? Data klien juga akan terhapus.`,
+      showCancelButton: true,
+      confirmButtonText: "Ya, Hapus",
+      cancelButtonText: "Batal",
+      confirmButtonColor: "#dc2626",
+    });
+    if (!confirmed.isConfirmed) return;
+    const supabase = createClient();
+    if (!supabase) return;
+    const { error } = await supabase.from("bookings").delete().eq("id", id);
+    if (error) {
+      await Swal.fire({ icon: "error", title: "Gagal Menghapus", text: error.message });
+    } else {
+      await Swal.fire({ icon: "success", title: "Booking Dihapus", timer: 1200, showConfirmButton: false });
+      loadBookings();
+      onChanged();
+    }
+  }
+
+  function openEditBooking(booking: BookingRow) {
+    setEditingBooking(booking);
+    setFormData({
+      full_name: booking.client?.full_name ?? "",
+      whatsapp_number: booking.client?.whatsapp_number ?? "",
+      event_date: booking.event_date,
+      location_type: booking.location_type,
+      event_address: booking.event_address,
+      subtotal: String(booking.subtotal),
+      transport_fee: String(booking.transport_fee),
+      grand_total: String(booking.grand_total),
+      dp_amount: String(booking.dp_amount),
+      status: booking.status,
+      notes: booking.notes ?? "",
+      is_vendor: booking.source === "VENDOR",
+      vendor_name: booking.vendor_name ?? "",
+    });
+    setShowBookingForm(true);
+  }
 
   async function patchBooking(
     id: number,
@@ -319,6 +542,18 @@ const filtered = bookings.filter((b) => {
             Block
           </button>
         </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => {
+              setEditingBooking(null);
+              setFormData({ full_name: "", whatsapp_number: "", event_date: "", location_type: "KOTA_TASIK", event_address: "", subtotal: "0", transport_fee: "0", grand_total: "0", dp_amount: "0", status: "MENUNGGU_DP", notes: "", is_vendor: false, vendor_name: "" });
+              setShowBookingForm(true);
+            }}
+            className="flex h-11 items-center gap-1.5 rounded-xl bg-[var(--brand)] px-4 text-xs font-bold uppercase tracking-wider text-white shadow-md hover:bg-[var(--brand-hover)]"
+          >
+            <Plus className="h-4 w-4" /> Tambah Booking
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -375,7 +610,7 @@ const filtered = bookings.filter((b) => {
                         </p>
                       )}
                     </div>
-                    {isOpen ? (
+                     {isOpen ? (
                       <ChevronUp className="h-4 w-4 shrink-0 text-[var(--muted-2)]" />
                     ) : (
                       <ChevronDown className="h-4 w-4 shrink-0 text-[var(--muted-2)]" />
@@ -383,6 +618,20 @@ const filtered = bookings.filter((b) => {
                   </button>
 
                   <div className="flex w-full flex-wrap items-center gap-1.5 sm:w-auto sm:justify-end">
+                    <button
+                      onClick={() => openEditBooking(booking)}
+                      className="glass-inset inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[11px] font-bold uppercase tracking-widest text-[var(--muted)] hover:text-[var(--brand)]"
+                      title="Edit booking"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => deleteBooking(booking.id, booking.client?.full_name ?? "Client")}
+                      className="glass-inset inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[11px] font-bold uppercase tracking-widest text-red-500 hover:bg-red-50"
+                      title="Hapus booking"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                     {booking.status === "MENUNGGU_DP" && (
                       <>
                         <button
@@ -533,6 +782,101 @@ const filtered = bookings.filter((b) => {
           defaultKind={invoiceKind}
           logoUrl={logoUrl}
         />
+      )}
+
+      {showBookingForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => { setShowBookingForm(false); setEditingBooking(null); }}>
+          <div className="relative flex w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3">
+              <h2 className="font-serif text-lg font-semibold text-[var(--ink)]">
+                {editingBooking ? "Edit Booking" : "Tambah Booking Baru"}
+              </h2>
+              <button onClick={() => { setShowBookingForm(false); setEditingBooking(null); }} className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              {!editingBooking && (
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" checked={formData.is_vendor} onChange={(e) => setFormData({ ...formData, is_vendor: e.target.checked })} className="accent-[var(--brand)]" />
+                  <span className="text-sm font-semibold text-[var(--ink)]">Booking Vendor</span>
+                </label>
+              )}
+              <div>
+                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+                  {formData.is_vendor ? "Nama Vendor" : "Nama Lengkap"}
+                </p>
+                <input value={formData.is_vendor ? formData.vendor_name : formData.full_name} onChange={(e) => setFormData({ ...formData, [formData.is_vendor ? "vendor_name" : "full_name"]: e.target.value })} className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none" placeholder={formData.is_vendor ? "Nama vendor" : "Nama pelanggan"} />
+              </div>
+              <div>
+                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">No. WhatsApp</p>
+                <input type="tel" value={formData.whatsapp_number} onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })} className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none" placeholder="08123456789" />
+              </div>
+              <div>
+                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Tanggal Acara</p>
+                <input type="date" value={formData.event_date} onChange={(e) => setFormData({ ...formData, event_date: e.target.value })} className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none" />
+              </div>
+              <div>
+                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Lokasi</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => setFormData({ ...formData, location_type: "KOTA_TASIK" })} className={`rounded-xl border-2 px-3 py-2 text-xs font-semibold ${formData.location_type === "KOTA_TASIK" ? "border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--ink)]" : "border-white/50 bg-white/60 text-[var(--muted)]"}`}>
+                    <span className="inline-flex items-center gap-1"><Car className="h-3.5 w-3.5" /> Kota Tasik</span>
+                  </button>
+                  <button type="button" onClick={() => setFormData({ ...formData, location_type: "LUAR_KOTA" })} className={`rounded-xl border-2 px-3 py-2 text-xs font-semibold ${formData.location_type === "LUAR_KOTA" ? "border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--ink)]" : "border-white/50 bg-white/60 text-[var(--muted)]"}`}>
+                    <span className="inline-flex items-center gap-1"><CalendarOff className="h-3.5 w-3.5" /> Luar Kota</span>
+                  </button>
+                </div>
+              </div>
+              <div>
+                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Alamat Acara</p>
+                <input value={formData.event_address} onChange={(e) => setFormData({ ...formData, event_address: e.target.value })} className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none" placeholder="Alamat lengkap" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Subtotal (Rp)</p>
+                  <input type="number" value={formData.subtotal} onChange={(e) => setFormData({ ...formData, subtotal: e.target.value })} className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none" />
+                </div>
+                <div>
+                  <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Transport (Rp)</p>
+                  <input type="number" value={formData.transport_fee} onChange={(e) => setFormData({ ...formData, transport_fee: e.target.value })} className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Grand Total (Rp)</p>
+                  <input type="number" value={formData.grand_total} onChange={(e) => setFormData({ ...formData, grand_total: e.target.value })} className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none" />
+                </div>
+                <div>
+                  <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">DP (Rp)</p>
+                  <input type="number" value={formData.dp_amount} onChange={(e) => setFormData({ ...formData, dp_amount: e.target.value })} className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none" />
+                </div>
+              </div>
+              <div>
+                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Status</p>
+                <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value as BookingStatus })} className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none">
+                  <option value="MENUNGGU_DP">Menunggu DP</option>
+                  <option value="MENUNGGU_PELUNASAN">Menunggu Pelunasan</option>
+                  <option value="LUNAS">Lunas</option>
+                  <option value="CANCELLED">Dibatalkan</option>
+                </select>
+              </div>
+              <div>
+                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Catatan (opsional)</p>
+                <textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} className="h-20 w-full resize-none rounded-xl border border-[var(--line)] bg-white px-3 py-2 text-sm focus:border-[var(--brand)] focus:outline-none" placeholder="Catatan..." />
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-3 border-t border-gray-200 px-5 py-3">
+              <button onClick={() => { setShowBookingForm(false); setEditingBooking(null); }} className="h-11 rounded-xl border border-[var(--line)] px-5 text-sm font-bold uppercase text-[var(--muted)] hover:bg-gray-50">Batal</button>
+              {editingBooking ? (
+                <button onClick={saveEditedBooking} className="h-11 rounded-xl bg-[var(--brand)] px-5 text-sm font-bold uppercase text-white shadow-lg hover:bg-[var(--brand-hover)]">Simpan Perubahan</button>
+              ) : formData.is_vendor ? (
+                <button onClick={addVendorBooking} className="h-11 rounded-xl bg-[var(--brand)] px-5 text-sm font-bold uppercase text-white shadow-lg hover:bg-[var(--brand-hover)]">Tambah Vendor</button>
+              ) : (
+                <button onClick={addBooking} className="h-11 rounded-xl bg-[var(--brand)] px-5 text-sm font-bold uppercase text-white shadow-lg hover:bg-[var(--brand-hover)]">Tambah Booking</button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {pdfFor && (
