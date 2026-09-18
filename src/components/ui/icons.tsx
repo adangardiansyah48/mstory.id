@@ -6,6 +6,7 @@ import {
   Film,
   Frame,
   Gem,
+  GraduationCap,
   Heart,
   Home,
   Palette,
@@ -21,6 +22,7 @@ const CATEGORY_ICON_MAP: Record<string, LucideIcon> = {
   ENGAGEMENT: Heart,
   EVENT: PartyPopper,
   "WEDDING CONTENT CREATOR": Clapperboard,
+  GRADUATION: GraduationCap,
 };
 
 const ADDON_ICON_MAP: Record<string, LucideIcon> = {
