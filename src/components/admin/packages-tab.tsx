@@ -190,7 +190,7 @@ export function PackagesTab() {
     if (!supabase) return;
     const payload = {
       sub_category_id: newPackage.sub_category_id,
-      name: newPackage.name.trim(),
+      name: newPackage.name.trim().toUpperCase(),
       price: Number(newPackage.price),
       duration_hours: newPackage.duration_hours ? Number(newPackage.duration_hours) : null,
       crew_info: newPackage.crew_info.trim() || null,
