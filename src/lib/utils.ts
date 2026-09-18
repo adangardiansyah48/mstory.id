@@ -131,12 +131,14 @@ interface InvoiceInput {
   paymentAccount: string;
   paymentHolder: string;
   vendorFee?: number;
+  vendorName?: string;
 }
 
-function vendorFeeLines(grandTotal: number, vendorFee?: number): string[] {
+function vendorFeeLines(grandTotal: number, vendorFee?: number, vendorName?: string): string[] {
   if (!vendorFee || vendorFee <= 0) return [];
+  const label = vendorName ? `Fee Vendor (${vendorName})` : "Fee Vendor";
   return [
-    `Fee Vendor : -${formatCurrency(vendorFee)}`,
+    `${label} : -${formatCurrency(vendorFee)}`,
     `Diterima Mstory.id : ${formatCurrency(Math.max(grandTotal - vendorFee, 0))}`,
   ];
 }
@@ -171,7 +173,7 @@ function invoiceBody(input: InvoiceInput): string[] {
     `Subtotal : ${formatCurrency(input.subtotal)}`,
     `Transport: ${formatCurrency(input.transportFee)}`,
     `Total    : ${formatCurrency(input.grandTotal)}`,
-    ...vendorFeeLines(input.grandTotal, input.vendorFee),
+    ...vendorFeeLines(input.grandTotal, input.vendorFee, input.vendorName),
   ];
 }
 
@@ -252,6 +254,7 @@ export function buildInvoiceMessage(input: {
   paymentAccount: string;
   paymentHolder: string;
   vendorFee?: number;
+  vendorName?: string;
 }): string {
   const lines = [
     `*INVOICE BOOKING - Mstory.id*`,
@@ -269,7 +272,7 @@ export function buildInvoiceMessage(input: {
     ``,
     `*PAKET*`,
     input.packageDescription,
-    ...vendorFeeLines(input.grandTotal, input.vendorFee),
+    ...vendorFeeLines(input.grandTotal, input.vendorFee, input.vendorName),
   ];
   return lines.join("\n");
 }

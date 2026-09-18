@@ -8,6 +8,8 @@ export interface InvoicePdfBooking {
   event_date: string;
   location_type: "KOTA_TASIK" | "LUAR_KOTA";
   event_address: string;
+  source?: string | null;
+  vendor_name?: string | null;
   subtotal: number;
   transport_fee: number;
   grand_total: number;
@@ -293,7 +295,8 @@ export async function downloadInvoicePdf(input: {
 
   if (vendorFee && vendorFee > 0) {
     const net = Math.max(Number(booking.grand_total || 0) - vendorFee, 0);
-    sumLine("Fee Vendor", `-${fmt(vendorFee)}`, [196, 96, 26], "bold");
+    const feeLabel = booking.vendor_name ? `Fee Vendor (${booking.vendor_name})` : "Fee Vendor";
+    sumLine(feeLabel, `-${fmt(vendorFee)}`, [196, 96, 26], "bold");
     sumLine("Diterima Mstory.id", fmt(net), GREEN_TXT, "bold");
   }
 

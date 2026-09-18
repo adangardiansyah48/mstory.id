@@ -152,7 +152,7 @@ export function InvoicePdfDocument({ booking, kind, logoUrl, vendorFee }: Props)
           <View style={s.sumRow}><Text style={s.sumLabel}>Total</Text><Text style={[s.sumValue, { fontWeight: "bold" }]}>{fmt(total)}</Text></View>
           {vendorFee != null && vendorFee > 0 && (
             <>
-              <View style={s.sumRow}><Text style={s.sumLabel}>Fee Vendor</Text><Text style={[s.sumValue, { color: "#C45B26" }]}>-{fmt(vendorFee)}</Text></View>
+              <View style={s.sumRow}><Text style={s.sumLabel}>{booking.vendor_name ? `Fee Vendor (${booking.vendor_name})` : "Fee Vendor"}</Text><Text style={[s.sumValue, { color: "#C45B26" }]}>-{fmt(vendorFee)}</Text></View>
               <View style={s.sumRow}><Text style={s.sumLabel}>Diterima Mstory.id</Text><Text style={[s.sumValue, { fontWeight: "bold", color: "#047857" }]}>{fmt(Math.max(total - vendorFee, 0))}</Text></View>
             </>
           )}

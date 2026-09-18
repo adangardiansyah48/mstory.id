@@ -80,6 +80,7 @@ export function InvoiceModal({
     dpLabel,
     dpAmount: booking.dp_amount ?? 0,
     vendorFee: vendorFee ?? 0,
+    vendorName: booking.vendor_name ?? undefined,
     paymentBank: PAYMENT_BANK,
     paymentAccount: PAYMENT_ACCOUNT,
     paymentHolder: PAYMENT_ACCOUNT_HOLDER,

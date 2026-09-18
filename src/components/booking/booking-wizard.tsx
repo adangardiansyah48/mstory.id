@@ -204,7 +204,7 @@ export function BookingWizard({
 
        if (clientError) throw clientError;
 
-       let bookingData;
+       let bookingData: { id: number } | null = null;
        try {
          const basePayload: Record<string, unknown> = {
             invoice_number: invoiceNumber,
@@ -223,34 +223,20 @@ export function BookingWizard({
             basePayload.source = "VENDOR";
             basePayload.vendor_name = vendorName.trim();
           }
-          const tryInsert = async (payload: Record<string, unknown>) => {
-            let inv = (payload.invoice_number as string) ?? invoiceNumber;
-            for (let attempt = 0; attempt < 3; attempt++) {
-              const attemptPayload = { ...payload, invoice_number: inv };
-              const { data: bd, error: be } = await supabase
-                .from("bookings")
-                .insert(attemptPayload)
-                .select()
-                .single();
-              if (!be) { bookingData = bd; invoiceNumber = inv; return true; }
-              const msg = String((be as { message?: string }).message ?? "");
-              const isMissingCol = msg.includes("source") || msg.includes("vendor_name") || msg.includes("schema cache");
-              if (isMissingCol && attempt === 0) {
-                const fallback = { ...attemptPayload };
-                delete fallback.source;
-                delete fallback.vendor_name;
-                const { data: bd2, error: be2 } = await supabase.from("bookings").insert(fallback).select().single();
-                if (!be2) { bookingData = bd2; invoiceNumber = inv; return true; }
-              }
-              if ((be as { code?: string }).code === "23505" && attempt < 2) {
-                inv = await generateInvoiceNumber();
-                continue;
-              }
-              throw be;
+for (let attempt = 0; attempt < 3; attempt++) {
+            const attemptPayload = { ...basePayload, invoice_number: invoiceNumber };
+            const { data: bd, error: be } = await supabase
+              .from("bookings")
+              .insert(attemptPayload)
+              .select()
+              .single();
+            if (!be) { bookingData = bd; break; }
+            if ((be as { code?: string }).code === "23505" && attempt < 2) {
+              invoiceNumber = await generateInvoiceNumber();
+              continue;
             }
-            return false;
-          };
-          await tryInsert(basePayload);
+            throw be;
+          }
           if (!bookingData) throw new Error("Gagal membuat booking");
        } catch (bookingErr) {
          await supabase.from("clients").delete().eq("id", clientData.id);
