@@ -214,8 +214,9 @@ export function PackagesTab() {
         await Swal.fire({
           icon: "success",
           title: "Paket Diperbarui",
-          timer: 1000,
+          timer: 1500,
           showConfirmButton: false,
+          timerProgressBar: true,
         });
         clearBookingDataCache();
       }
@@ -322,11 +323,13 @@ export function PackagesTab() {
         setAddons((prev) => prev.map((a) => (a.id === editingAddonId ? { ...a, ...payload } : a)),);
         setEditingAddonId(null);
         setNewAddon({ id: 0, name: "", price: "", is_active: true });
+        setShowAddonModal(false);
         await Swal.fire({
           icon: "success",
           title: "Add-on Diperbarui",
-          timer: 1000,
+          timer: 1500,
           showConfirmButton: false,
+          timerProgressBar: true,
         });
         clearBookingDataCache();
       }
