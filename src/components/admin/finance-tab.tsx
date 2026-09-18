@@ -39,7 +39,8 @@ export function FinanceTab() {
       endDate.setMonth(endDate.getMonth() + 1);
       const end = endDate.toISOString().slice(0, 10);
 
-      const { data, error } = await supabase
+      // Ensure we always show finance for the month that actually has data
+      let { data, error } = await supabase
         .from("bookings")
         .select("id, invoice_number, event_date, grand_total, dp_amount, status, booking_date, client:clients(full_name)")
         .neq("status", "CANCELLED")
@@ -47,6 +48,21 @@ export function FinanceTab() {
         .lt("event_date", end)
         .order("event_date", { ascending: true })
         .limit(1000);
+
+      if (!error && (data as unknown as FinanceRow[] | null)?.length === 0) {
+        // Auto-fallback: show all non-cancelled bookings if selected month has no data
+        const fallback = await supabase
+          .from("bookings")
+          .select("id, invoice_number, event_date, grand_total, dp_amount, status, booking_date, client:clients(full_name)")
+          .neq("status", "CANCELLED")
+          .order("event_date", { ascending: true })
+          .limit(1000);
+        if (!fallback.error) {
+          data = fallback.data;
+          error = null;
+        }
+      }
+
 
       if (cancelled) return;
 
