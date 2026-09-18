@@ -22,8 +22,7 @@ import {
   withPosition,
   type SiteSettings,
 } from "@/lib/site-settings";
-import { Camera, Check, ImagePlus, Loader2, Trash2, X } from "lucide-react";
-import { compressAndUploadImage, getGalleryImages } from "@/lib/website";
+import { Camera, Check, ImagePlus, Loader2, Trash2 } from "lucide-react";
 
 const TEXT_FIELDS: {
   key: keyof Omit<SiteSettings, "id" | "updated_at">;
@@ -72,8 +71,6 @@ export function SettingsTab({ onThemeChanged }: { onThemeChanged?: (theme: strin
   const [message, setMessage] = useState("");
   const [uploading, setUploading] = useState<"banner" | "logo" | null>(null);
   const [logoPos, setLogoPos] = useState({ x: 50, y: 30 });
-  const [galleryImages, setGalleryImages] = useState<{ id: string; name: string; url: string }[]>([]);
-  const [galleryUploading, setGalleryUploading] = useState(false);
   const [banners, setBanners] = useState<{ url: string | null; pos: { x: number; y: number } }[]>([
     { url: null, pos: { x: 50, y: 50 } },
     { url: null, pos: { x: 50, y: 50 } },
@@ -100,9 +97,6 @@ export function SettingsTab({ onThemeChanged }: { onThemeChanged?: (theme: strin
             padded.map((url) => ({ url, pos: parseObjectPosition(url, 50, 50) })),
           );
           setLogoPos(parseObjectPosition(data.logo_url, 50, 30));
-
-          const gallery = await getGalleryImages();
-          setGalleryImages(gallery);
         }
       } catch (e) {
         console.error("Failed to load settings or gallery:", e);
@@ -360,99 +354,6 @@ export function SettingsTab({ onThemeChanged }: { onThemeChanged?: (theme: strin
               />
             </Field>
           ))}
-        </div>
-      </Card>
-
-      {/* Galeri Website (Portofolio) */}
-      <Card title="Galeri Website (Portofolio)">
-        <div className="space-y-3">
-          <p className="text-[11px] text-[var(--muted-3)]">
-            Foto tampil di halaman /website. Upload akan dikompres otomatis (hemat storage tanpa mengorbankan kualitas).
-          </p>
-          <div className="flex flex-col gap-2">
-            <label className="block text-xs font-semibold text-[var(--muted)]">
-              Upload Foto Baru
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  setGalleryUploading(true);
-                  setMessage("");
-                  try {
-                    const url = await compressAndUploadImage(file, FANSPAGE_BUCKET, "gallery");
-                    if (url) {
-                      const newList = await getGalleryImages();
-                      setGalleryImages(newList);
-                      setMessage("Foto galeri berhasil diupload & dikompres.");
-                    } else {
-                      setMessage("Gagal upload galeri.");
-                    }
-                  } catch (err) {
-                    setMessage(`Upload gagal: ${err instanceof Error ? err.message : String(err)}`);
-                  } finally {
-                    setGalleryUploading(false);
-                    e.target.value = "";
-                  }
-                }}
-                className="block w-full text-sm text-[var(--muted)] file:mr-3 file:rounded-lg file:border file:border-[var(--line)] file:bg-white file:px-3 file:py-1.5 file:text-[11px] file:font-semibold file:text-[var(--muted)] hover:file:border-[var(--brand)] hover:file:text-[var(--brand)]"
-                disabled={galleryUploading}
-              />
-              {galleryUploading && <span className="flex items-center gap-1 text-[11px] text-[var(--muted)]"><Loader2 className="h-3 w-3 animate-spin" />Kompres & upload...</span>}
-            </div>
-          </div>
-
-          <div className="mt-4">
-            <h4 className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-              Daftar Foto ({galleryImages.length})
-            </h4>
-            {galleryImages.length === 0 ? (
-              <p className="py-4 text-center text-xs text-[var(--muted-3)]">
-                Belum ada foto di galeri.
-              </p>
-            ) : (
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {galleryImages.map((img) => (
-                  <div key={img.id} className="group relative overflow-hidden rounded-lg border border-[var(--line)]">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={img.url}
-                      alt={img.name}
-                      className="h-28 w-full object-cover sm:h-32"
-                    />
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        const supabase = createClient();
-                        if (supabase) {
-                          await supabase.storage
-                            .from(FANSPAGE_BUCKET)
-                            .remove([`gallery/${img.name}`]);
-                        }
-                        if (supabase) {
-                          const fresh = await getGalleryImages();
-                          setGalleryImages(fresh);
-                        } else {
-                          setGalleryImages((prev) => prev.filter((g) => g.id !== img.id));
-                        }
-                        setMessage(`Foto ${img.name} dihapus dari galeri.`);
-                      }}
-                      className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
-                      title="Hapus dari preview"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                    <div className="bg-white/90 px-2 py-1 text-[10px] font-medium text-[var(--muted)] truncate">
-                      {img.name}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
       </Card>
 
