@@ -206,36 +206,52 @@ export function BookingWizard({
 
        let bookingData;
        try {
-         let inv = invoiceNumber;
-         for (let attempt = 0; attempt < 3; attempt++) {
-           const { data: bd, error: be } = await supabase
-             .from("bookings")
-             .insert({
-                invoice_number: inv,
-                client_id: clientData.id,
-                event_date: client.eventDate,
-                location_type: client.locationType,
-                event_address: client.eventAddress,
-                subtotal: subtotal,
-                transport_fee: transportFee,
-                grand_total: grandTotal,
-                dp_amount: dpAmount,
-                status: "MENUNGGU_DP",
-                notes: client.notes || null,
-                ...(adminMode && vendorName.trim()
-                  ? { source: "VENDOR", vendor_name: vendorName.trim() }
-                  : {}),
-             })
-             .select()
-             .single();
-           if (!be) { bookingData = bd; invoiceNumber = inv; break; }
-           if ((be as { code?: string }).code === "23505" && attempt < 2) {
-             inv = await generateInvoiceNumber();
-             continue;
-           }
-           throw be;
-         }
-         if (!bookingData) throw new Error("Gagal membuat booking");
+         const basePayload: Record<string, unknown> = {
+            invoice_number: invoiceNumber,
+            client_id: clientData.id,
+            event_date: client.eventDate,
+            location_type: client.locationType,
+            event_address: client.eventAddress,
+            subtotal: subtotal,
+            transport_fee: transportFee,
+            grand_total: grandTotal,
+            dp_amount: dpAmount,
+            status: "MENUNGGU_DP",
+            notes: client.notes || null,
+          };
+          if (adminMode && vendorName.trim()) {
+            basePayload.source = "VENDOR";
+            basePayload.vendor_name = vendorName.trim();
+          }
+          const tryInsert = async (payload: Record<string, unknown>) => {
+            let inv = (payload.invoice_number as string) ?? invoiceNumber;
+            for (let attempt = 0; attempt < 3; attempt++) {
+              const attemptPayload = { ...payload, invoice_number: inv };
+              const { data: bd, error: be } = await supabase
+                .from("bookings")
+                .insert(attemptPayload)
+                .select()
+                .single();
+              if (!be) { bookingData = bd; invoiceNumber = inv; return true; }
+              const msg = String((be as { message?: string }).message ?? "");
+              const isMissingCol = msg.includes("source") || msg.includes("vendor_name") || msg.includes("schema cache");
+              if (isMissingCol && attempt === 0) {
+                const fallback = { ...attemptPayload };
+                delete fallback.source;
+                delete fallback.vendor_name;
+                const { data: bd2, error: be2 } = await supabase.from("bookings").insert(fallback).select().single();
+                if (!be2) { bookingData = bd2; invoiceNumber = inv; return true; }
+              }
+              if ((be as { code?: string }).code === "23505" && attempt < 2) {
+                inv = await generateInvoiceNumber();
+                continue;
+              }
+              throw be;
+            }
+            return false;
+          };
+          await tryInsert(basePayload);
+          if (!bookingData) throw new Error("Gagal membuat booking");
        } catch (bookingErr) {
          await supabase.from("clients").delete().eq("id", clientData.id);
          throw bookingErr;
