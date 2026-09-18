@@ -37,6 +37,7 @@ export function OverviewTab({
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [refreshKeyLocal, setRefreshKeyLocal] = useState(0);
+  const [vendorFee, setVendorFee] = useState(200000);
 
   useEffect(() => {
     let cancelled = false;
@@ -49,8 +50,13 @@ export function OverviewTab({
       }
 
       try {
+        try {
+          const { getSiteSettings } = await import("@/lib/site-settings");
+          const s = await getSiteSettings();
+          if (!cancelled && s.vendor_fee != null) setVendorFee(Number(s.vendor_fee) || 0);
+        } catch { /* fallback */ }
         const [bookingCount, clientCount] = await Promise.all([
-          supabase.from("bookings").select("status, grand_total, event_date, dp_amount, dp_paid_at, paid_at").limit(2000),
+          supabase.from("bookings").select("status, grand_total, event_date, dp_amount, source, dp_paid_at, paid_at").limit(2000),
           supabase.from("clients").select("id", { count: "exact", head: true }),
         ]);
 
@@ -63,13 +69,20 @@ export function OverviewTab({
           (b) => b.event_date >= today && b.status !== "CANCELLED",
         ).length;
 
+       const isVendor = (b: Record<string, unknown>) => b.source === "VENDOR";
         const revenueDp = bookings
           .filter((b) => b.status === "MENUNGGU_PELUNASAN" || b.status === "LUNAS")
-          .reduce((s, b) => s + Number(b.dp_amount ?? 0), 0);
+          .reduce((s, b) => {
+            const net = Math.max(Number(b.grand_total ?? 0) - (isVendor(b as never) ? vendorFee : 0), 0);
+            return s + Math.min(Number(b.dp_amount ?? 0), net);
+          }, 0);
 
         const revenuePelunasan = bookings
           .filter((b) => b.status === "LUNAS")
-          .reduce((s, b) => s + (Number(b.grand_total ?? 0) - Number(b.dp_amount ?? 0)), 0);
+          .reduce((s, b) => {
+            const net = Math.max(Number(b.grand_total ?? 0) - (isVendor(b as never) ? vendorFee : 0), 0);
+            return s + Math.max(net - Math.min(Number(b.dp_amount ?? 0), net), 0);
+          }, 0);
 
         if (cancelled) return;
         setStats({

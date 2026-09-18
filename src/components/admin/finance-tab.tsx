@@ -13,6 +13,7 @@ interface FinanceRow {
   event_date: string;
   grand_total: number;
   dp_amount: number;
+  source?: string | null;
   status: BookingStatus;
   client: { full_name: string } | null;
   booking_date: string | null;
@@ -21,6 +22,7 @@ interface FinanceRow {
 export function FinanceTab() {
   const [rows, setRows] = useState<FinanceRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [vendorFee, setVendorFee] = useState(200000);
   const [month, setMonth] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -34,6 +36,11 @@ export function FinanceTab() {
         setLoading(false);
         return;
       }
+      try {
+        const { getSiteSettings } = await import("@/lib/site-settings");
+        const s = await getSiteSettings();
+        if (!cancelled && s.vendor_fee != null) setVendorFee(Number(s.vendor_fee) || 0);
+      } catch { /* fallback */ }
       const start = `${month}-01`;
       const endDate = new Date(`${month}-01`);
       endDate.setMonth(endDate.getMonth() + 1);
@@ -41,7 +48,7 @@ export function FinanceTab() {
 
       const { data, error } = await supabase
         .from("bookings")
-        .select("id, invoice_number, event_date, grand_total, dp_amount, status, booking_date, client:clients(full_name)")
+        .select("id, invoice_number, event_date, grand_total, dp_amount, source, status, booking_date, client:clients(full_name)")
         .neq("status", "CANCELLED")
         .gte("event_date", start)
         .lt("event_date", end)
@@ -69,11 +76,15 @@ export function FinanceTab() {
     let pelunasanDiterima = 0;
 
     for (const r of rows) {
+      const isVendor = r.source === "VENDOR";
+      const net = Math.max(Number(r.grand_total ?? 0) - (isVendor ? vendorFee : 0), 0);
+      const dpNet = Math.min(Number(r.dp_amount ?? 0), net);
+      const pelNet = Math.max(net - dpNet, 0);
       if (r.status === "MENUNGGU_PELUNASAN" || r.status === "LUNAS") {
-        dpDiterima += Number(r.dp_amount ?? 0);
+        dpDiterima += dpNet;
       }
       if (r.status === "LUNAS") {
-        pelunasanDiterima += Number(r.grand_total ?? 0) - Number(r.dp_amount ?? 0);
+        pelunasanDiterima += pelNet;
       }
     }
 
@@ -151,12 +162,15 @@ export function FinanceTab() {
               <th className="px-4 py-3 text-right">Total</th>
               <th className="px-4 py-3 text-right">DP</th>
               <th className="px-4 py-3 text-right">Pelunasan</th>
+              <th className="px-4 py-3 text-right">Diterima Mstory</th>
               <th className="px-4 py-3 text-right">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--line)]">
             {rows.map((r) => {
-              const pelunasan = r.status === "LUNAS" ? Number(r.grand_total) - Number(r.dp_amount) : 0;
+              const isVendor = r.source === "VENDOR";
+              const net = Math.max(Number(r.grand_total) - (isVendor ? vendorFee : 0), 0);
+              const pelunasan = r.status === "LUNAS" ? Math.max(net - Math.min(Number(r.dp_amount), net), 0) : 0;
               return (
                 <tr key={r.id} className="text-sm">
                   <td className="px-4 py-3 font-mono text-xs text-[var(--ink)]">{r.invoice_number}</td>
@@ -165,6 +179,7 @@ export function FinanceTab() {
                   <td className="px-4 py-3 text-right font-semibold text-[var(--ink)]">{formatCurrency(r.grand_total)}</td>
                   <td className="px-4 py-3 text-right text-amber-700">{r.status !== "MENUNGGU_DP" ? formatCurrency(r.dp_amount) : "-"}</td>
                   <td className="px-4 py-3 text-right text-blue-700">{pelunasan > 0 ? formatCurrency(pelunasan) : "-"}</td>
+                  <td className="px-4 py-3 text-right font-semibold text-green-700">{formatCurrency(isVendor ? net : Number(r.grand_total))}</td>
                   <td className="px-4 py-3 text-right">
                     <span
                       className={cn(
