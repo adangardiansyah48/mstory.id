@@ -756,6 +756,18 @@ const filtered = bookings.filter((b) => {
                           · {booking.event_address}
                         </p>
                         <p>
+                          <span className="text-[var(--muted)]">Subtotal:</span>{" "}
+                          {formatCurrency(booking.subtotal ?? (booking.grand_total - (booking.transport_fee ?? 0)))}
+                        </p>
+                        <p>
+                          <span className="text-[var(--muted)]">Transport:</span>{" "}
+                          {formatCurrency(booking.transport_fee ?? 0)}{booking.location_type === "LUAR_KOTA" ? " · Luar Kota" : " · Kota Tasik"}
+                        </p>
+                        <p>
+                          <span className="text-[var(--muted)]">Grand Total:</span>{" "}
+                          {formatCurrency(booking.grand_total)}
+                        </p>
+                        <p>
                           <span className="text-[var(--muted)]">DP:</span>{" "}
                           {formatCurrency(booking.status === "MENUNGGU_DP" ? 0 : booking.dp_amount)}
                         </p>

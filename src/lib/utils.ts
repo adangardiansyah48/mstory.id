@@ -51,14 +51,17 @@ export function addWeeks(date: Date, weeks: number): Date {
 import { createClient } from "@/lib/supabase/client";
 
 export async function generateInvoiceNumber(): Promise<string> {
+  const supabase = createClient();
+  if (supabase) {
+    const { data, error } = await supabase.rpc("generate_invoice_number");
+    if (!error && typeof data === "string" && data) return data;
+  }
   const now = new Date();
   const dd = String(now.getDate()).padStart(2, "0");
   const mm = String(now.getMonth() + 1).padStart(2, "0");
   const yyyy = now.getFullYear();
   const prefix = `INV-${dd}${mm}${yyyy}-`;
   const monthSuffix = `${mm}${yyyy}-`;
-
-  const supabase = createClient();
   let last = 0;
   if (supabase) {
     const { data } = await supabase

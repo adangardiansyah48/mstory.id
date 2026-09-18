@@ -65,6 +65,16 @@ export function StatusSearchPanel() {
     const normalized = normalizeWhatsAppNumber(trimmed);
 
     try {
+      const { data: rpcData, error: rpcError } = await supabase.rpc("lookup_bookings", { p_query: trimmed });
+      if (!rpcError && Array.isArray(rpcData) && rpcData.length > 0) {
+        setResults(rpcData as unknown as BookingWithRelations[]);
+        setSearchState("found");
+        return;
+      }
+      if (!rpcError && Array.isArray(rpcData) && rpcData.length === 0) {
+        setSearchState("notfound");
+        return;
+      }
       const { data: invoiceData } = await supabase
         .from("bookings")
         .select(
