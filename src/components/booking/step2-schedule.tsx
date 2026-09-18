@@ -297,6 +297,7 @@ export function Step2Schedule({
               onChange={(e) =>
                 setClient({ ...client, travelHours: e.target.value })
               }
+              error={client.locationType === "LUAR_KOTA" && client.travelHours !== "" && (Number(client.travelHours) || 0) <= 0 ? "Wajib isi &gt; 0 jika Luar Kota" : undefined}
             />
             <div className="rounded-[1.5rem] border border-white/50 bg-white/60 px-4 py-3 text-xs text-[var(--muted)] backdrop-blur-md">
               Tarif: {FEE_LABEL}/jam × {client.travelHours || "0"} jam = <strong>{formatCurrency((Number(client.travelHours) || 0) * (transportFeeDefault ?? OUTSIDE_CITY_TRANSPORT_FEE))}</strong>

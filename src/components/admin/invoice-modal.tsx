@@ -35,6 +35,7 @@ interface InvoiceModalProps {
   };
   defaultKind?: InvoiceKind;
   logoUrl?: string | null;
+  vendorFee?: number;
 }
 
 export function InvoiceModal({
@@ -42,6 +43,7 @@ export function InvoiceModal({
   onClose,
   booking,
   defaultKind = "DP",
+  vendorFee,
 }: InvoiceModalProps) {
   const [kind, setKind] = useState<InvoiceKind>(defaultKind);
 
@@ -77,6 +79,7 @@ export function InvoiceModal({
     grandTotal: booking.grand_total ?? 0,
     dpLabel,
     dpAmount: booking.dp_amount ?? 0,
+    vendorFee: vendorFee ?? 0,
     paymentBank: PAYMENT_BANK,
     paymentAccount: PAYMENT_ACCOUNT,
     paymentHolder: PAYMENT_ACCOUNT_HOLDER,

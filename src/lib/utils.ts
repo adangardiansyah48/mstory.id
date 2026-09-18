@@ -130,6 +130,15 @@ interface InvoiceInput {
   paymentBank: string;
   paymentAccount: string;
   paymentHolder: string;
+  vendorFee?: number;
+}
+
+function vendorFeeLines(grandTotal: number, vendorFee?: number): string[] {
+  if (!vendorFee || vendorFee <= 0) return [];
+  return [
+    `Fee Vendor : -${formatCurrency(vendorFee)}`,
+    `Diterima Mstory.id : ${formatCurrency(Math.max(grandTotal - vendorFee, 0))}`,
+  ];
 }
 
 function invoiceHeader(type: "DP" | "PELUNASAN" | "LUNAS"): string[] {
@@ -162,6 +171,7 @@ function invoiceBody(input: InvoiceInput): string[] {
     `Subtotal : ${formatCurrency(input.subtotal)}`,
     `Transport: ${formatCurrency(input.transportFee)}`,
     `Total    : ${formatCurrency(input.grandTotal)}`,
+    ...vendorFeeLines(input.grandTotal, input.vendorFee),
   ];
 }
 
@@ -241,6 +251,7 @@ export function buildInvoiceMessage(input: {
   paymentBank: string;
   paymentAccount: string;
   paymentHolder: string;
+  vendorFee?: number;
 }): string {
   const lines = [
     `*INVOICE BOOKING - Mstory.id*`,
@@ -258,6 +269,7 @@ export function buildInvoiceMessage(input: {
     ``,
     `*PAKET*`,
     input.packageDescription,
+    ...vendorFeeLines(input.grandTotal, input.vendorFee),
   ];
   return lines.join("\n");
 }

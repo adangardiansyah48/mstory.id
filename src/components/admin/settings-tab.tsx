@@ -344,6 +344,14 @@ export function SettingsTab({ onThemeChanged }: { onThemeChanged?: (theme: strin
               className="w-full rounded-xl border border-white/50 bg-white/60 px-3 py-2 text-sm text-[var(--ink)] outline-none backdrop-blur-md transition-all focus:border-[var(--brand)] focus:bg-white/85 focus:ring-2 focus:ring-[var(--brand)]/20"
             />
           </Field>
+          <Field label="Fee Vendor (Rp)" hint="Dipisahkan dari invoice vendor — total perusahaan berkurang sebesar nominal ini">
+            <input
+              type="number"
+              value={form.vendor_fee ?? 200000}
+              onChange={(e) => setField("vendor_fee", Number(e.target.value))}
+              className="w-full rounded-xl border border-white/50 bg-white/60 px-3 py-2 text-sm text-[var(--ink)] outline-none backdrop-blur-md transition-all focus:border-[var(--brand)] focus:bg-white/85 focus:ring-2 focus:ring-[var(--brand)]/20"
+            />
+          </Field>
         </div>
       </Card>
 

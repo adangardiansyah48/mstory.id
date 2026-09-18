@@ -26,6 +26,7 @@ import { InvoiceModal, type InvoiceKind } from "@/components/admin/invoice-modal
 import { InvoicePdfPreview, downloadInvoicePdfBlob } from "@/components/admin/invoice-pdf-view";
 import type { InvoicePdfKind } from "@/lib/types";
 import { getSiteSettings, getStoredPublicUrl } from "@/lib/site-settings";
+import { BookingWizard } from "@/components/booking/booking-wizard";
 
 interface BookingRow {
   id: number;
@@ -89,8 +90,12 @@ export function BookingTab({
   const [blockDate, setBlockDate] = useState(() => todayInput());
   const [invoiceFor, setInvoiceFor] = useState<BookingRow | null>(null);
   const [invoiceKind, setInvoiceKind] = useState<InvoiceKind>("DP");
-  const [pdfFor, setPdfFor] = useState<{ booking: BookingRow; kind: InvoicePdfKind } | null>(null);
+  const [invoiceVendor, setInvoiceVendor] = useState(false);
+  const [pdfFor, setPdfFor] = useState<{ booking: BookingRow; kind: InvoicePdfKind; vendor?: boolean } | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [transportFeeRate, setTransportFeeRate] = useState(250000);
+  const [vendorFee, setVendorFee] = useState(200000);
+  const [showAddWizard, setShowAddWizard] = useState(false);
   const [statusFilter, setStatusFilter] = useState<BookingStatus | "ALL">("ALL");
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 20;
@@ -130,7 +135,11 @@ export function BookingTab({
   useEffect(() => {
     loadBookings();
     getSiteSettings()
-      .then((settings) => setLogoUrl(getStoredPublicUrl(settings.logo_url)))
+      .then((settings) => {
+        setLogoUrl(getStoredPublicUrl(settings.logo_url));
+        setTransportFeeRate(settings.transport_fee ?? 250000);
+        setVendorFee(settings.vendor_fee ?? 200000);
+      })
       .catch(() => {});
     const t = setInterval(loadBookings, 30000);
     return () => clearInterval(t);
@@ -511,9 +520,10 @@ const filtered = bookings.filter((b) => {
 
   function resetPage() { setPage(0); }
 
-  function openInvoice(booking: BookingRow, kind: InvoiceKind) {
+  function openInvoice(booking: BookingRow, kind: InvoiceKind, vendor = false) {
     setInvoiceFor(booking);
     setInvoiceKind(kind);
+    setInvoiceVendor(vendor);
   }
 
   return (
@@ -560,11 +570,7 @@ const filtered = bookings.filter((b) => {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => {
-              setEditingBooking(null);
-              setFormData({ full_name: "", whatsapp_number: "", event_date: "", location_type: "KOTA_TASIK", event_address: "", subtotal: "0", transport_fee: "0", grand_total: "0", dp_amount: "0", status: "MENUNGGU_DP", notes: "", is_vendor: false, vendor_name: "" });
-              setShowBookingForm(true);
-            }}
+            onClick={() => setShowAddWizard(true)}
             className="flex h-11 items-center gap-1.5 rounded-xl bg-[var(--brand)] px-4 text-xs font-bold uppercase tracking-wider text-white shadow-md hover:bg-[var(--brand-hover)]"
           >
             <Plus className="h-4 w-4" /> Tambah Booking
@@ -733,6 +739,26 @@ const filtered = bookings.filter((b) => {
                         </button>
                       </>
                     )}
+                    {booking.source === "VENDOR" && (
+                      <>
+                        <button
+                          onClick={() => setPdfFor({ booking, kind: (booking.status === "MENUNGGU_DP" ? "MENUNGGU_DP" : booking.status === "MENUNGGU_PELUNASAN" ? "MENUNGGU_PELUNASAN" : "LUNAS") as InvoicePdfKind, vendor: true })}
+                          title="Preview & download PDF invoice vendor (fee dipotong)"
+                          className="glass-inset inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[11px] font-bold uppercase tracking-widest text-[var(--ink)]"
+                        >
+                          <FileDown className="h-3.5 w-3.5" />
+                          Vendor PDF
+                        </button>
+                        <button
+                          onClick={() => openInvoice(booking, (booking.status === "MENUNGGU_DP" ? "DP" : booking.status === "MENUNGGU_PELUNASAN" ? "PELUNASAN" : "LUNAS") as InvoiceKind, true)}
+                          title="Lihat / kirim invoice vendor via WhatsApp"
+                          className="glass-inset inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[11px] font-bold uppercase tracking-widest text-[var(--ink)]"
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          Vendor WA
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -802,13 +828,28 @@ const filtered = bookings.filter((b) => {
         </div>
       )}
 
+      {showAddWizard && (
+        <BookingWizard
+          open={true}
+          adminMode
+          onClose={() => setShowAddWizard(false)}
+          transportFeeDefault={transportFeeRate}
+          onCreated={() => {
+            setShowAddWizard(false);
+            loadBookings();
+            onChanged();
+          }}
+        />
+      )}
+
       {invoiceFor && (
         <InvoiceModal
           open={true}
-          onClose={() => setInvoiceFor(null)}
+          onClose={() => { setInvoiceFor(null); setInvoiceVendor(false); }}
           booking={invoiceFor as ComponentProps<typeof InvoiceModal>["booking"]}
           defaultKind={invoiceKind}
           logoUrl={logoUrl}
+          vendorFee={invoiceVendor ? vendorFee : undefined}
         />
       )}
 
@@ -912,10 +953,10 @@ const filtered = bookings.filter((b) => {
           <div className="relative flex w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl h-[90vh]" onClick={(e) => e.stopPropagation()}>
             <div className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-200 px-5 py-3">
               <p className="text-sm font-semibold text-gray-700">
-                {pdfFor.booking.invoice_number}
+                {pdfFor.booking.invoice_number}{pdfFor.vendor ? " · Invoice Vendor" : ""}
               </p>
               <div className="flex items-center gap-2">
-                <button onClick={async () => { await downloadInvoicePdfBlob(pdfFor.booking, pdfFor.kind, logoUrl); }} className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-2 text-xs font-bold text-white">
+                <button onClick={async () => { await downloadInvoicePdfBlob(pdfFor.booking, pdfFor.kind, logoUrl, pdfFor.vendor ? vendorFee : undefined); }} className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-2 text-xs font-bold text-white">
                   <Download className="h-3.5 w-3.5" />
                   Download PDF
                 </button>
@@ -925,7 +966,7 @@ const filtered = bookings.filter((b) => {
               </div>
             </div>
             <div className="min-h-0 flex-1 bg-gray-100 p-3">
-              <InvoicePdfPreview booking={pdfFor.booking} kind={pdfFor.kind} logoUrl={logoUrl} />
+              <InvoicePdfPreview booking={pdfFor.booking} kind={pdfFor.kind} logoUrl={logoUrl} vendorFee={pdfFor.vendor ? vendorFee : undefined} />
             </div>
           </div>
         </div>

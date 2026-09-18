@@ -119,8 +119,9 @@ export async function downloadInvoicePdf(input: {
   kind: InvoicePdfKind;
   logoUrl?: string | null;
   note?: string | null;
+  vendorFee?: number;
 }): Promise<void> {
-  const { booking, kind, logoUrl, note } = input;
+  const { booking, kind, logoUrl, note, vendorFee } = input;
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const logoDataUrl = logoUrl ? await loadLogoDataUrl(logoUrl) : null;
   const badge = BADGE[kind];
@@ -289,6 +290,12 @@ export async function downloadInvoicePdf(input: {
     sumLine("Transport", fmt(transport));
   }
   sumLine("Total", fmt(Number(booking.grand_total) || 0));
+
+  if (vendorFee && vendorFee > 0) {
+    const net = Math.max(Number(booking.grand_total || 0) - vendorFee, 0);
+    sumLine("Fee Vendor", `-${fmt(vendorFee)}`, [196, 96, 26], "bold");
+    sumLine("Diterima Mstory.id", fmt(net), GREEN_TXT, "bold");
+  }
 
   if (kind === "LUNAS") {
     sumLine("DP Dibayar", fmt(Number(booking.dp_amount) || 0));

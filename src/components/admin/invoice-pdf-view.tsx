@@ -65,6 +65,7 @@ interface Props {
   booking: InvoicePdfBooking;
   kind: InvoicePdfKind;
   logoUrl?: string | null;
+  vendorFee?: number;
 }
 
 function fmt(v: number) {
@@ -82,7 +83,7 @@ function subDays(d: string, days: number): string {
   return date.toDateString();
 }
 
-export function InvoicePdfDocument({ booking, kind, logoUrl }: Props) {
+export function InvoicePdfDocument({ booking, kind, logoUrl, vendorFee }: Props) {
   const rows: { name: string; price: number }[] = [];
   if (booking.details?.[0]) {
     rows.push({ name: booking.details[0].packages?.name ?? "Paket", price: Number(booking.details[0].price_at_booking) || 0 });
@@ -149,6 +150,12 @@ export function InvoicePdfDocument({ booking, kind, logoUrl }: Props) {
           <View style={s.sumRow}><Text style={s.sumLabel}>Subtotal</Text><Text style={s.sumValue}>{fmt(subtotal)}</Text></View>
           <View style={s.sumRow}><Text style={s.sumLabel}>Transport</Text><Text style={s.sumValue}>{fmt(transport)}</Text></View>
           <View style={s.sumRow}><Text style={s.sumLabel}>Total</Text><Text style={[s.sumValue, { fontWeight: "bold" }]}>{fmt(total)}</Text></View>
+          {vendorFee != null && vendorFee > 0 && (
+            <>
+              <View style={s.sumRow}><Text style={s.sumLabel}>Fee Vendor</Text><Text style={[s.sumValue, { color: "#C45B26" }]}>-{fmt(vendorFee)}</Text></View>
+              <View style={s.sumRow}><Text style={s.sumLabel}>Diterima Mstory.id</Text><Text style={[s.sumValue, { fontWeight: "bold", color: "#047857" }]}>{fmt(Math.max(total - vendorFee, 0))}</Text></View>
+            </>
+          )}
           {kind === "MENUNGGU_PELUNASAN" && (
             <>
               <View style={s.sumRow}><Text style={s.sumLabel}>DP Dibayar</Text><Text style={s.sumValue}>{fmt(dpAmount)}</Text></View>
@@ -220,8 +227,8 @@ export function InvoicePdfDocument({ booking, kind, logoUrl }: Props) {
   );
 }
 
-export function InvoicePdfPreview({ booking, kind, logoUrl }: Props) {
-  const doc = useMemo(() => <InvoicePdfDocument booking={booking} kind={kind} logoUrl={logoUrl} />, [booking, kind, logoUrl]);
+export function InvoicePdfPreview({ booking, kind, logoUrl, vendorFee }: Props) {
+  const doc = useMemo(() => <InvoicePdfDocument booking={booking} kind={kind} logoUrl={logoUrl} vendorFee={vendorFee} />, [booking, kind, logoUrl, vendorFee]);
   return (
     <PDFViewer width="100%" height="100%" showToolbar={false}>
       {doc}
@@ -229,9 +236,9 @@ export function InvoicePdfPreview({ booking, kind, logoUrl }: Props) {
   );
 }
 
-export async function downloadInvoicePdfBlob(booking: InvoicePdfBooking, kind: InvoicePdfKind, logoUrl?: string | null) {
+export async function downloadInvoicePdfBlob(booking: InvoicePdfBooking, kind: InvoicePdfKind, logoUrl?: string | null, vendorFee?: number) {
   const { pdf } = await import("@react-pdf/renderer");
-  const blob = await pdf(<InvoicePdfDocument booking={booking} kind={kind} logoUrl={logoUrl} />).toBlob();
+  const blob = await pdf(<InvoicePdfDocument booking={booking} kind={kind} logoUrl={logoUrl} vendorFee={vendorFee} />).toBlob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   const suffix = kind === "MENUNGGU_DP" ? "invoice-dp" : kind === "MENUNGGU_PELUNASAN" ? "tagihan-pelunasan" : "tanda-terima-lunas";

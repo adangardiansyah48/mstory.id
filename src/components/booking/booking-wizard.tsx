@@ -35,6 +35,8 @@ interface BookingWizardProps {
   onSuccess?: () => void;
   waNumber?: string;
   transportFeeDefault?: number;
+  adminMode?: boolean;
+  onCreated?: (booking: unknown) => void;
 }
 
 interface BookingSelection {
@@ -52,6 +54,8 @@ export function BookingWizard({
   onSuccess,
   waNumber,
   transportFeeDefault,
+  adminMode,
+  onCreated,
 }: BookingWizardProps) {
   const [step, setStep] = useState(1);
   const [categories, setCategories] = useState<Category[]>(
@@ -92,6 +96,7 @@ export function BookingWizard({
     () => peekBookingData() === null,
   );
   const [submitting, setSubmitting] = useState(false);
+  const [vendorName, setVendorName] = useState("");
   const [submitResult, setSubmitResult] = useState<{
     invoiceNumber: string;
     waLink: string;
@@ -206,17 +211,20 @@ export function BookingWizard({
            const { data: bd, error: be } = await supabase
              .from("bookings")
              .insert({
-               invoice_number: inv,
-               client_id: clientData.id,
-               event_date: client.eventDate,
-               location_type: client.locationType,
-               event_address: client.eventAddress,
-               subtotal: subtotal,
-               transport_fee: transportFee,
-               grand_total: grandTotal,
-               dp_amount: dpAmount,
-               status: "MENUNGGU_DP",
-               notes: client.notes || null,
+                invoice_number: inv,
+                client_id: clientData.id,
+                event_date: client.eventDate,
+                location_type: client.locationType,
+                event_address: client.eventAddress,
+                subtotal: subtotal,
+                transport_fee: transportFee,
+                grand_total: grandTotal,
+                dp_amount: dpAmount,
+                status: "MENUNGGU_DP",
+                notes: client.notes || null,
+                ...(adminMode && vendorName.trim()
+                  ? { source: "VENDOR", vendor_name: vendorName.trim() }
+                  : {}),
              })
              .select()
              .single();
@@ -300,6 +308,7 @@ export function BookingWizard({
         message,
       );
       setSubmitResult({ invoiceNumber, waLink });
+      if (bookingData) onCreated?.(bookingData);
       onSuccess?.();
     } catch (err) {
       const e = err as { message?: string; details?: string; hint?: string; code?: string };
@@ -319,6 +328,7 @@ export function BookingWizard({
   function closeWizard() {
     setSubmitResult(null);
     setStep(1);
+    setVendorName("");
     onClose();
   }
 
@@ -332,11 +342,12 @@ export function BookingWizard({
                 <Check className="h-8 w-8 text-[#4CAF50]" strokeWidth={2.5} />
               </div>
               <h3 className="mt-4 font-serif text-xl font-semibold text-[var(--ink)]">
-                Booking Berhasil Dibuat!
+                {adminMode ? "Booking Berhasil Dibuat!" : "Booking Berhasil Dibuat!"}
               </h3>
               <p className="mt-2 text-sm text-[var(--muted)]">
-                Kirim invoice via WhatsApp ke admin, lalu tunggu verifikasi DP
-                agar status berubah menjadi Menunggu Pelunasan.
+                {adminMode 
+                  ? "Booking telah tersimpan. Silakan cek daftar booking untuk melihat invoice." 
+                  : "Kirim invoice via WhatsApp ke admin, lalu tunggu verifikasi DP agar status berubah menjadi Menunggu Pelunasan."}
               </p>
               <div className="mt-4 rounded-2xl bg-white/60 p-4 backdrop-blur-md">
                 <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
@@ -391,26 +402,34 @@ export function BookingWizard({
               <div className="space-y-4">
                 <div className="rounded-[2rem] border border-white/50 bg-white/65 p-4 backdrop-blur-md">
                   <h4 className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-                    Langkah Selanjutnya
+                    {adminMode ? "Booking Tersimpan" : "Langkah Selanjutnya"}
                   </h4>
                   <ol className="mt-3 space-y-3 text-sm text-[var(--ink)]">
-                    <li className="flex gap-3">
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-xs font-bold text-white">1</span>
-                      <span>Buka WhatsApp dan kirim pesanan paket ini ke admin Mstory.id</span>
-                    </li>
-                    <li className="flex gap-3">
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-xs font-bold text-white">2</span>
-                      <span>Transfer DP <strong>{formatCurrency(dpAmount)}</strong> ke {PAYMENT_BANK} {PAYMENT_ACCOUNT} A/n {PAYMENT_ACCOUNT_HOLDER}</span>
-                    </li>
-                    <li className="flex gap-3">
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-xs font-bold text-white">3</span>
-                      <span>Kirim bukti transfer ke admin untuk konfirmasi booking</span>
-                    </li>
+                    {adminMode ? (
+                      <li className="flex gap-3">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-xs font-bold text-white">1</span>
+                        <span>Booking berhasil disimpan. Invoice bisa dibuka dari daftar booking di admin dashboard.</span>
+                      </li>
+                    ) : (
+                      <>
+                        <li className="flex gap-3">
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-xs font-bold text-white">1</span>
+                          <span>Buka WhatsApp dan kirim pesanan paket ini ke admin Mstory.id</span>
+                        </li>
+                        <li className="flex gap-3">
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-xs font-bold text-white">2</span>
+                          <span>Transfer DP <strong>{formatCurrency(dpAmount)}</strong> ke {PAYMENT_BANK} {PAYMENT_ACCOUNT} A/n {PAYMENT_ACCOUNT_HOLDER}</span>
+                        </li>
+                        <li className="flex gap-3">
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-xs font-bold text-white">3</span>
+                          <span>Kirim bukti transfer ke admin untuk konfirmasi booking</span>
+                        </li>
+                      </>
+                    )}
                   </ol>
                 </div>
                 <p className="text-center text-xs text-[var(--muted)]">
-                  DP tidak dapat dikembalikan jika booking dibatalkan setelah
-                  invoice dibuat.
+                  {adminMode ? "" : "DP tidak dapat dikembalikan jika booking dibatalkan setelah invoice dibuat."}
                 </p>
               </div>
             </div>
@@ -427,12 +446,36 @@ export function BookingWizard({
                 />
               )}
               {step === 2 && (
-                <Step2Schedule
-                  bookedCounts={bookedCounts}
-                  client={client}
-                  setClient={setClient}
-                  transportFeeDefault={transportFeeDefault}
-                />
+                <>
+                  {adminMode && (
+                    <div className="mx-6 mt-4 rounded-2xl border-2 border-[var(--brand)]/30 bg-[var(--brand)]/5 p-4">
+                      <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--brand)]">Data Vendor (Admin)</p>
+                      <div className="space-y-3">
+                        <label className="flex items-center gap-2 text-sm font-semibold text-[var(--ink)]">
+                          <input type="checkbox" checked={!!vendorName} onChange={(e) => setVendorName(e.target.checked ? "Vendor" : "")} className="accent-[var(--brand)]" />
+                          Ini Booking dari Vendor
+                        </label>
+                        {!!vendorName && (
+                          <div className="animate-fade-in">
+                            <p className="mb-1 text-[10px] font-bold uppercase text-[var(--muted-2)]">Nama Vendor</p>
+                            <input
+                              value={vendorName === "Vendor" ? "" : vendorName}
+                              onChange={(e) => setVendorName(e.target.value)}
+                              placeholder="Ketik nama vendor..."
+                              className="h-10 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  <Step2Schedule
+                    bookedCounts={bookedCounts}
+                    client={client}
+                    setClient={setClient}
+                    transportFeeDefault={transportFeeDefault}
+                  />
+                </>
               )}
               {step === 3 && (
                 <Step3Summary
@@ -490,16 +533,18 @@ export function BookingWizard({
 
         {submitResult && !loading && (
           <div className="flex items-center justify-center gap-3 border-t border-white/40 px-6 py-4">
-            <a
-              href={submitResult.waLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#25D366] px-7 text-sm font-semibold uppercase tracking-widest text-white shadow-lg shadow-green-500/20 transition-colors hover:bg-[#1eb958]"
-            >
-              <WhatsAppIcon className="h-4 w-4" />
-              Kirim ke WhatsApp
-            </a>
-            <Button variant="ghost" onClick={closeWizard}>
+            {!adminMode && (
+              <a
+                href={submitResult.waLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#25D366] px-7 text-sm font-semibold uppercase tracking-widest text-white shadow-lg shadow-green-500/20 transition-colors hover:bg-[#1eb958]"
+              >
+                <WhatsAppIcon className="h-4 w-4" />
+                Kirim ke WhatsApp
+              </a>
+            )}
+            <Button variant={adminMode ? "default" : "ghost"} onClick={closeWizard}>
               Tutup
             </Button>
           </div>

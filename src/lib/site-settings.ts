@@ -19,6 +19,7 @@ export interface SiteSettings {
   footer_text: string | null;
   city_text: string | null;
   transport_fee: number | null;
+  vendor_fee: number | null;
   theme_fanpage: string | null;
   theme_admin: string | null;
   updated_at: string;
@@ -42,6 +43,7 @@ export const DEFAULT_SETTINGS: Omit<SiteSettings, "id" | "updated_at"> = {
   footer_text: "Photography & Videography",
   city_text: "Tasikmalaya",
   transport_fee: 250000,
+  vendor_fee: 200000,
   theme_fanpage: "CLASSIC",
   theme_admin: "CLASSIC",
 };
