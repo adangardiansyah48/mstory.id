@@ -240,11 +240,14 @@ export function PackagesTab() {
     if (!error && data) {
       setPackages((prev) => [...prev, data]);
       setNewPackage({ ...EMPTY_PACKAGE });
+      setShowPkgModal(false);
+      setEditingPackageId(null);
       await Swal.fire({
         icon: "success",
         title: "Paket Ditambahkan",
-        timer: 1000,
+        timer: 1500,
         showConfirmButton: false,
+        timerProgressBar: true,
       });
       clearBookingDataCache();
     } else if (error) {
@@ -334,11 +337,14 @@ export function PackagesTab() {
     if (!error && data) {
       setAddons((prev) => [...prev, data]);
       setNewAddon({ id: 0, name: "", price: "", is_active: true });
+      setShowAddonModal(false);
+      setEditingAddonId(null);
       await Swal.fire({
         icon: "success",
         title: "Add-on Ditambahkan",
-        timer: 1000,
+        timer: 1500,
         showConfirmButton: false,
+        timerProgressBar: true,
       });
       clearBookingDataCache();
     } else if (error) {
