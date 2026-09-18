@@ -94,12 +94,52 @@ export function FinanceTab() {
       total: dpDiterima + pelunasanDiterima,
       count: rows.length,
     };
-  }, [rows]);
+  }, [rows, vendorFee]);
 
   const monthLabel = new Date(`${month}-01`).toLocaleDateString("id-ID", {
     month: "long",
     year: "numeric",
   });
+
+  const logoUrl = "";
+  const [logoUrlState, setLogoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { getSiteSettings, getStoredPublicUrl } = await import("@/lib/site-settings");
+        const s = await getSiteSettings();
+        if (s.logo_url) setLogoUrl(getStoredPublicUrl(s.logo_url) ?? null);
+      } catch {}
+    })();
+  }, []);
+
+  const vendorInvoices = useMemo(() => {
+    const map = new Map<string, { bookings: { invoice_number: string; event_date: string; fee: number }[]; totalFee: number }>();
+    for (const r of rows) {
+      if (r.source !== "VENDOR") continue;
+      const vendorName = (r as unknown as { vendor_name?: string | null }).vendor_name ?? "Vendor";
+      if (!map.has(vendorName)) map.set(vendorName, { bookings: [], totalFee: 0 });
+      const entry = map.get(vendorName)!;
+      entry.bookings.push({
+        invoice_number: r.invoice_number,
+        event_date: r.event_date,
+        fee: vendorFee,
+      });
+      entry.totalFee += vendorFee;
+    }
+    return Array.from(map.entries()).map(([vendorName, v]) => ({
+      vendorName,
+      bookings: v.bookings,
+      totalFee: v.totalFee,
+    }));
+  }, [rows, vendorFee]);
+
+  
+
+  // ambil data vendor fee per bulan via memo vendorInvoices (sudah ada)
+
+  // ...
 
   return (
     <div className="space-y-6">
@@ -199,10 +239,56 @@ export function FinanceTab() {
             })}
           </tbody>
         </table>
-        {rows.length === 0 && !loading && (
+          {rows.length === 0 && !loading && (
           <p className="py-8 text-center text-sm text-[var(--muted)]">
             Tidak ada data transaksi di bulan ini.
           </p>
+        )}
+      </div>
+
+      <div className="rounded-2xl border border-[var(--line)] bg-white p-5">
+        <h3 className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--muted)]">
+          Bukti Penyerahan Fee Vendor — {monthLabel}
+        </h3>
+        <p className="mt-1 text-[11px] text-[var(--muted-2)]">1 invoice PDF per vendor, periode bulan terpilih.</p>
+        {vendorInvoices.length === 0 ? (
+          <p className="mt-4 py-6 text-center text-sm text-[var(--muted)]">Tidak ada booking vendor di bulan ini.</p>
+        ) : (
+          <div className="mt-4 space-y-4">
+            {vendorInvoices.map((v) => (
+              <div key={v.vendorName} className="rounded-xl border border-[var(--line)] bg-[var(--soft)]/40 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-bold text-[var(--ink)]">{v.vendorName}</p>
+                    <p className="text-xs text-[var(--muted)]">{v.bookings.length} booking · Total fee {formatCurrency(v.totalFee)} ({formatCurrency(vendorFee)}/booking)</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const { downloadVendorFeeMonthlyInvoice } = await import("@/lib/invoice-pdf");
+                      await downloadVendorFeeMonthlyInvoice({
+                        vendorName: v.vendorName,
+                        monthLabel,
+                        logoUrl: logoUrlState,
+                        rows: v.bookings.map((b) => ({ invoice_number: b.invoice_number, event_date: b.event_date, fee: b.fee })),
+                      });
+                    }}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[var(--brand)] px-4 text-[11px] font-bold uppercase tracking-widest text-white hover:bg-[var(--brand-hover)]"
+                  >
+                    Download PDF
+                  </button>
+                </div>
+                <div className="mt-3 max-h-40 overflow-y-auto rounded-lg border border-[var(--line)] bg-white p-2 text-[11px]">
+                  {v.bookings.map((b) => (
+                    <div key={b.invoice_number} className="flex justify-between py-0.5">
+                      <span className="font-mono text-[var(--ink)]">{b.invoice_number}</span>
+                      <span className="text-[var(--muted-2)]">{formatShortDate(b.event_date)} · {formatCurrency(b.fee)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>

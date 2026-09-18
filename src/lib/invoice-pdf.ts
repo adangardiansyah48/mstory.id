@@ -2,6 +2,16 @@ import { jsPDF } from "jspdf";
 import type { InvoicePdfKind } from "@/lib/types";
 import { PAYMENT_ACCOUNT, PAYMENT_ACCOUNT_HOLDER, PAYMENT_BANK } from "@/lib/types";
 
+function slugify(input: string): string {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 export interface InvoicePdfBooking {
   invoice_number: string;
   booking_date?: string | null;
@@ -415,4 +425,157 @@ function drawBullets(
     cursor += lines.length * 4.5 + 2.5;
   });
   return cursor;
+}
+
+export function downloadVendorFeeMonthlyInvoice(input: {
+  vendorName: string;
+  monthLabel: string;
+  logoUrl?: string | null;
+  rows: {
+    invoice_number: string;
+    event_date: string;
+    fee: number;
+  }[];
+}): Promise<void> {
+  const { vendorName, monthLabel, logoUrl, rows } = input;
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const feeEach = rows[0]?.fee ?? 0;
+  const totalFee = rows.reduce((s, r) => s + r.fee, 0);
+
+  async function build(): Promise<void> {
+    const logoDataUrl = logoUrl ? await loadLogoDataUrl(logoUrl) : null;
+    const logoW = 34;
+    if (logoDataUrl) {
+      try {
+        doc.addImage(logoDataUrl, "PNG", MARGIN, 12, logoW, logoW);
+      } catch {
+        /* logo opsional */
+      }
+    }
+
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(22);
+    doc.setTextColor(...BRAND_DARK);
+    doc.text("BUKTI PENYERAHAN", RIGHT, 26, { align: "right", charSpace: 0.8 });
+    doc.text("FEE VENDOR", RIGHT, 34, { align: "right", charSpace: 0.8 });
+
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(12);
+    doc.setTextColor(...INK);
+    doc.text("Periode :", RIGHT, 43.5, { align: "right" });
+    doc.setFont("Helvetica", "bold");
+    doc.text(monthLabel, RIGHT, 49, { align: "right" });
+
+    doc.setDrawColor(...BRAND_C);
+    doc.setLineWidth(1.1);
+    doc.line(MARGIN, 57, RIGHT, 57);
+    doc.setLineWidth(0.3);
+    doc.line(MARGIN, 59, RIGHT, 59);
+
+    let y = 70;
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(...MUTED);
+    doc.text("DISERAHKAN KEPADA VENDOR", MARGIN, y);
+    y += 7;
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(14);
+    doc.setTextColor(...INK);
+    doc.text(vendorName, MARGIN, y);
+    y += 6;
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(9.5);
+    doc.setTextColor(...MUTED);
+    doc.text(`Akumulasi fee vendor bulan ${monthLabel}», Mstory.id menyatakan telah menyerahkan fee atas booking yang ditangani ${vendorName}.`, MARGIN, y);
+    y += 8;
+
+    const tableTop = Math.max(y, 100);
+    let ty = tableTop;
+    const cItem = MARGIN;
+    const cJml = RIGHT;
+
+    doc.setFillColor(...BRAND_C);
+    doc.rect(MARGIN, ty - 9, CONTENT_W, 10, "F");
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(255, 255, 255);
+    doc.text("NO. INVOICE / BOOKING", cItem + 5, ty - 2.4);
+    doc.text("TANGGAL EVENT", (cItem + RIGHT) / 2, ty - 2.4, { align: "right" });
+    doc.text("FEE", cJml - 5, ty - 2.4, { align: "right" });
+
+    ty += 3;
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(9.5);
+    doc.setTextColor(...INK);
+    let totalCol = 0;
+    rows.forEach((r, idx) => {
+      doc.text(r.invoice_number, cItem + 5, ty + 4.2);
+      doc.text(fmtDate(r.event_date), (cItem + RIGHT) / 2, ty + 4.2, { align: "right" });
+      doc.text(fmt(Number(r.fee) || 0), cJml - 5, ty + 4.2, { align: "right" });
+      totalCol += Number(r.fee) || 0;
+      ty += 8;
+      if (idx < rows.length - 1) {
+        doc.setDrawColor(...LINE_C);
+        doc.setLineWidth(0.2);
+        doc.line(MARGIN, ty - 0.5, RIGHT, ty - 0.5);
+      }
+    });
+
+    ty += 8;
+    doc.setDrawColor(...BRAND_C);
+    doc.setLineWidth(1.1);
+    doc.line(MARGIN, ty - 5, RIGHT, ty - 5);
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(...INK);
+    doc.text("TOTAL FEE DISERAHKAN", MARGIN, ty + 3);
+    doc.text(fmt(totalCol), RIGHT, ty + 3, { align: "right" });
+    ty += 9;
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(...GREEN_TXT);
+    doc.text(`(${rows.length} booking · ${fmt(feeEach)} per booking)`, MARGIN, ty + 2);
+    ty += 10;
+
+    let fy = Math.max(ty + 6, 216);
+    doc.setFont("Helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(...INK);
+    doc.text("KETERANGAN", MARGIN, fy);
+    fy += 1.5;
+    doc.setDrawColor(...BRAND_C);
+    doc.setLineWidth(0.4);
+    doc.line(MARGIN, fy, RIGHT, fy);
+    fy += 5.5;
+
+    fy = drawBullets(
+      doc,
+      [
+        "Dokumen ini merupakan tanda/bukti penyerahan fee dari Mstory.id kepada vendor terkait atas pekerjaan bulan bersangkutan.",
+        "Total fee diserahkan = jumlah booking ditangani vendor × fee per booking.",
+        "Fee sudah memperhitungkan pengurangan (kewajiban) vendor sesuai kesepakatan. Tidak ada tagihan lain terkait periode ini.",
+        "Dokumen dicetak otomatis dari sistem Mstory.id.",
+      ],
+      MARGIN,
+      fy,
+      CONTENT_W,
+      8,
+    );
+
+    fy += 6;
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...MUTED);
+    doc.text(
+      `Dokumen ini dibuat otomatis oleh Sistem Mstory.id - ${fmtInvoiceDateTime(new Date().toISOString())}`,
+      PAGE_W / 2,
+      fy,
+      { align: "center" },
+    );
+
+    const fileSafe = slugify(vendorName) || "vendor";
+    doc.save(`fee-vendor-${fileSafe}-${slugify(monthLabel)}.pdf`);
+  }
+
+  return build();
 }
