@@ -194,6 +194,10 @@ export function BookingTab({
       await Swal.fire({ icon: "error", title: "Gagal Menambah Klien", text: clientErr?.message ?? "Terjadi kesalahan." });
       return;
     }
+    const subtotalNum = Number(formData.subtotal) || 0;
+    const transportNum = Number(formData.transport_fee) || 0;
+    const grandNum = Number(formData.grand_total) || 0;
+    const finalGrand = subtotalNum + transportNum > 0 ? subtotalNum + transportNum : grandNum;
     const { data: bookingData, error: bookingErr } = await supabase
       .from("bookings")
       .insert({
@@ -202,9 +206,9 @@ export function BookingTab({
         event_date: formData.event_date,
         location_type: formData.location_type,
         event_address: formData.event_address.trim(),
-        subtotal: Number(formData.subtotal) || 0,
-        transport_fee: Number(formData.transport_fee) || 0,
-        grand_total: Number(formData.grand_total) || 0,
+        subtotal: subtotalNum,
+        transport_fee: transportNum,
+        grand_total: finalGrand,
         dp_amount: Number(formData.dp_amount) || 0,
         status: formData.status,
         notes: formData.notes.trim() || null,
@@ -244,6 +248,10 @@ export function BookingTab({
       await Swal.fire({ icon: "error", title: "Gagal Menambah Vendor", text: clientErr?.message ?? "Terjadi kesalahan." });
       return;
     }
+    const subtotalNum2 = Number(formData.subtotal) || 0;
+    const transportNum2 = Number(formData.transport_fee) || 0;
+    const grandNum2 = Number(formData.grand_total) || 0;
+    const finalGrand2 = subtotalNum2 + transportNum2 > 0 ? subtotalNum2 + transportNum2 : grandNum2;
     const { data: bookingData, error: bookingErr } = await supabase
       .from("bookings")
       .insert({
@@ -252,9 +260,9 @@ export function BookingTab({
         event_date: formData.event_date,
         location_type: formData.location_type,
         event_address: formData.event_address.trim(),
-        subtotal: Number(formData.subtotal) || 0,
-        transport_fee: Number(formData.transport_fee) || 0,
-        grand_total: Number(formData.grand_total) || 0,
+        subtotal: subtotalNum2,
+        transport_fee: transportNum2,
+        grand_total: finalGrand2,
         dp_amount: Number(formData.dp_amount) || 0,
         status: formData.status,
         notes: formData.notes.trim() || null,
@@ -279,15 +287,23 @@ export function BookingTab({
     if (!editingBooking) return;
     const supabase = createClient();
     if (!supabase) return;
+    const subtotalNum = Number(formData.subtotal) || 0;
+    const transportNum = Number(formData.transport_fee) || 0;
+    const grandNum = Number(formData.grand_total) || 0;
+    const expected = subtotalNum + transportNum;
+    const finalGrand = expected > 0 && grandNum !== expected ? expected : grandNum;
+    if (expected > 0 && grandNum !== expected) {
+      await Swal.fire({ icon: "info", title: "Grand Total disesuaikan", text: `Grand Total disesuaikan ke Rp ${expected.toLocaleString("id-ID")} (Subtotal + Transport).` });
+    }
     const { error: bookingErr } = await supabase
       .from("bookings")
       .update({
         event_date: formData.event_date,
         location_type: formData.location_type,
         event_address: formData.event_address.trim(),
-        subtotal: Number(formData.subtotal) || 0,
-        transport_fee: Number(formData.transport_fee) || 0,
-        grand_total: Number(formData.grand_total) || 0,
+        subtotal: subtotalNum,
+        transport_fee: transportNum,
+        grand_total: finalGrand,
         dp_amount: Number(formData.dp_amount) || 0,
         status: formData.status,
         notes: formData.notes.trim() || null,
