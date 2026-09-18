@@ -444,10 +444,10 @@ export function downloadVendorFeeMonthlyInvoice(input: {
 
   async function build(): Promise<void> {
     const logoDataUrl = logoUrl ? await loadLogoDataUrl(logoUrl) : null;
-    const logoW = 34;
+    const logoW = 50;
     if (logoDataUrl) {
       try {
-        doc.addImage(logoDataUrl, "PNG", MARGIN, 12, logoW, logoW);
+        doc.addImage(logoDataUrl, "PNG", MARGIN, 10, logoW, logoW);
       } catch {
         /* logo opsional */
       }
@@ -477,22 +477,24 @@ export function downloadVendorFeeMonthlyInvoice(input: {
     doc.setFontSize(9);
     doc.setTextColor(...MUTED);
     doc.text("DISERAHKAN KEPADA VENDOR", MARGIN, y);
-    y += 7;
+    y += 8;
     doc.setFont("Helvetica", "bold");
-    doc.setFontSize(14);
+    doc.setFontSize(16);
     doc.setTextColor(...INK);
-    doc.text(vendorName, MARGIN, y);
-    y += 6;
+    const vendorLines = doc.splitTextToSize(vendorName, CONTENT_W) as string[];
+    doc.text(vendorLines, MARGIN, y);
+    y += vendorLines.length * 5.5 + 3;
     doc.setFont("Helvetica", "normal");
     doc.setFontSize(9.5);
     doc.setTextColor(...MUTED);
-    doc.text(`Akumulasi fee vendor bulan ${monthLabel}», Mstory.id menyatakan telah menyerahkan fee atas booking yang ditangani ${vendorName}.`, MARGIN, y);
+    doc.text(`Akumulasi fee vendor bulan ${monthLabel} · Mstory.id menyatakan telah menyerahkan fee atas booking yang ditangani ${vendorName}.`, MARGIN, y);
     y += 8;
 
     const tableTop = Math.max(y, 100);
     let ty = tableTop;
     const cItem = MARGIN;
-    const cJml = RIGHT;
+    const cTanggal = MARGIN + 95;
+    const cFee = RIGHT;
 
     doc.setFillColor(...BRAND_C);
     doc.rect(MARGIN, ty - 9, CONTENT_W, 10, "F");
@@ -500,8 +502,8 @@ export function downloadVendorFeeMonthlyInvoice(input: {
     doc.setFontSize(9);
     doc.setTextColor(255, 255, 255);
     doc.text("NO. INVOICE / BOOKING", cItem + 5, ty - 2.4);
-    doc.text("TANGGAL EVENT", (cItem + RIGHT) / 2, ty - 2.4, { align: "right" });
-    doc.text("FEE", cJml - 5, ty - 2.4, { align: "right" });
+    doc.text("TANGGAL EVENT", cTanggal + 5, ty - 2.4);
+    doc.text("FEE", cFee - 5, ty - 2.4, { align: "right" });
 
     ty += 3;
     doc.setFont("Helvetica", "normal");
@@ -509,9 +511,12 @@ export function downloadVendorFeeMonthlyInvoice(input: {
     doc.setTextColor(...INK);
     let totalCol = 0;
     rows.forEach((r, idx) => {
-      doc.text(r.invoice_number, cItem + 5, ty + 4.2);
-      doc.text(fmtDate(r.event_date), (cItem + RIGHT) / 2, ty + 4.2, { align: "right" });
-      doc.text(fmt(Number(r.fee) || 0), cJml - 5, ty + 4.2, { align: "right" });
+      doc.text(String(r.invoice_number), cItem + 5, ty + 4.2);
+      doc.setFont("Helvetica", "normal");
+      doc.text(fmtDate(r.event_date), cTanggal + 5, ty + 4.2);
+      doc.setFont("Helvetica", "bold");
+      doc.text(fmt(Number(r.fee) || 0), cFee - 5, ty + 4.2, { align: "right" });
+      doc.setFont("Helvetica", "normal");
       totalCol += Number(r.fee) || 0;
       ty += 8;
       if (idx < rows.length - 1) {
@@ -531,11 +536,6 @@ export function downloadVendorFeeMonthlyInvoice(input: {
     doc.text("TOTAL FEE DISERAHKAN", MARGIN, ty + 3);
     doc.text(fmt(totalCol), RIGHT, ty + 3, { align: "right" });
     ty += 9;
-    doc.setFont("Helvetica", "normal");
-    doc.setFontSize(8.5);
-    doc.setTextColor(...GREEN_TXT);
-    doc.text(`(${rows.length} booking · ${fmt(feeEach)} per booking)`, MARGIN, ty + 2);
-    ty += 10;
 
     let fy = Math.max(ty + 6, 216);
     doc.setFont("Helvetica", "bold");
@@ -562,16 +562,7 @@ export function downloadVendorFeeMonthlyInvoice(input: {
       8,
     );
 
-    fy += 6;
-    doc.setFont("Helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(...MUTED);
-    doc.text(
-      `Dokumen ini dibuat otomatis oleh Sistem Mstory.id - ${fmtInvoiceDateTime(new Date().toISOString())}`,
-      PAGE_W / 2,
-      fy,
-      { align: "center" },
-    );
+  fy += 6;
 
     const fileSafe = slugify(vendorName) || "vendor";
     doc.save(`fee-vendor-${fileSafe}-${slugify(monthLabel)}.pdf`);
