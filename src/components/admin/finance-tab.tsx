@@ -16,7 +16,6 @@ interface FinanceRow {
   status: BookingStatus;
   client: { full_name: string } | null;
   booking_date: string | null;
-  created_at: string;
 }
 
 export function FinanceTab() {
@@ -42,11 +41,11 @@ export function FinanceTab() {
 
       const { data, error } = await supabase
         .from("bookings")
-        .select("id, invoice_number, event_date, grand_total, dp_amount, status, booking_date, created_at, client:clients(full_name)")
+        .select("id, invoice_number, event_date, grand_total, dp_amount, status, booking_date, client:clients(full_name)")
         .neq("status", "CANCELLED")
-        .gte("created_at", start)
-        .lt("created_at", end)
-        .order("created_at", { ascending: false })
+        .gte("event_date", start)
+        .lt("event_date", end)
+        .order("event_date", { ascending: true })
         .limit(1000);
 
 
