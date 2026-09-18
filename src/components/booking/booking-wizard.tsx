@@ -178,7 +178,7 @@ export function BookingWizard({
       });
       return;
     }
-    const invoiceNumber = await generateInvoiceNumber();
+    let invoiceNumber = await generateInvoiceNumber();
     const normalizedPhone = normalizeWhatsAppNumber(client.whatsappNumber);
 
      try {
@@ -195,25 +195,33 @@ export function BookingWizard({
 
        let bookingData;
        try {
-         const { data: bd, error: be } = await supabase
-           .from("bookings")
-           .insert({
-             invoice_number: invoiceNumber,
-             client_id: clientData.id,
-             event_date: client.eventDate,
-             location_type: client.locationType,
-             event_address: client.eventAddress,
-             subtotal: subtotal,
-             transport_fee: transportFee,
-             grand_total: grandTotal,
-             dp_amount: dpAmount,
-             status: "MENUNGGU_DP",
-             notes: client.notes || null,
-           })
-           .select()
-           .single();
-         if (be) throw be;
-         bookingData = bd;
+         let inv = invoiceNumber;
+         for (let attempt = 0; attempt < 3; attempt++) {
+           const { data: bd, error: be } = await supabase
+             .from("bookings")
+             .insert({
+               invoice_number: inv,
+               client_id: clientData.id,
+               event_date: client.eventDate,
+               location_type: client.locationType,
+               event_address: client.eventAddress,
+               subtotal: subtotal,
+               transport_fee: transportFee,
+               grand_total: grandTotal,
+               dp_amount: dpAmount,
+               status: "MENUNGGU_DP",
+               notes: client.notes || null,
+             })
+             .select()
+             .single();
+           if (!be) { bookingData = bd; invoiceNumber = inv; break; }
+           if ((be as { code?: string }).code === "23505" && attempt < 2) {
+             inv = await generateInvoiceNumber();
+             continue;
+           }
+           throw be;
+         }
+         if (!bookingData) throw new Error("Gagal membuat booking");
        } catch (bookingErr) {
          await supabase.from("clients").delete().eq("id", clientData.id);
          throw bookingErr;

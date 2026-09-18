@@ -56,6 +56,7 @@ export async function generateInvoiceNumber(): Promise<string> {
   const mm = String(now.getMonth() + 1).padStart(2, "0");
   const yyyy = now.getFullYear();
   const prefix = `INV-${dd}${mm}${yyyy}-`;
+  const monthSuffix = `${mm}${yyyy}-`;
 
   const supabase = createClient();
   let last = 0;
@@ -63,7 +64,7 @@ export async function generateInvoiceNumber(): Promise<string> {
     const { data } = await supabase
       .from("bookings")
       .select("invoice_number")
-      .like("invoice_number", `${prefix}%`)
+      .like("invoice_number", `INV-%${monthSuffix}%`)
       .order("invoice_number", { ascending: false })
       .limit(1);
     const match = data?.[0]?.invoice_number?.match(/(\d{4})\s*$/);
