@@ -262,7 +262,7 @@ export function PackagesTab() {
 
   function startPackageEdit(pkg: PackageRow) {
     setEditingPackageId(pkg.id);
-    setShowPkgModal(false);
+    setShowPkgModal(true);
     setNewPackage({
       id: pkg.id,
       sub_category_id: pkg.sub_category_id,
@@ -359,7 +359,7 @@ export function PackagesTab() {
 
   function startAddonEdit(addon: Addon) {
     setEditingAddonId(addon.id);
-    setShowAddonModal(false);
+    setShowAddonModal(true);
     setNewAddon({
       id: addon.id,
       name: addon.name,
