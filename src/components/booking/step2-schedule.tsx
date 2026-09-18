@@ -21,6 +21,7 @@ interface Step2Props {
   bookedCounts: Record<string, number>;
   client: WizardClientDetails;
   setClient: React.Dispatch<React.SetStateAction<WizardClientDetails>>;
+  transportFeeDefault?: number;
 }
 
 function toLocalDateKey(date: Date) {
@@ -34,7 +35,9 @@ export function Step2Schedule({
   bookedCounts,
   client,
   setClient,
+  transportFeeDefault,
 }: Step2Props) {
+  const FEE_LABEL = formatCurrency(transportFeeDefault ?? OUTSIDE_CITY_TRANSPORT_FEE);
   const [currentMonth, setCurrentMonth] = useState(() => {
     const today = new Date();
     return new Date(today.getFullYear(), today.getMonth(), 1);
@@ -279,7 +282,7 @@ export function Step2Schedule({
         </div>
         {client.locationType === "LUAR_KOTA" && (
           <div className="mt-3 rounded-[1.5rem] border border-white/50 bg-white/60 px-4 py-3 text-xs text-[var(--muted)] backdrop-blur-md">
-            Biaya transport <strong>{formatCurrency(OUTSIDE_CITY_TRANSPORT_FEE)}</strong>{" "}
+            Biaya transport <strong>{FEE_LABEL}</strong>{" "}
             berlaku untuk lokasi di luar Kota Tasikmalaya.
           </div>
         )}

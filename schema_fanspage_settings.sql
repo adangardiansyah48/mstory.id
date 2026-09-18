@@ -4,6 +4,7 @@
 CREATE TABLE IF NOT EXISTS public.linktree_settings (
     id SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
     banner_url TEXT,
+    banner_urls TEXT,
     logo_url TEXT,
     subtitle TEXT DEFAULT 'Photography & Videography',
     tagline TEXT DEFAULT 'tell us your story journey',
@@ -18,6 +19,7 @@ CREATE TABLE IF NOT EXISTS public.linktree_settings (
     youtube_url TEXT DEFAULT 'https://youtube.com/@mstory.id',
     footer_text TEXT DEFAULT 'Photography & Videography',
     city_text TEXT DEFAULT 'Tasikmalaya',
+    transport_fee INTEGER DEFAULT 250000,
     theme_fanpage TEXT DEFAULT 'CLASSIC',
     theme_admin TEXT DEFAULT 'CLASSIC',
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL

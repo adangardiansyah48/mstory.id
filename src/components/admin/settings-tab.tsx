@@ -425,7 +425,21 @@ export function SettingsTab({ onThemeChanged }: { onThemeChanged?: (theme: strin
                     />
                     <button
                       type="button"
-                      onClick={() => setGalleryImages((prev) => prev.filter((g) => g.id !== img.id))}
+                      onClick={async () => {
+                        const supabase = createClient();
+                        if (supabase) {
+                          await supabase.storage
+                            .from(FANSPAGE_BUCKET)
+                            .remove([`gallery/${img.name}`]);
+                        }
+                        if (supabase) {
+                          const fresh = await getGalleryImages();
+                          setGalleryImages(fresh);
+                        } else {
+                          setGalleryImages((prev) => prev.filter((g) => g.id !== img.id));
+                        }
+                        setMessage(`Foto ${img.name} dihapus dari galeri.`);
+                      }}
                       className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity group-hover:opacity-100"
                       title="Hapus dari preview"
                     >

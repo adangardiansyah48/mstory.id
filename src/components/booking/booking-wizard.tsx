@@ -34,6 +34,7 @@ interface BookingWizardProps {
   onClose: () => void;
   onSuccess?: () => void;
   waNumber?: string;
+  transportFeeDefault?: number;
 }
 
 interface BookingSelection {
@@ -50,6 +51,7 @@ export function BookingWizard({
   onClose,
   onSuccess,
   waNumber,
+  transportFeeDefault,
 }: BookingWizardProps) {
   const [step, setStep] = useState(1);
   const [categories, setCategories] = useState<Category[]>(
@@ -132,7 +134,7 @@ export function BookingWizard({
     selection.addons.reduce((sum, a) => sum + a.price, 0);
 
   const transportFee =
-    client.locationType === "LUAR_KOTA" ? TRANSPORT_FEE_LUAR_KOTA : 0;
+    client.locationType === "LUAR_KOTA" ? (transportFeeDefault ?? TRANSPORT_FEE_LUAR_KOTA) : 0;
 
   const grandTotal = subtotal + transportFee;
   const dpValue = Number(selection.selectedPackage?.dp_value ?? 0);
@@ -425,6 +427,7 @@ export function BookingWizard({
                   bookedCounts={bookedCounts}
                   client={client}
                   setClient={setClient}
+                  transportFeeDefault={transportFeeDefault}
                 />
               )}
               {step === 3 && (

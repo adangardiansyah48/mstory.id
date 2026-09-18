@@ -49,6 +49,7 @@ export function LinkTreeContent() {
   const waNumber = normalizeWhatsAppNumber(
     settings.wa_number || "6281234567890",
   );
+  const transportFeeDefault = settings.transport_fee ?? 250000;
   const subtitle = settings.subtitle || "Photography & Videography";
   const tagline = settings.tagline || "tell us your story journey";
   const bookingLabel = settings.booking_label || "Booking Online";
@@ -294,7 +295,7 @@ export function LinkTreeContent() {
       </div>
 
       {bookingOpen && (
-        <BookingWizard open={true} onClose={() => setBookingOpen(false)} waNumber={waNumber} />
+        <BookingWizard open={true} onClose={() => setBookingOpen(false)} waNumber={waNumber} transportFeeDefault={transportFeeDefault} />
       )}
       {statusOpen && <StatusChecker open={true} onClose={() => setStatusOpen(false)} />}
     </>
