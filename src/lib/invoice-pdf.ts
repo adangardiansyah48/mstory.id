@@ -439,9 +439,6 @@ export function downloadVendorFeeMonthlyInvoice(input: {
 }): Promise<void> {
   const { vendorName, monthLabel, logoUrl, rows } = input;
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const feeEach = rows[0]?.fee ?? 0;
-  const totalFee = rows.reduce((s, r) => s + r.fee, 0);
-
   async function build(): Promise<void> {
     const logoDataUrl = logoUrl ? await loadLogoDataUrl(logoUrl) : null;
     const logoW = 50;

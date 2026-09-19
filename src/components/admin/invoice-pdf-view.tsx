@@ -249,3 +249,126 @@ export async function downloadInvoicePdfBlob(booking: InvoicePdfBooking, kind: I
   a.remove();
   URL.revokeObjectURL(url);
 }
+
+export interface VendorFeeRow {
+  invoice_number: string;
+  event_date: string;
+  fee: number;
+}
+
+interface VendorFeeProps {
+  vendorName: string;
+  monthLabel: string;
+  logoUrl?: string | null;
+  rows: VendorFeeRow[];
+}
+
+function slugifyVendor(input: string): string {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+export function VendorFeePdfDocument({ vendorName, monthLabel, logoUrl, rows }: VendorFeeProps) {
+  const totalFee = rows.reduce((s, r) => s + (Number(r.fee) || 0), 0);
+  const feeEach = rows[0]?.fee ?? 0;
+
+  return (
+    <Document>
+      <Page size="A4" style={s.page}>
+        <View style={s.header}>
+          {/* eslint-disable-next-line jsx-a11y/alt-text */}
+          {logoUrl ? <Image src={logoUrl} style={s.logo} /> : <View style={s.logo} />}
+          <View style={s.titleBlock}>
+            <Text style={s.title}>BUKTI PENYERAHAN</Text>
+            <Text style={s.title}>FEE VENDOR</Text>
+            <Text style={s.dates}>Periode: {monthLabel}</Text>
+          </View>
+        </View>
+
+        <View style={{ backgroundColor: C.bg, borderRadius: 6, padding: 12, marginBottom: 20 }}>
+          <Text style={s.sectionTitle}>DISERAHKAN KEPADA VENDOR</Text>
+          <Text style={{ fontSize: 16, fontWeight: "bold" }}>{vendorName}</Text>
+          <Text style={{ fontSize: 9, color: C.muted, marginTop: 4 }}>
+            Akumulasi fee vendor bulan {monthLabel} — {rows.length} booking × {fmt(feeEach)}. Mstory.id menyatakan telah menyerahkan fee atas booking yang ditangani {vendorName}.
+          </Text>
+        </View>
+
+        <View style={s.tableHeader}>
+          <Text style={[s.thItem, { flex: 1 }]}>No</Text>
+          <Text style={[s.thItem, { flex: 5 }]}>No. Invoice / Booking</Text>
+          <Text style={[s.thItem, { flex: 4 }]}>Tanggal Event</Text>
+          <Text style={[s.thPrice, { flex: 3 }]}>Fee</Text>
+        </View>
+        {rows.map((r, i) => (
+          <View key={r.invoice_number} style={[s.tableRow, { backgroundColor: i % 2 === 1 ? C.bg : C.white }]}>
+            <Text style={[s.tdItem, { flex: 1, color: C.muted }]}>{i + 1}</Text>
+            <Text style={[s.tdItem, { flex: 5, fontWeight: "bold" }]}>{r.invoice_number}</Text>
+            <Text style={[s.tdItem, { flex: 4 }]}>{fmtDate(r.event_date)}</Text>
+            <Text style={[s.tdPrice, { flex: 3, fontWeight: "bold" }]}>{fmt(Number(r.fee) || 0)}</Text>
+          </View>
+        ))}
+
+        <View style={s.summary}>
+          <View style={s.sumRow}>
+            <Text style={s.grandLabel}>TOTAL FEE DISERAHKAN</Text>
+            <Text style={s.grandValue}>{fmt(totalFee)}</Text>
+          </View>
+        </View>
+
+        <View style={{ marginTop: 24 }}>
+          <Text style={s.sectionTitle}>KETERANGAN</Text>
+          <Text style={{ fontSize: 9, marginBottom: 4 }}>1. Dokumen ini merupakan tanda/bukti penyerahan fee dari Mstory.id kepada vendor terkait atas pekerjaan bulan bersangkutan.</Text>
+          <Text style={{ fontSize: 9, marginBottom: 4 }}>2. Total fee diserahkan = jumlah booking ditangani vendor × fee per booking.</Text>
+          <Text style={{ fontSize: 9, marginBottom: 4 }}>3. Fee sudah memperhitungkan pengurangan (kewajiban) vendor sesuai kesepakatan. Tidak ada tagihan lain terkait periode ini.</Text>
+          <Text style={{ fontSize: 9 }}>4. Dokumen dicetak otomatis dari sistem Mstory.id.</Text>
+        </View>
+
+        <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 36 }}>
+          <View style={{ width: "40%", alignItems: "center" }}>
+            <Text style={{ fontSize: 9, color: C.muted }}>Mstory.id,</Text>
+            <Text style={{ fontSize: 9, color: C.muted, marginTop: 48 }}>( ............................ )</Text>
+          </View>
+          <View style={{ width: "40%", alignItems: "center" }}>
+            <Text style={{ fontSize: 9, color: C.muted }}>Vendor ({vendorName}),</Text>
+            <Text style={{ fontSize: 9, color: C.muted, marginTop: 48 }}>( ............................ )</Text>
+          </View>
+        </View>
+
+        <Text style={s.footer}>Dokumen ini dibuat otomatis oleh Sistem Booking Mstory.id</Text>
+      </Page>
+    </Document>
+  );
+}
+
+export function VendorFeePdfPreview(props: VendorFeeProps) {
+  const doc = useMemo(
+    () => <VendorFeePdfDocument vendorName={props.vendorName} monthLabel={props.monthLabel} logoUrl={props.logoUrl} rows={props.rows} />,
+    [props.vendorName, props.monthLabel, props.logoUrl, props.rows],
+  );
+  return (
+    <PDFViewer width="100%" height="100%" showToolbar={false}>
+      {doc}
+    </PDFViewer>
+  );
+}
+
+export async function downloadVendorFeePdfBlob(input: VendorFeeProps) {
+  const { pdf } = await import("@react-pdf/renderer");
+  const blob = await pdf(
+    <VendorFeePdfDocument vendorName={input.vendorName} monthLabel={input.monthLabel} logoUrl={input.logoUrl} rows={input.rows} />,
+  ).toBlob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const fileSafe = slugifyVendor(input.vendorName) || "vendor";
+  a.href = url;
+  a.download = `fee-vendor-${fileSafe}-${slugifyVendor(input.monthLabel)}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}

@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { CalendarDays, DollarSign } from "lucide-react";
+import { CalendarDays, DollarSign, Download, X } from "lucide-react";
 import { cn, formatCurrency, formatShortDate } from "@/lib/utils";
 import { STATUS_LABELS } from "@/lib/types";
 import type { BookingStatus } from "@/lib/types";
+import { VendorFeePdfPreview, downloadVendorFeePdfBlob, type VendorFeeRow } from "./invoice-pdf-view";
 
 interface FinanceRow {
   id: number;
@@ -23,6 +24,11 @@ export function FinanceTab() {
   const [rows, setRows] = useState<FinanceRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [vendorFee, setVendorFee] = useState(200000);
+  const [previewVendor, setPreviewVendor] = useState<{
+    vendorName: string;
+    monthLabel: string;
+    rows: VendorFeeRow[];
+  } | null>(null);
   const [month, setMonth] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -101,7 +107,6 @@ export function FinanceTab() {
     year: "numeric",
   });
 
-  const logoUrl = "";
   const [logoUrlState, setLogoUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -264,18 +269,14 @@ export function FinanceTab() {
                   </div>
                   <button
                     type="button"
-                    onClick={async () => {
-                      const { downloadVendorFeeMonthlyInvoice } = await import("@/lib/invoice-pdf");
-                      await downloadVendorFeeMonthlyInvoice({
-                        vendorName: v.vendorName,
-                        monthLabel,
-                        logoUrl: logoUrlState,
-                        rows: v.bookings.map((b) => ({ invoice_number: b.invoice_number, event_date: b.event_date, fee: b.fee })),
-                      });
-                    }}
+                    onClick={() => setPreviewVendor({
+                      vendorName: v.vendorName,
+                      monthLabel,
+                      rows: v.bookings.map((b) => ({ invoice_number: b.invoice_number, event_date: b.event_date, fee: b.fee })),
+                    })}
                     className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[var(--brand)] px-4 text-[11px] font-bold uppercase tracking-widest text-white hover:bg-[var(--brand-hover)]"
                   >
-                    Download PDF
+                    Preview
                   </button>
                 </div>
                 <div className="mt-3 max-h-40 overflow-y-auto rounded-lg border border-[var(--line)] bg-white p-2 text-[11px]">
@@ -291,6 +292,48 @@ export function FinanceTab() {
           </div>
         )}
       </div>
+
+      {previewVendor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setPreviewVendor(null)}>
+          <div className="relative flex w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl h-[90vh]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-200 px-5 py-3">
+              <p className="text-sm font-semibold text-gray-700">
+                {previewVendor.vendorName} — {previewVendor.monthLabel} ({previewVendor.rows.length} booking)
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={async () => {
+                    await downloadVendorFeePdfBlob({
+                      vendorName: previewVendor.vendorName,
+                      monthLabel: previewVendor.monthLabel,
+                      logoUrl: logoUrlState,
+                      rows: previewVendor.rows,
+                    });
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-2 text-xs font-bold text-white"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Download PDF
+                </button>
+                <button
+                  onClick={() => setPreviewVendor(null)}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            <div className="min-h-0 flex-1 bg-gray-100 p-3">
+              <VendorFeePdfPreview
+                vendorName={previewVendor.vendorName}
+                monthLabel={previewVendor.monthLabel}
+                logoUrl={logoUrlState}
+                rows={previewVendor.rows}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
