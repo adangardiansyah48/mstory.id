@@ -130,7 +130,7 @@ export function calcDownPayment(dpValue: number): number {
 export const SLA_RETOUCH_WEEKS = 1;
 export const SLA_PRINT_WEEKS = 3;
 
-export const MAX_BOOKINGS_PER_DATE = 3;
+export const MAX_BOOKINGS_PER_DATE = 5;
 
 export const STATUS_LABELS: Record<BookingStatus, string> = {
   MENUNGGU_DP: "Menunggu DP",
