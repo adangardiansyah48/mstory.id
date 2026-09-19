@@ -12,6 +12,7 @@ import {
   Package,
   Settings,
   Globe,
+  Users,
 } from "lucide-react";
 import { FinanceTab } from "@/components/admin/finance-tab";
 import { cn } from "@/lib/utils";
@@ -22,9 +23,10 @@ import { SlaTab } from "@/components/admin/sla-tab";
 import { OverviewTab } from "@/components/admin/overview-tab";
 import { SettingsTab } from "@/components/admin/settings-tab";
 import { WebsiteTab } from "@/components/admin/website-tab";
+import { AccountsTab } from "@/components/admin/accounts-tab";
 import { getSiteSettings, getStoredPublicUrl } from "@/lib/site-settings";
 
-type Tab = "overview" | "bookings" | "packages" | "sla" | "finance" | "website" | "settings";
+type Tab = "overview" | "bookings" | "packages" | "sla" | "finance" | "website" | "settings" | "accounts";
 
 export function AdminDashboardClient({ email }: { email: string }) {
   const router = useRouter();
@@ -92,6 +94,7 @@ export function AdminDashboardClient({ email }: { email: string }) {
     { key: "sla", label: "SLA Tracker", icon: <Settings className="h-4 w-4" /> },
     { key: "finance", label: "Laporan Keuangan", icon: <DollarSign className="h-4 w-4" /> },
     { key: "website", label: "Website", icon: <Globe className="h-4 w-4" /> },
+    { key: "accounts", label: "Akun", icon: <Users className="h-4 w-4" /> },
     { key: "settings", label: "Pengaturan", icon: <LayoutTemplate className="h-4 w-4" /> },
   ];
 
@@ -168,6 +171,7 @@ export function AdminDashboardClient({ email }: { email: string }) {
         {tab === "sla" && <SlaTab />}
         {tab === "finance" && <FinanceTab />}
         {tab === "website" && <WebsiteTab />}
+        {tab === "accounts" && <AccountsTab />}
         {tab === "settings" && (
           <SettingsTab onThemeChanged={(theme) => setAdminTheme(theme)} />
         )}
