@@ -98,8 +98,10 @@ export function BookingTab({
   const [vendorFee, setVendorFee] = useState(200000);
   const [showAddWizard, setShowAddWizard] = useState(false);
   const [statusFilter, setStatusFilter] = useState<BookingStatus | "ALL">("ALL");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(0);
-  const PAGE_SIZE = 20;
+  const PAGE_SIZE = 10;
 
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [editingBooking, setEditingBooking] = useState<BookingRow | null>(null);
@@ -152,7 +154,7 @@ export function BookingTab({
       setLoading(false);
       return;
     }
-    let query = supabase
+    const query = supabase
       .from("bookings")
       .select(
         `
@@ -160,15 +162,10 @@ export function BookingTab({
         client:clients(full_name, whatsapp_number),
         details:booking_details(price_at_booking, packages:packages(name, dp_value)),
         addons:booking_addons(add_ons:addons(name), price_at_booking, qty)
-      `,
-        { count: "exact" }
+      `
       )
       .order("created_at", { ascending: false })
-      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-
-    if (statusFilter !== "ALL") {
-      query = query.eq("status", statusFilter);
-    }
+      .limit(5000);
 
     const { data, error } = await query;
 
@@ -181,8 +178,11 @@ export function BookingTab({
   }
 
   useEffect(() => {
-    loadBookings(true);
-  }, [page, statusFilter]);
+    const t = window.setTimeout(() => {
+      void loadBookings(true);
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, []);
 
   async function addBooking() {
     const supabase = createClient();
@@ -515,8 +515,12 @@ const filtered = bookings.filter((b) => {
       b.invoice_number.toLowerCase().includes(q) ||
       b.client?.full_name.toLowerCase().includes(q) ||
       b.client?.whatsapp_number.toLowerCase().includes(q);
-    return matchesStatus && matchesQuery;
+    const matchesDate =
+      (!dateFrom || b.event_date >= dateFrom) &&
+      (!dateTo || b.event_date <= dateTo);
+    return matchesStatus && matchesQuery && matchesDate;
   });
+  const visible = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   function resetPage() { setPage(0); }
 
@@ -555,6 +559,31 @@ const filtered = bookings.filter((b) => {
         <div className="flex items-center gap-2">
           <input
             type="date"
+            value={dateFrom}
+            onChange={(e) => { setDateFrom(e.target.value); resetPage(); }}
+            title="Filter dari tanggal acara"
+            className="h-11 rounded-xl border border-[var(--line)] bg-white px-2.5 text-sm text-[var(--ink)]"
+          />
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => { setDateTo(e.target.value); resetPage(); }}
+            title="Filter sampai tanggal acara"
+            className="h-11 rounded-xl border border-[var(--line)] bg-white px-2.5 text-sm text-[var(--ink)]"
+          />
+          {(dateFrom || dateTo) && (
+            <button
+              onClick={() => { setDateFrom(""); setDateTo(""); resetPage(); }}
+              className="rounded-full border border-[var(--line)] bg-white px-3 py-2 text-xs font-semibold text-[var(--muted)] hover:border-[var(--brand)]"
+              title="Hapus filter tanggal"
+            >
+              Reset
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="date"
             value={blockDate}
             onChange={(e) => setBlockDate(e.target.value)}
             className="h-11 rounded-xl border border-[var(--line)] bg-white px-3 text-sm text-[var(--ink)]"
@@ -588,7 +617,7 @@ const filtered = bookings.filter((b) => {
         </div>
       ) : (
         <div className="space-y-3">
-          {filtered.map((booking) => {
+          {visible.map((booking) => {
             const remaining = Math.max(
               (booking.grand_total ?? 0) - (booking.dp_amount ?? 0),
               0,
@@ -825,6 +854,30 @@ const filtered = bookings.filter((b) => {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {filtered.length > PAGE_SIZE && (
+        <div className="flex items-center justify-between gap-3 pt-1">
+          <button
+            type="button"
+            onClick={() => setPage(Math.max(0, page - 1))}
+            disabled={page === 0}
+            className="rounded-full border border-[var(--line)] bg-white px-4 py-2 text-xs font-semibold text-[var(--muted)] hover:border-[var(--brand)] disabled:opacity-40"
+          >
+            Sebelumnya
+          </button>
+          <span className="text-xs font-semibold text-[var(--muted)]">
+            Halaman {page + 1} dari {Math.ceil(filtered.length / PAGE_SIZE)} ({filtered.length} data)
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage((p) => p + 1)}
+            disabled={(page + 1) * PAGE_SIZE >= filtered.length}
+            className="rounded-full border border-[var(--line)] bg-white px-4 py-2 text-xs font-semibold text-[var(--muted)] hover:border-[var(--brand)] disabled:opacity-40"
+          >
+            Berikutnya
+          </button>
         </div>
       )}
 

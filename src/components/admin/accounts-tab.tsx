@@ -19,6 +19,7 @@ export function AccountsTab() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
   const [editPassword, setEditPassword] = useState("");
+  const [search, setSearch] = useState("");
 
   async function loadUsers(silent = false) {
     if (!silent && users.length === 0) setLoading(true);
@@ -127,6 +128,12 @@ export function AccountsTab() {
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-serif text-lg font-semibold text-[var(--ink)]">Manajemen Akun</h2>
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Cari email..."
+          className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-4 text-sm focus:border-[var(--brand)] focus:outline-none sm:w-72"
+        />
         <button
           onClick={() => setShowAddForm(true)}
           className="inline-flex h-11 items-center gap-1.5 rounded-xl bg-[var(--brand)] px-4 text-xs font-bold uppercase tracking-wider text-white shadow-md hover:bg-[var(--brand-hover)]"
@@ -194,7 +201,10 @@ export function AccountsTab() {
       )}
 
       <div className="space-y-3">
-        {users.map((u) => (
+        {(search.trim()
+          ? users.filter((u) => u.email.toLowerCase().includes(search.trim().toLowerCase()))
+          : users
+        ).map((u) => (
           <div key={u.id} className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--line)] bg-white px-5 py-4">
             <div className="min-w-0 flex-1">
               <p className="truncate font-mono text-sm text-[var(--ink)]">{u.email}</p>
@@ -212,7 +222,10 @@ export function AccountsTab() {
         ))}
       </div>
 
-      {users.length === 0 && (
+      {search.trim() && users.filter((u) => u.email.toLowerCase().includes(search.trim().toLowerCase())).length === 0 && (
+        <div className="rounded-2xl border border-[var(--line)] bg-white p-10 text-center text-sm text-[var(--muted)]">Tidak ada akun yang cocok.</div>
+      )}
+      {!search.trim() && users.length === 0 && (
         <div className="rounded-2xl border border-[var(--line)] bg-white p-10 text-center text-sm text-[var(--muted)]">Belum ada akun admin.</div>
       )}
     </div>

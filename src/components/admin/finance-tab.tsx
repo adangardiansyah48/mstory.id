@@ -34,6 +34,9 @@ export function FinanceTab() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   });
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 10;
 
   async function loadRows() {
     const supabase = createClient();
@@ -149,11 +152,14 @@ export function FinanceTab() {
     }));
   }, [rows, vendorFee]);
 
-  
-
-  // ambil data vendor fee per bulan via memo vendorInvoices (sudah ada)
-
-  // ...
+  const q = search.trim().toLowerCase();
+  const filteredRows = rows.filter(
+    (r) =>
+      !q ||
+      r.invoice_number.toLowerCase().includes(q) ||
+      (r.client?.full_name?.toLowerCase() ?? "").includes(q),
+  );
+  const visibleRows = filteredRows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   return (
     <div className="space-y-6">
@@ -161,12 +167,20 @@ export function FinanceTab() {
         <h2 className="font-serif text-lg font-semibold text-[var(--ink)]">
           Laporan Keuangan
         </h2>
-        <input
-          type="month"
-          value={month}
-          onChange={(e) => setMonth(e.target.value)}
-          className="h-10 rounded-xl border border-[var(--line)] bg-white px-3 text-sm"
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+            placeholder="Cari invoice / nama klien..."
+            className="h-10 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none sm:w-64"
+          />
+          <input
+            type="month"
+            value={month}
+            onChange={(e) => { setMonth(e.target.value); setPage(0); }}
+            className="h-10 rounded-xl border border-[var(--line)] bg-white px-3 text-sm"
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -221,7 +235,7 @@ export function FinanceTab() {
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--line)]">
-            {rows.map((r) => {
+            {visibleRows.map((r) => {
               const isVendor = r.source === "VENDOR";
               const net = Math.max(Number(r.grand_total) - (isVendor ? vendorFee : 0), 0);
               const pelunasan = r.status === "LUNAS" ? Math.max(net - Math.min(Number(r.dp_amount), net), 0) : 0;
@@ -253,10 +267,33 @@ export function FinanceTab() {
             })}
           </tbody>
         </table>
-          {rows.length === 0 && !loading && (
+          {filteredRows.length === 0 && !loading && (
           <p className="py-8 text-center text-sm text-[var(--muted)]">
-            Tidak ada data transaksi di bulan ini.
+            Tidak ada data transaksi yang cocok di bulan ini.
           </p>
+        )}
+        {filteredRows.length > PAGE_SIZE && (
+          <div className="flex items-center justify-between gap-3 border-t border-[var(--line)] px-4 py-3">
+            <button
+              type="button"
+              onClick={() => setPage(Math.max(0, page - 1))}
+              disabled={page === 0}
+              className="rounded-full border border-[var(--line)] bg-white px-4 py-2 text-xs font-semibold text-[var(--muted)] hover:border-[var(--brand)] disabled:opacity-40"
+            >
+              Sebelumnya
+            </button>
+            <span className="text-xs font-semibold text-[var(--muted)]">
+              Halaman {page + 1} dari {Math.ceil(filteredRows.length / PAGE_SIZE)} ({filteredRows.length} data)
+            </span>
+            <button
+              type="button"
+              onClick={() => setPage((p) => p + 1)}
+              disabled={(page + 1) * PAGE_SIZE >= filteredRows.length}
+              className="rounded-full border border-[var(--line)] bg-white px-4 py-2 text-xs font-semibold text-[var(--muted)] hover:border-[var(--brand)] disabled:opacity-40"
+            >
+              Berikutnya
+            </button>
+          </div>
         )}
       </div>
 

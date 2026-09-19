@@ -49,6 +49,8 @@ export function SlaTab() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [workflowFilter, setWorkflowFilter] = useState<WorkflowStatus | "ALL">("ALL");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   async function loadProjects(showSpinner = true) {
     if (showSpinner) setLoading(true);
@@ -92,10 +94,7 @@ export function SlaTab() {
       ...b,
       project_progress: progByBooking.has(b.id) ? [progByBooking.get(b.id) as unknown as ProjectRow["project_progress"][number]] : [],
     }));
-    let filtered = merged;
-    if (workflowFilter !== "ALL") { filtered = filtered.filter((r) => r.project_progress?.[0]?.progress_status === workflowFilter); }
-    if (search.trim()) { const q = search.trim().toLowerCase(); filtered = filtered.filter((r) => r.invoice_number.toLowerCase().includes(q) || r.client?.full_name?.toLowerCase().includes(q)); }
-    setRows(filtered);
+    setRows(merged);
     setLoading(false);
   }
 
@@ -112,6 +111,23 @@ export function SlaTab() {
     { enabled: rows.length > 0 },
   );
   const resetPage = () => setPage(0);
+
+  const PAGE_SIZE = 10;
+  const q = search.trim().toLowerCase();
+  const filteredRows = rows.filter((r) => {
+    const mStatus =
+      workflowFilter === "ALL" ||
+      r.project_progress?.[0]?.progress_status === workflowFilter;
+    const mQuery =
+      !q ||
+      r.invoice_number.toLowerCase().includes(q) ||
+      (r.client?.full_name?.toLowerCase() ?? "").includes(q);
+    const mDate =
+      (!dateFrom || !r.event_date || r.event_date >= dateFrom) &&
+      (!dateTo || !r.event_date || r.event_date <= dateTo);
+    return mStatus && mQuery && mDate;
+  });
+  const visibleRows = filteredRows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   function calcDeadline(eventDate: string, weeks: number): string {
     const d = new Date(eventDate + "T00:00:00");
@@ -244,18 +260,25 @@ export function SlaTab() {
           <option value="ALL">Semua Tahapan</option>
           {WORKFLOW_STEPS.map((s) => (<option key={s} value={s}>{WORKFLOW_STATUS_LABELS[s]}</option>))}
         </select>
+        <input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); resetPage(); }} title="Event dari tanggal" className="h-10 rounded-xl border border-[var(--line)] bg-white px-2.5 text-sm text-[var(--ink)]" />
+        <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); resetPage(); }} title="Event sampai tanggal" className="h-10 rounded-xl border border-[var(--line)] bg-white px-2.5 text-sm text-[var(--ink)]" />
+        {(dateFrom || dateTo) && (
+          <button onClick={() => { setDateFrom(""); setDateTo(""); resetPage(); }} className="rounded-full border border-[var(--line)] bg-white px-3 py-2 text-xs font-semibold text-[var(--muted)] hover:border-[var(--brand)]" title="Hapus filter tanggal">
+            Reset
+          </button>
+        )}
       </div>
       <p className="text-xs leading-relaxed text-[var(--muted)]">
         SLA: Retouch foto maksimal {SLA_RETOUCH_WEEKS} minggu setelah event ·
         Cetak/video maksimal {SLA_PRINT_WEEKS} minggu setelah event.
       </p>
 
-      {rows.length === 0 ? (
+      {filteredRows.length === 0 ? (
         <div className="rounded-2xl border border-[var(--line)] bg-white p-10 text-center text-sm text-[var(--muted)]">
-          Tidak ada project aktif (status LUNAS / MENUNGGU PELUNASAN).
+          Tidak ada project yang cocok (status LUNAS / MENUNGGU PELUNASAN).
         </div>
       ) : (
-        rows.slice(page * 20, (page + 1) * 20).map((row) => {
+        visibleRows.map((row) => {
           const prog = row.project_progress?.[0];
           const currentIdx = WORKFLOW_STEPS.indexOf(prog?.progress_status ?? "SHOOTING");
           const clientName = row.client?.full_name ?? row.client_name;
@@ -330,11 +353,11 @@ export function SlaTab() {
           );
         })
       )}
-      {rows.length > 20 ? (
+      {filteredRows.length > PAGE_SIZE ? (
         <div className="flex items-center justify-between gap-3 pt-2">
           <button type="button" onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0} className="rounded-full border border-[var(--line)] bg-white px-4 py-2 text-xs font-semibold text-[var(--muted)] hover:border-[var(--brand)] disabled:opacity-40">Sebelumnya</button>
-          <span className="text-xs font-semibold text-[var(--muted)]">Halaman {page + 1} dari {Math.ceil(rows.length / 20)} ({rows.length} data)</span>
-          <button type="button" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * 20 >= rows.length} className="rounded-full border border-[var(--line)] bg-white px-4 py-2 text-xs font-semibold text-[var(--muted)] hover:border-[var(--brand)] disabled:opacity-40">Berikutnya</button>
+          <span className="text-xs font-semibold text-[var(--muted)]">Halaman {page + 1} dari {Math.ceil(filteredRows.length / PAGE_SIZE)} ({filteredRows.length} data)</span>
+          <button type="button" onClick={() => setPage((p) => p + 1)} disabled={(page + 1) * PAGE_SIZE >= filteredRows.length} className="rounded-full border border-[var(--line)] bg-white px-4 py-2 text-xs font-semibold text-[var(--muted)] hover:border-[var(--brand)] disabled:opacity-40">Berikutnya</button>
         </div>
       ) : null}
     </div>

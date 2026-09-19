@@ -84,6 +84,7 @@ export function PackagesTab() {
 
   const [expandedCats, setExpandedCats] = useState<Record<number, boolean>>({});
   const [activeSection, setActiveSection] = useState<EntityType>("categories");
+  const [search, setSearch] = useState("");
 
   const [newCatName, setNewCatName] = useState("");
   const [newCatIcon, setNewCatIcon] = useState("Gem");
@@ -547,6 +548,8 @@ export function PackagesTab() {
     );
   }
 
+  const q = search.trim().toLowerCase();
+
   return (
     <div className="space-y-5">
       <div className="flex gap-2 overflow-x-auto">
@@ -572,6 +575,15 @@ export function PackagesTab() {
         ))}
       </div>
 
+      <div>
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Cari kategori / paket / add-on..."
+          className="h-10 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm text-[var(--ink)] placeholder:text-[var(--muted-5)] focus:border-[var(--brand)] focus:outline-none"
+        />
+      </div>
+
       {activeSection === "categories" && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -587,7 +599,9 @@ export function PackagesTab() {
           </div>
 
           <div className="space-y-3">
-            {categories.map((cat) => (
+            {categories
+              .filter((cat) => !q || cat.name.toLowerCase().includes(q))
+              .map((cat) => (
               <div key={cat.id} className="rounded-2xl border border-[var(--line)] bg-white p-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold text-[var(--ink)]">{cat.name}</span>
@@ -637,7 +651,7 @@ export function PackagesTab() {
                 {expandedCats[cat.id] && (
                   <div className="mt-3 space-y-2 border-t border-[var(--line)] pt-3">
                     {subCategories
-                      .filter((s) => s.category_id === cat.id)
+                      .filter((s) => s.category_id === cat.id && (!q || s.name.toLowerCase().includes(q)))
                       .map((sub) => (
                         <div
                           key={sub.id}
@@ -689,7 +703,9 @@ export function PackagesTab() {
           </div>
 
           <div className="space-y-2">
-            {packages.map((pkg) => (
+            {packages
+              .filter((pkg) => !q || pkg.name.toLowerCase().includes(q))
+              .map((pkg) => (
               <div
                 key={pkg.id}
                 className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-white px-4 py-3"
@@ -751,7 +767,9 @@ export function PackagesTab() {
             </button>
           </div>
           <div className="space-y-2">
-            {addons.map((addon) => (
+            {addons
+              .filter((addon) => !q || addon.name.toLowerCase().includes(q))
+              .map((addon) => (
               <div
                 key={addon.id}
                 className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-white px-4 py-3"
