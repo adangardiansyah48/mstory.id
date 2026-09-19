@@ -27,6 +27,7 @@ import { InvoicePdfPreview, downloadInvoicePdfBlob } from "@/components/admin/in
 import type { InvoicePdfKind } from "@/lib/types";
 import { getSiteSettings, getStoredPublicUrl } from "@/lib/site-settings";
 import { BookingWizard } from "@/components/booking/booking-wizard";
+import { useAutoRefresh } from "@/lib/use-auto-refresh";
 
 interface BookingRow {
   id: number;
@@ -133,7 +134,6 @@ export function BookingTab({
   });
 
   useEffect(() => {
-    loadBookings();
     getSiteSettings()
       .then((settings) => {
         setLogoUrl(getStoredPublicUrl(settings.logo_url));
@@ -141,12 +141,12 @@ export function BookingTab({
         setVendorFee(settings.vendor_fee ?? 200000);
       })
       .catch(() => {});
-    const t = setInterval(loadBookings, 30000);
-    return () => clearInterval(t);
   }, []);
 
-  async function loadBookings() {
-    setLoading(true);
+  useAutoRefresh(() => loadBookings(false), 10000);
+
+  async function loadBookings(showSpinner = true) {
+    if (showSpinner) setLoading(true);
     const supabase = createClient();
     if (!supabase) {
       setLoading(false);
@@ -181,8 +181,8 @@ export function BookingTab({
   }
 
   useEffect(() => {
-    loadBookings();
-  }, [page, statusFilter, statusFilter]); // tetap dependency array eksplisit
+    loadBookings(true);
+  }, [page, statusFilter]);
 
   async function addBooking() {
     const supabase = createClient();
@@ -234,7 +234,7 @@ export function BookingTab({
     await Swal.fire({ icon: "success", title: "Booking Ditambahkan", timer: 1200, showConfirmButton: false });
     setShowBookingForm(false);
     setFormData({ full_name: "", whatsapp_number: "", event_date: "", location_type: "KOTA_TASIK", event_address: "", subtotal: "0", transport_fee: "0", grand_total: "0", dp_amount: "0", status: "MENUNGGU_DP", notes: "", is_vendor: false, vendor_name: "" });
-    loadBookings();
+    loadBookings(false);
     onChanged();
   }
 
@@ -288,7 +288,7 @@ export function BookingTab({
     await Swal.fire({ icon: "success", title: "Booking Vendor Ditambahkan", timer: 1200, showConfirmButton: false });
     setShowBookingForm(false);
     setFormData({ full_name: "", whatsapp_number: "", event_date: "", location_type: "KOTA_TASIK", event_address: "", subtotal: "0", transport_fee: "0", grand_total: "0", dp_amount: "0", status: "MENUNGGU_DP", notes: "", is_vendor: false, vendor_name: "" });
-    loadBookings();
+    loadBookings(false);
     onChanged();
   }
 
@@ -336,7 +336,7 @@ export function BookingTab({
     setEditingBooking(null);
     setShowBookingForm(false);
     setFormData({ full_name: "", whatsapp_number: "", event_date: "", location_type: "KOTA_TASIK", event_address: "", subtotal: "0", transport_fee: "0", grand_total: "0", dp_amount: "0", status: "MENUNGGU_DP", notes: "", is_vendor: false, vendor_name: "" });
-    loadBookings();
+    loadBookings(false);
     onChanged();
   }
 
@@ -358,7 +358,7 @@ export function BookingTab({
       await Swal.fire({ icon: "error", title: "Gagal Menghapus", text: error.message });
     } else {
       await Swal.fire({ icon: "success", title: "Booking Dihapus", timer: 1200, showConfirmButton: false });
-      loadBookings();
+      loadBookings(false);
       onChanged();
     }
   }
@@ -498,7 +498,7 @@ export function BookingTab({
       });
     } else {
       setBlockDate("");
-      loadBookings();
+      loadBookings(false);
       await Swal.fire({
         icon: "success",
         title: "Tanggal Diblokir",
@@ -836,7 +836,7 @@ const filtered = bookings.filter((b) => {
           transportFeeDefault={transportFeeRate}
           onCreated={() => {
             setShowAddWizard(false);
-            loadBookings();
+            loadBookings(false);
             onChanged();
           }}
         />

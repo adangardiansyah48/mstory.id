@@ -320,6 +320,21 @@ export function getWebsiteContent(): Promise<WebsiteContent> {
   return inflight;
 }
 
+/**
+ * Ambil konten ter-cache secara sinkron (tanpa fetch) untuk render instan.
+ * Mengembalikan null bila cache belum tersedia / sudah kedaluwarsa.
+ */
+export function peekWebsiteContent(): WebsiteContent | null {
+  if (cache && cache.expiresAt > Date.now() && cache.settings && cache.gallery) {
+    return {
+      settings: cache.settings,
+      gallery: cache.gallery,
+      albums: cache.albums ?? [],
+    };
+  }
+  return null;
+}
+
 export function clearWebsiteContentCache() {
   cache = null;
   inflight = null;

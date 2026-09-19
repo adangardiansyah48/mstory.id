@@ -14,6 +14,7 @@ import {
 import type {
   WorkflowStatus,
 } from "@/lib/types";
+import { useAutoRefresh } from "@/lib/use-auto-refresh";
 
 interface ProjectRow {
   id: number;
@@ -49,8 +50,8 @@ export function SlaTab() {
   const [page, setPage] = useState(0);
   const [workflowFilter, setWorkflowFilter] = useState<WorkflowStatus | "ALL">("ALL");
 
-  async function loadProjects() {
-    setLoading(true);
+  async function loadProjects(showSpinner = true) {
+    if (showSpinner) setLoading(true);
     const supabase = createClient();
     if (!supabase) {
       setLoading(false);
@@ -99,9 +100,17 @@ export function SlaTab() {
   }
 
   useEffect(() => {
-    const t = setTimeout(loadProjects, 0);
+    const t = setTimeout(() => loadProjects(true), 0);
     return () => clearTimeout(t);
   }, []);
+  useAutoRefresh(
+    async () => {
+      if (rows.length === 0) return;
+      await loadProjects(false);
+    },
+    10000,
+    { enabled: rows.length > 0 },
+  );
   const resetPage = () => setPage(0);
 
   function calcDeadline(eventDate: string, weeks: number): string {

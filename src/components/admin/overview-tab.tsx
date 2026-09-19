@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { STATUS_LABELS } from "@/lib/types";
+import { useAutoRefresh } from "@/lib/use-auto-refresh";
 
 interface Stats {
   totalBookings: number;
@@ -39,64 +40,73 @@ export function OverviewTab({
   const [refreshKeyLocal, setRefreshKeyLocal] = useState(0);
   const [vendorFee, setVendorFee] = useState(200000);
 
+  async function loadStats() {
+    const supabase = createClient();
+    if (!supabase) {
+      setLoading(false);
+      setErrorMsg("Supabase belum dikonfigurasi. Isi .env.local terlebih dahulu.");
+      return;
+    }
+
+    try {
+      try {
+        const { getSiteSettings } = await import("@/lib/site-settings");
+        const s = await getSiteSettings();
+        if (s.vendor_fee != null) setVendorFee(Number(s.vendor_fee) || 0);
+      } catch { /* fallback */ }
+      const [bookingCount, clientCount] = await Promise.all([
+        supabase.from("bookings").select("status, grand_total, event_date, dp_amount, source, dp_paid_at, paid_at").limit(2000),
+        supabase.from("clients").select("id", { count: "exact", head: true }),
+      ]);
+
+      if (bookingCount.error) throw bookingCount.error;
+      if (clientCount.error) throw clientCount.error;
+      const bookings = bookingCount.data ?? [];
+
+      const today = new Date().toISOString().slice(0, 10);
+      const upcoming = bookings.filter(
+        (b) => b.event_date >= today && b.status !== "CANCELLED",
+      ).length;
+
+     const isVendor = (b: Record<string, unknown>) => b.source === "VENDOR";
+      const revenueDp = bookings
+        .filter((b) => b.status === "MENUNGGU_PELUNASAN" || b.status === "LUNAS")
+        .reduce((s, b) => {
+          const net = Math.max(Number(b.grand_total ?? 0) - (isVendor(b as never) ? vendorFee : 0), 0);
+          return s + Math.min(Number(b.dp_amount ?? 0), net);
+        }, 0);
+
+      const revenuePelunasan = bookings
+        .filter((b) => b.status === "LUNAS")
+        .reduce((s, b) => {
+          const net = Math.max(Number(b.grand_total ?? 0) - (isVendor(b as never) ? vendorFee : 0), 0);
+          return s + Math.max(net - Math.min(Number(b.dp_amount ?? 0), net), 0);
+        }, 0);
+
+      setStats({
+        totalBookings: bookings.length,
+        menungguDp: bookings.filter((b) => b.status === "MENUNGGU_DP").length,
+        menungguPelunasan: bookings.filter((b) => b.status === "MENUNGGU_PELUNASAN").length,
+        lunas: bookings.filter((b) => b.status === "LUNAS").length,
+        cancelled: bookings.filter((b) => b.status === "CANCELLED").length,
+        upcomingEvents: upcoming,
+        revenueDp,
+        revenuePelunasan,
+        revenueTotal: revenueDp + revenuePelunasan,
+        totalClients: clientCount.count ?? 0,
+      });
+    } catch (err) {
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const supabase = createClient();
-      if (!supabase) {
-        setLoading(false);
-        setErrorMsg("Supabase belum dikonfigurasi. Isi .env.local terlebih dahulu.");
-        return;
-      }
-
       try {
-        try {
-          const { getSiteSettings } = await import("@/lib/site-settings");
-          const s = await getSiteSettings();
-          if (!cancelled && s.vendor_fee != null) setVendorFee(Number(s.vendor_fee) || 0);
-        } catch { /* fallback */ }
-        const [bookingCount, clientCount] = await Promise.all([
-          supabase.from("bookings").select("status, grand_total, event_date, dp_amount, source, dp_paid_at, paid_at").limit(2000),
-          supabase.from("clients").select("id", { count: "exact", head: true }),
-        ]);
-
-        if (bookingCount.error) throw bookingCount.error;
-        if (clientCount.error) throw clientCount.error;
-        const bookings = bookingCount.data ?? [];
-
-        const today = new Date().toISOString().slice(0, 10);
-        const upcoming = bookings.filter(
-          (b) => b.event_date >= today && b.status !== "CANCELLED",
-        ).length;
-
-       const isVendor = (b: Record<string, unknown>) => b.source === "VENDOR";
-        const revenueDp = bookings
-          .filter((b) => b.status === "MENUNGGU_PELUNASAN" || b.status === "LUNAS")
-          .reduce((s, b) => {
-            const net = Math.max(Number(b.grand_total ?? 0) - (isVendor(b as never) ? vendorFee : 0), 0);
-            return s + Math.min(Number(b.dp_amount ?? 0), net);
-          }, 0);
-
-        const revenuePelunasan = bookings
-          .filter((b) => b.status === "LUNAS")
-          .reduce((s, b) => {
-            const net = Math.max(Number(b.grand_total ?? 0) - (isVendor(b as never) ? vendorFee : 0), 0);
-            return s + Math.max(net - Math.min(Number(b.dp_amount ?? 0), net), 0);
-          }, 0);
-
-        if (cancelled) return;
-        setStats({
-          totalBookings: bookings.length,
-          menungguDp: bookings.filter((b) => b.status === "MENUNGGU_DP").length,
-          menungguPelunasan: bookings.filter((b) => b.status === "MENUNGGU_PELUNASAN").length,
-          lunas: bookings.filter((b) => b.status === "LUNAS").length,
-          cancelled: bookings.filter((b) => b.status === "CANCELLED").length,
-          upcomingEvents: upcoming,
-          revenueDp,
-          revenuePelunasan,
-          revenueTotal: revenueDp + revenuePelunasan,
-          totalClients: clientCount.count ?? 0,
-        });
+        await loadStats();
       } catch (err) {
         const e = err as Error & { code?: string; status?: number };
         const message =
@@ -113,6 +123,19 @@ export function OverviewTab({
       cancelled = true;
     };
   }, [refreshKey, refreshKeyLocal]);
+
+  useAutoRefresh(
+    async () => {
+      if (stats === null || loading) return;
+      try {
+        await loadStats();
+      } catch {
+        /* refresh latar belakang gagal — biarkan data lama */
+      }
+    },
+    10000,
+    { enabled: stats !== null },
+  );
 
   if (loading) {
     return (

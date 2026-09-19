@@ -7,6 +7,7 @@ import { cn, formatCurrency, formatShortDate } from "@/lib/utils";
 import { STATUS_LABELS } from "@/lib/types";
 import type { BookingStatus } from "@/lib/types";
 import { VendorFeePdfPreview, downloadVendorFeePdfBlob, type VendorFeeRow } from "./invoice-pdf-view";
+import { useAutoRefresh } from "@/lib/use-auto-refresh";
 
 interface FinanceRow {
   id: number;
@@ -34,48 +35,56 @@ export function FinanceTab() {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   });
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const supabase = createClient();
-      if (!supabase) {
-        setLoading(false);
-        return;
-      }
-      try {
-        const { getSiteSettings } = await import("@/lib/site-settings");
-        const s = await getSiteSettings();
-        if (!cancelled && s.vendor_fee != null) setVendorFee(Number(s.vendor_fee) || 0);
-      } catch { /* fallback */ }
-      const start = `${month}-01`;
-      const endDate = new Date(`${month}-01`);
-      endDate.setMonth(endDate.getMonth() + 1);
-      const end = endDate.toISOString().slice(0, 10);
-
-      const { data, error } = await supabase
-        .from("bookings")
-        .select("id, invoice_number, event_date, grand_total, dp_amount, source, status, booking_date, client:clients(full_name)")
-        .neq("status", "CANCELLED")
-        .gte("event_date", start)
-        .lt("event_date", end)
-        .order("event_date", { ascending: true })
-        .limit(1000);
-
-
-      if (cancelled) return;
-
-      if (error) {
-        console.error("loadData finance error:", error.message);
-        setRows([]);
-      } else {
-        setRows((data as unknown as FinanceRow[]) ?? []);
-      }
+  async function loadRows() {
+    const supabase = createClient();
+    if (!supabase) {
       setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
+      return;
+    }
+    try {
+      const { getSiteSettings } = await import("@/lib/site-settings");
+      const s = await getSiteSettings();
+      if (s.vendor_fee != null) setVendorFee(Number(s.vendor_fee) || 0);
+    } catch { /* fallback */ }
+    const start = `${month}-01`;
+    const endDate = new Date(`${month}-01`);
+    endDate.setMonth(endDate.getMonth() + 1);
+    const end = endDate.toISOString().slice(0, 10);
+
+    const { data, error } = await supabase
+      .from("bookings")
+      .select("id, invoice_number, event_date, grand_total, dp_amount, source, status, booking_date, client:clients(full_name)")
+      .neq("status", "CANCELLED")
+      .gte("event_date", start)
+      .lt("event_date", end)
+      .order("event_date", { ascending: true })
+      .limit(1000);
+
+
+    if (error) {
+      console.error("loadData finance error:", error.message);
+      setRows([]);
+    } else {
+      setRows((data as unknown as FinanceRow[]) ?? []);
+    }
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      void loadRows();
+    }, 0);
+    return () => window.clearTimeout(t);
   }, [month]);
+
+  useAutoRefresh(
+    async () => {
+      if (!rows.length) return;
+      await loadRows();
+    },
+    10000,
+    { enabled: rows.length > 0 },
+  );
 
   const totals = useMemo(() => {
     let dpDiterima = 0;

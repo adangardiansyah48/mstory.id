@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Pencil, Trash2, Plus } from "lucide-react";
 import Swal from "sweetalert2";
+import { useAutoRefresh } from "@/lib/use-auto-refresh";
 
 interface AdminUser {
   id: string;
@@ -19,23 +20,35 @@ export function AccountsTab() {
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
   const [editPassword, setEditPassword] = useState("");
 
-  async function loadUsers() {
-    setLoading(true);
+  async function loadUsers(silent = false) {
+    if (!silent && users.length === 0) setLoading(true);
     try {
       const res = await fetch("/api/admin/users");
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Gagal load");
       setUsers(json.users ?? []);
     } catch (e) {
-      Swal.fire({ icon: "error", title: "Gagal memuat akun", text: (e as Error).message });
+      if (!silent) Swal.fire({ icon: "error", title: "Gagal memuat akun", text: (e as Error).message });
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    loadUsers();
+    const t = window.setTimeout(() => {
+      void loadUsers();
+    }, 0);
+    return () => window.clearTimeout(t);
   }, []);
+
+  useAutoRefresh(
+    async () => {
+      if (users.length === 0) return;
+      await loadUsers(true);
+    },
+    10000,
+    { enabled: users.length > 0 },
+  );
 
   async function addUser() {
     if (!newEmail.trim() || !newPassword) {
@@ -56,7 +69,7 @@ export function AccountsTab() {
     setNewEmail("");
     setNewPassword("");
     setShowAddForm(false);
-    await loadUsers();
+    await loadUsers(true);
   }
 
   async function saveEdit() {
@@ -78,7 +91,7 @@ export function AccountsTab() {
     await Swal.fire({ icon: "success", title: "Password diperbarui", timer: 1200, showConfirmButton: false });
     setEditingUser(null);
     setEditPassword("");
-    await loadUsers();
+    await loadUsers(true);
   }
 
   async function deleteUser(id: string, email: string) {
@@ -99,7 +112,7 @@ export function AccountsTab() {
       return;
     }
     await Swal.fire({ icon: "success", title: "Akun dihapus", timer: 1000, showConfirmButton: false });
-    await loadUsers();
+    await loadUsers(true);
   }
 
   if (loading) {

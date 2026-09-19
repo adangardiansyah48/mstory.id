@@ -163,18 +163,30 @@ export function AdminDashboardClient({ email }: { email: string }) {
       </header>
 
       <main className="relative mx-auto w-full max-w-7xl flex-1 px-6 py-7">
-        {tab === "overview" && <OverviewTab refreshKey={refreshKey} onNavigate={setTab} />}
-        {tab === "bookings" && (
+        <div className={cn(tab !== "overview" && "hidden")}>
+          <OverviewTab refreshKey={refreshKey} onNavigate={setTab} />
+        </div>
+        <div className={cn(tab !== "bookings" && "hidden")}>
           <BookingTab onChanged={() => setRefreshKey((k) => k + 1)} onNavigate={setTab} />
-        )}
-        {tab === "packages" && <PackagesTab />}
-        {tab === "sla" && <SlaTab />}
-        {tab === "finance" && <FinanceTab />}
-        {tab === "website" && <WebsiteTab />}
-        {tab === "accounts" && <AccountsTab />}
-        {tab === "settings" && (
+        </div>
+        <div className={cn(tab !== "packages" && "hidden")}>
+          <PackagesTab />
+        </div>
+        <div className={cn(tab !== "sla" && "hidden")}>
+          <SlaTab />
+        </div>
+        <div className={cn(tab !== "finance" && "hidden")}>
+          <FinanceTab />
+        </div>
+        <div className={cn(tab !== "website" && "hidden")}>
+          <WebsiteTab />
+        </div>
+        <div className={cn(tab !== "accounts" && "hidden")}>
+          <AccountsTab />
+        </div>
+        <div className={cn(tab !== "settings" && "hidden")}>
           <SettingsTab onThemeChanged={(theme) => setAdminTheme(theme)} />
-        )}
+        </div>
       </main>
     </div>
   );

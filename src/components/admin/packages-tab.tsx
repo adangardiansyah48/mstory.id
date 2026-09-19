@@ -9,6 +9,7 @@ import { cn, formatCurrency } from "@/lib/utils";
 import Swal from "sweetalert2";
 import type { Addon, Category, Package as PackageRow, SubCategory } from "@/lib/types";
 import { AVAILABLE_CATEGORY_ICONS, CategoryIcon } from "@/components/ui/icons";
+import { useAutoRefresh } from "@/lib/use-auto-refresh";
 
 type EntityType = "categories" | "packages" | "addons";
 
@@ -103,35 +104,42 @@ export function PackagesTab() {
   const [editingAddonId, setEditingAddonId] = useState<number | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const supabase = createClient();
-      if (!supabase) {
-        setLoading(false);
-        return;
-      }
-      try {
-        const [c, s, p, a] = await Promise.all([
-          supabase.from("categories").select("*").order("id"),
-          supabase.from("sub_categories").select("*").order("id"),
-          supabase.from("packages").select("*").order("id"),
-          supabase.from("addons").select("*").order("id"),
-        ]);
-        if (cancelled) return;
-        setCategories(c.data ?? []);
-        setSubCategories(s.data ?? []);
-        setPackages(p.data ?? []);
-        setAddons(a.data ?? []);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    void loadCatalog(false);
   }, []);
+
+  useAutoRefresh(
+    async () => {
+      if (packages.length === 0) return;
+      await loadCatalog(true);
+    },
+    20000,
+    { enabled: packages.length > 0 },
+  );
+
+  async function loadCatalog(silent = false) {
+    if (!silent) setLoading(true);
+    const supabase = createClient();
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+    try {
+      const [c, s, p, a] = await Promise.all([
+        supabase.from("categories").select("*").order("id"),
+        supabase.from("sub_categories").select("*").order("id"),
+        supabase.from("packages").select("*").order("id"),
+        supabase.from("addons").select("*").order("id"),
+      ]);
+      setCategories(c.data ?? []);
+      setSubCategories(s.data ?? []);
+      setPackages(p.data ?? []);
+      setAddons(a.data ?? []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const [showCatModal, setShowCatModal] = useState(false);
   const [showSubModal, setShowSubModal] = useState(false);

@@ -78,6 +78,8 @@ export function LinkTreeContent() {
                   key={slide.url}
                   src={slide.url}
                   alt="Mstory.id Studio Cover"
+                  loading={i === 0 ? "eager" : "lazy"}
+                  decoding="async"
                   className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${
                     i === bannerIndex ? "opacity-100" : "opacity-0"
                   }`}

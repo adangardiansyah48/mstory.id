@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Menu, X, ArrowUp, ZoomIn, ZoomOut, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   getWebsiteContent,
+  peekWebsiteContent,
   WEBSITE_DEFAULTS,
   type WebsiteContent,
   type WebsiteResolvedSettings,
@@ -13,10 +14,13 @@ import { getStoredPublicUrl, parseObjectPosition, getSiteSettings } from "@/lib/
 import { getPackages } from "@/lib/website";
 
 export default function WebsitePage() {
-  const [content, setContent] = useState<WebsiteContent | null>(null);
+  const cachedInitial = peekWebsiteContent();
+  const [content, setContent] = useState<WebsiteContent | null>(() =>
+    cachedInitial ?? null,
+  );
   const [cats, setCats] = useState<{ id: number; name: string }[]>([]);
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => cachedInitial === null);
   const [slide, setSlide] = useState(0);
   const [navOpen, setNavOpen] = useState(false);
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
@@ -259,6 +263,8 @@ export default function WebsitePage() {
                   key={`${s.url}-${i}`}
                   src={s.url}
                   alt=""
+                  loading={i === 0 ? "eager" : "lazy"}
+                  decoding="async"
                   className={`absolute inset-0 h-full w-full object-cover transition-all duration-[1100ms] ${i === slide ? "opacity-100 scale-100" : "opacity-0 scale-[1.04]"}`}
                   style={{ objectPosition: `${s.pos.x}% ${s.pos.y}%` }}
                 />
@@ -335,7 +341,7 @@ export default function WebsitePage() {
                 <div className="relative h-[320px] overflow-hidden bg-[#F3F2EE]">
                   {album.cover_image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={album.cover_image_url} alt={album.couple_name} className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.06]" />
+                    <img src={album.cover_image_url} alt={album.couple_name} loading="lazy" decoding="async" className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.06]" />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-[#B9AA96]">{album.couple_name.slice(0, 1)}</div>
                   )}
@@ -362,7 +368,7 @@ export default function WebsitePage() {
                 <div className="relative h-[300px] overflow-hidden bg-[#F3F2EE] sm:h-[320px]">
                   {it.img ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={it.img} alt={it.title} className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.06]" style={{ objectPosition: `${it.pos.x}% ${it.pos.y}%` }} />
+                    <img src={it.img} alt={it.title} loading="lazy" decoding="async" className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.06]" style={{ objectPosition: `${it.pos.x}% ${it.pos.y}%` }} />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-[#B9AA96]">{it.title.slice(0, 1)}</div>
                   )}
@@ -392,7 +398,7 @@ export default function WebsitePage() {
               const bg = settings.info_image || bannerSlides[0]?.url || "";
               return bg ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={bg} alt="" className="h-full w-full object-cover" />
+                <img src={bg} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
               ) : null;
             })()}
             <div className="absolute inset-0 bg-[#FCFCF9]/70 sm:bg-[#FCFCF9]/60" />
