@@ -252,6 +252,8 @@ export function BookingTab({
     }
     await Swal.fire({ icon: "success", title: "Booking Ditambahkan", timer: 1200, showConfirmButton: false });
     setShowBookingForm(false);
+    setSearch("");
+    setPage(0);
     setFormData({ full_name: "", whatsapp_number: "", event_date: todayInput(), location_type: "KOTA_TASIK", event_address: "", subtotal: "0", transport_fee: "0", grand_total: "0", dp_amount: "0", status: "MENUNGGU_DP", notes: "", is_vendor: false, vendor_name: "", vendor_id: null });
     loadBookings(false);
     onChanged();
@@ -307,6 +309,8 @@ export function BookingTab({
     }
     await Swal.fire({ icon: "success", title: "Booking Vendor Ditambahkan", timer: 1200, showConfirmButton: false });
     setShowBookingForm(false);
+    setSearch("");
+    setPage(0);
     setFormData({ full_name: "", whatsapp_number: "", event_date: todayInput(), location_type: "KOTA_TASIK", event_address: "", subtotal: "0", transport_fee: "0", grand_total: "0", dp_amount: "0", status: "MENUNGGU_DP", notes: "", is_vendor: false, vendor_name: "", vendor_id: null });
     loadBookings(false);
     onChanged();
@@ -355,6 +359,8 @@ export function BookingTab({
     await Swal.fire({ icon: "success", title: "Booking Diperbarui", timer: 1200, showConfirmButton: false });
     setEditingBooking(null);
     setShowBookingForm(false);
+    setSearch("");
+    setPage(0);
     setFormData({ full_name: "", whatsapp_number: "", event_date: todayInput(), location_type: "KOTA_TASIK", event_address: "", subtotal: "0", transport_fee: "0", grand_total: "0", dp_amount: "0", status: "MENUNGGU_DP", notes: "", is_vendor: false, vendor_name: "", vendor_id: null });
     loadBookings(false);
     onChanged();
@@ -911,6 +917,8 @@ const filtered = bookings.filter((b) => {
           transportFeeDefault={transportFeeRate}
           onCreated={() => {
             setShowAddWizard(false);
+            setSearch("");
+            setPage(0);
             loadBookings(false);
             onChanged();
           }}
