@@ -18,7 +18,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { cn, formatCurrency, formatShortDate } from "@/lib/utils";
+import { cn, formatCurrency, formatShortDate, todayInput } from "@/lib/utils";
 import Swal from "sweetalert2";
 import { STATUS_LABELS } from "@/lib/types";
 import type { BookingStatus } from "@/lib/types";
@@ -53,13 +53,6 @@ interface BookingRow {
     packages: { name: string; dp_value?: number };
   }[];
   addons: { add_ons?: { name: string }; price_at_booking: number; qty?: number }[];
-}
-
-function todayInput(): string {
-  const d = new Date();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${d.getFullYear()}-${mm}-${dd}`;
 }
 
 const STATUS_STYLES: Record<BookingStatus, string> = {
@@ -98,8 +91,8 @@ export function BookingTab({
   const [vendorFee, setVendorFee] = useState(200000);
   const [showAddWizard, setShowAddWizard] = useState(false);
   const [statusFilter, setStatusFilter] = useState<BookingStatus | "ALL">("ALL");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [dateFrom, setDateFrom] = useState(() => todayInput());
+  const [dateTo, setDateTo] = useState(() => todayInput());
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 10;
 
@@ -122,7 +115,7 @@ export function BookingTab({
   }>({
     full_name: "",
     whatsapp_number: "",
-    event_date: "",
+    event_date: todayInput(),
     location_type: "KOTA_TASIK",
     event_address: "",
     subtotal: "0",
@@ -233,7 +226,7 @@ export function BookingTab({
     }
     await Swal.fire({ icon: "success", title: "Booking Ditambahkan", timer: 1200, showConfirmButton: false });
     setShowBookingForm(false);
-    setFormData({ full_name: "", whatsapp_number: "", event_date: "", location_type: "KOTA_TASIK", event_address: "", subtotal: "0", transport_fee: "0", grand_total: "0", dp_amount: "0", status: "MENUNGGU_DP", notes: "", is_vendor: false, vendor_name: "" });
+    setFormData({ full_name: "", whatsapp_number: "", event_date: todayInput(), location_type: "KOTA_TASIK", event_address: "", subtotal: "0", transport_fee: "0", grand_total: "0", dp_amount: "0", status: "MENUNGGU_DP", notes: "", is_vendor: false, vendor_name: "" });
     loadBookings(false);
     onChanged();
   }
@@ -287,7 +280,7 @@ export function BookingTab({
     }
     await Swal.fire({ icon: "success", title: "Booking Vendor Ditambahkan", timer: 1200, showConfirmButton: false });
     setShowBookingForm(false);
-    setFormData({ full_name: "", whatsapp_number: "", event_date: "", location_type: "KOTA_TASIK", event_address: "", subtotal: "0", transport_fee: "0", grand_total: "0", dp_amount: "0", status: "MENUNGGU_DP", notes: "", is_vendor: false, vendor_name: "" });
+    setFormData({ full_name: "", whatsapp_number: "", event_date: todayInput(), location_type: "KOTA_TASIK", event_address: "", subtotal: "0", transport_fee: "0", grand_total: "0", dp_amount: "0", status: "MENUNGGU_DP", notes: "", is_vendor: false, vendor_name: "" });
     loadBookings(false);
     onChanged();
   }
@@ -335,7 +328,7 @@ export function BookingTab({
     await Swal.fire({ icon: "success", title: "Booking Diperbarui", timer: 1200, showConfirmButton: false });
     setEditingBooking(null);
     setShowBookingForm(false);
-    setFormData({ full_name: "", whatsapp_number: "", event_date: "", location_type: "KOTA_TASIK", event_address: "", subtotal: "0", transport_fee: "0", grand_total: "0", dp_amount: "0", status: "MENUNGGU_DP", notes: "", is_vendor: false, vendor_name: "" });
+    setFormData({ full_name: "", whatsapp_number: "", event_date: todayInput(), location_type: "KOTA_TASIK", event_address: "", subtotal: "0", transport_fee: "0", grand_total: "0", dp_amount: "0", status: "MENUNGGU_DP", notes: "", is_vendor: false, vendor_name: "" });
     loadBookings(false);
     onChanged();
   }
@@ -497,7 +490,7 @@ export function BookingTab({
         text: error.message,
       });
     } else {
-      setBlockDate("");
+      setBlockDate(todayInput());
       loadBookings(false);
       await Swal.fire({
         icon: "success",
@@ -573,7 +566,7 @@ const filtered = bookings.filter((b) => {
           />
           {(dateFrom || dateTo) && (
             <button
-              onClick={() => { setDateFrom(""); setDateTo(""); resetPage(); }}
+              onClick={() => { setDateFrom(todayInput()); setDateTo(todayInput()); resetPage(); }}
               className="rounded-full border border-[var(--line)] bg-white px-3 py-2 text-xs font-semibold text-[var(--muted)] hover:border-[var(--brand)]"
               title="Hapus filter tanggal"
             >
