@@ -361,17 +361,34 @@ export function StatusSearchPanel() {
                       steps={["SHOOTING", "EDIT", "EDIT_DONE", "PRINTING", "PRINT_DONE", "DELIVERED", "RECEIVED"]}
                     />
                   </div>
-                  {progress?.drive_link && progress.drive_link.trim().length > 0 && (
-                    <a
-                      href={progress.drive_link.startsWith("http") ? progress.drive_link : `https://${progress.drive_link}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                      Buka Link File (Google Drive)
-                    </a>
-                  )}
+                  {(() => {
+                    const order: Record<string, number> = {
+                      SHOOTING: 0,
+                      EDIT: 1,
+                      EDIT_DONE: 2,
+                      PRINTING: 3,
+                      PRINT_DONE: 4,
+                      DELIVERED: 5,
+                      RECEIVED: 6,
+                    };
+                    const isVisible =
+                      progress?.drive_link != null &&
+                      progress.drive_link.trim().length > 0 &&
+                      (order[progress.progress_status] ?? 0) >= order["EDIT_DONE"];
+                    if (!isVisible || !progress?.drive_link) return null;
+                    const link = progress.drive_link as string;
+                    return (
+                      <a
+                        href={link.startsWith("http") ? link : `https://${link}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-100"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        Buka Link File (Google Drive)
+                      </a>
+                    );
+                  })()}
                   {progress?.expected_date && (
                     <p className="mt-2 text-[11px] text-[var(--muted-2)]">
                       Target selesai: {formatShortDate(progress.expected_date)}
