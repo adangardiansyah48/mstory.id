@@ -93,6 +93,7 @@ export function BookingTab({
   const [statusFilter, setStatusFilter] = useState<BookingStatus | "ALL">("ALL");
   const [dateFrom, setDateFrom] = useState(() => todayInput());
   const [dateTo, setDateTo] = useState(() => todayInput());
+  const [dateFilterActive, setDateFilterActive] = useState(false);
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 10;
 
@@ -509,8 +510,9 @@ const filtered = bookings.filter((b) => {
       b.client?.full_name.toLowerCase().includes(q) ||
       b.client?.whatsapp_number.toLowerCase().includes(q);
     const matchesDate =
-      (!dateFrom || b.event_date >= dateFrom) &&
-      (!dateTo || b.event_date <= dateTo);
+      !dateFilterActive ||
+      ((!dateFrom || b.event_date >= dateFrom) &&
+        (!dateTo || b.event_date <= dateTo));
     return matchesStatus && matchesQuery && matchesDate;
   });
   const visible = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -553,26 +555,26 @@ const filtered = bookings.filter((b) => {
           <input
             type="date"
             value={dateFrom}
-            onChange={(e) => { setDateFrom(e.target.value); resetPage(); }}
+            onChange={(e) => { setDateFrom(e.target.value); setDateFilterActive(true); resetPage(); }}
             title="Filter dari tanggal acara"
             className="h-11 rounded-xl border border-[var(--line)] bg-white px-2.5 text-sm text-[var(--ink)]"
           />
           <input
             type="date"
             value={dateTo}
-            onChange={(e) => { setDateTo(e.target.value); resetPage(); }}
+            onChange={(e) => { setDateTo(e.target.value); setDateFilterActive(true); resetPage(); }}
             title="Filter sampai tanggal acara"
             className="h-11 rounded-xl border border-[var(--line)] bg-white px-2.5 text-sm text-[var(--ink)]"
           />
-          {(dateFrom || dateTo) && (
+          {(dateFrom || dateTo) || dateFilterActive ? (
             <button
-              onClick={() => { setDateFrom(todayInput()); setDateTo(todayInput()); resetPage(); }}
+              onClick={() => { setDateFrom(todayInput()); setDateTo(todayInput()); setDateFilterActive(false); resetPage(); }}
               className="rounded-full border border-[var(--line)] bg-white px-3 py-2 text-xs font-semibold text-[var(--muted)] hover:border-[var(--brand)]"
-              title="Hapus filter tanggal"
+              title="Reset filter ke hari ini"
             >
               Reset
             </button>
-          )}
+          ) : null}
         </div>
         <div className="flex items-center gap-2">
           <input

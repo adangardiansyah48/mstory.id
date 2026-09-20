@@ -51,6 +51,7 @@ export function SlaTab() {
   const [workflowFilter, setWorkflowFilter] = useState<WorkflowStatus | "ALL">("ALL");
   const [dateFrom, setDateFrom] = useState(() => todayInput());
   const [dateTo, setDateTo] = useState(() => todayInput());
+  const [dateFilterActive, setDateFilterActive] = useState(false);
 
   async function loadProjects(showSpinner = true) {
     if (showSpinner) setLoading(true);
@@ -123,8 +124,9 @@ export function SlaTab() {
       r.invoice_number.toLowerCase().includes(q) ||
       (r.client?.full_name?.toLowerCase() ?? "").includes(q);
     const mDate =
-      (!dateFrom || !r.event_date || r.event_date >= dateFrom) &&
-      (!dateTo || !r.event_date || r.event_date <= dateTo);
+      !dateFilterActive ||
+      ((!dateFrom || !r.event_date || r.event_date >= dateFrom) &&
+        (!dateTo || !r.event_date || r.event_date <= dateTo));
     return mStatus && mQuery && mDate;
   });
   const visibleRows = filteredRows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -260,13 +262,13 @@ export function SlaTab() {
           <option value="ALL">Semua Tahapan</option>
           {WORKFLOW_STEPS.map((s) => (<option key={s} value={s}>{WORKFLOW_STATUS_LABELS[s]}</option>))}
         </select>
-        <input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); resetPage(); }} title="Event dari tanggal" className="h-10 rounded-xl border border-[var(--line)] bg-white px-2.5 text-sm text-[var(--ink)]" />
-        <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); resetPage(); }} title="Event sampai tanggal" className="h-10 rounded-xl border border-[var(--line)] bg-white px-2.5 text-sm text-[var(--ink)]" />
-        {(dateFrom || dateTo) && (
-          <button onClick={() => { setDateFrom(todayInput()); setDateTo(todayInput()); resetPage(); }} className="rounded-full border border-[var(--line)] bg-white px-3 py-2 text-xs font-semibold text-[var(--muted)] hover:border-[var(--brand)]" title="Reset filter ke hari ini">
+<input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setDateFilterActive(true); resetPage(); }} title="Event dari tanggal" className="h-10 rounded-xl border border-[var(--line)] bg-white px-2.5 text-sm text-[var(--ink)]" />
+        <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setDateFilterActive(true); resetPage(); }} title="Event sampai tanggal" className="h-10 rounded-xl border border-[var(--line)] bg-white px-2.5 text-sm text-[var(--ink)]" />
+        {(dateFrom || dateTo) || dateFilterActive ? (
+          <button onClick={() => { setDateFrom(todayInput()); setDateTo(todayInput()); setDateFilterActive(false); resetPage(); }} className="rounded-full border border-[var(--line)] bg-white px-3 py-2 text-xs font-semibold text-[var(--muted)] hover:border-[var(--brand)]" title="Reset filter ke hari ini">
             Reset
           </button>
-        )}
+        ) : null}
       </div>
       <p className="text-xs leading-relaxed text-[var(--muted)]">
         SLA: Retouch foto maksimal {SLA_RETOUCH_WEEKS} minggu setelah event ·
