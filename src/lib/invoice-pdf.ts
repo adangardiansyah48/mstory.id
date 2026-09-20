@@ -451,11 +451,9 @@ export function downloadVendorFeeMonthlyInvoice(input: {
     }
 
     doc.setFont("Helvetica", "bold");
-    doc.setFontSize(13);
+    doc.setFontSize(16);
     doc.setTextColor(...BRAND_DARK);
-    doc.text("BUKTI PENYERAHAN", RIGHT, 26, { align: "right", charSpace: 0.7 });
-    doc.setFontSize(12);
-    doc.text("FEE VENDOR", RIGHT, 33, { align: "right", charSpace: 0.7 });
+    doc.text("BUKTI PENYERAHAN FEE VENDOR", RIGHT, 30, { align: "right", charSpace: 0.7 });
 
     doc.setFont("Helvetica", "normal");
     doc.setFontSize(12);

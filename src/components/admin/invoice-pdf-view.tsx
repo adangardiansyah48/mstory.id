@@ -285,8 +285,7 @@ export function VendorFeePdfDocument({ vendorName, monthLabel, logoUrl, rows }: 
           {/* eslint-disable-next-line jsx-a11y/alt-text */}
           {logoUrl ? <Image src={logoUrl} style={s.logo} /> : <View style={s.logo} />}
           <View style={s.titleBlock}>
-            <Text style={s.titleSmall}>BUKTI PENYERAHAN</Text>
-            <Text style={s.titleSmall}>FEE VENDOR</Text>
+            <Text style={s.titleSmall}>BUKTI PENYERAHAN FEE VENDOR</Text>
             <Text style={s.dates}>Periode: {monthLabel}</Text>
           </View>
         </View>
