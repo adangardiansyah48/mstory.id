@@ -73,9 +73,11 @@ const NEXT_STEP: Record<BookingStatus, string> = {
 export function BookingTab({
   onChanged,
   onNavigate,
+  active,
 }: {
   onChanged: () => void;
   onNavigate: (tab: "overview" | "bookings" | "packages" | "sla" | "settings") => void;
+  active?: boolean;
 }) {
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -153,6 +155,13 @@ export function BookingTab({
     })();
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    if (active) {
+      setSearch("");
+      setPage(0);
+    }
+  }, [active]);
 
   useAutoRefresh(() => loadBookings(false), 10000);
 

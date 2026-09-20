@@ -170,7 +170,7 @@ export function AdminDashboardClient({ email }: { email: string }) {
           <OverviewTab refreshKey={refreshKey} onNavigate={setTab} />
         </div>
         <div className={cn(tab !== "bookings" && "hidden")}>
-          <BookingTab onChanged={() => setRefreshKey((k) => k + 1)} onNavigate={setTab} />
+          <BookingTab active={tab === "bookings"} onChanged={() => setRefreshKey((k) => k + 1)} onNavigate={setTab} />
         </div>
         <div className={cn(tab !== "packages" && "hidden")}>
           <PackagesTab />
