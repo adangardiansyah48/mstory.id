@@ -100,3 +100,11 @@ export function compressedBannerPath(slot: number): string {
 export function compressedLogoPath(): string {
   return `logos/logo.webp`;
 }
+
+export const WEBSITE_FOLDERS = {
+  HERO: "website/hero",
+  INFO: "website/info",
+  ALBUM_COVER: "website/albums/covers",
+  ALBUM_PHOTOS: "website/albums/photos",
+  GALLERY: "website/gallery",
+} as const;

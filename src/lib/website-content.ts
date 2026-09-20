@@ -9,6 +9,8 @@ export const WEBSITE = {
   HERO_FOLDER: "website/hero",
   INFO_FOLDER: "website/info",
   GALLERY_FOLDER: "website/gallery",
+  ALBUM_COVER: "website/albums/covers",
+  ALBUM_PHOTOS: "website/albums/photos",
 } as const;
 
 export interface WebsiteSettingsRow {
@@ -457,7 +459,7 @@ export async function deleteWebsiteGalleryItem(id: number): Promise<{ ok: boolea
  */
 export async function uploadWebsiteImage(
   file: File,
-  folder: "website/hero" | "website/info" | "website/gallery",
+  folder: "website/hero" | "website/info" | "website/gallery" | "website/albums/covers" | "website/albums/photos",
 ): Promise<{ url?: string; error?: string }> {
   const url = await compressAndUploadImage(file, FANSPAGE_BUCKET, folder);
   if (!url) return { error: "Upload gambar gagal." };

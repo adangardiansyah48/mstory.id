@@ -599,7 +599,7 @@ export function WebsiteTab() {
                             <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                               const f = e.target.files?.[0]; if (!f) return;
                               setAlbumUploading(`cover-${album.id}`);
-                              const { url } = await uploadWebsiteImage(f, WEBSITE.GALLERY_FOLDER);
+                              const { url } = await uploadWebsiteImage(f, WEBSITE.ALBUM_COVER);
                               if (url) { await updateWebsiteAlbum(album.id, { cover_image_path: url }); setAlbums((prev) => prev.map((a) => a.id === album.id ? { ...a, cover_image_path: url } : a)); }
                               setAlbumUploading(null);
                               e.target.value = "";
@@ -617,7 +617,7 @@ export function WebsiteTab() {
                           <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                             const f = e.target.files?.[0]; if (!f) return;
                             setAlbumUploading(`photo-${album.id}`);
-                            const { url } = await uploadWebsiteImage(f, WEBSITE.GALLERY_FOLDER);
+                            const { url } = await uploadWebsiteImage(f, WEBSITE.ALBUM_PHOTOS);
                             if (url) { await addWebsiteAlbumPhoto(album.id, url); setAlbumPhotos(await fetchWebsiteAlbumPhotos()); }
                             setAlbumUploading(null);
                             e.target.value = "";
