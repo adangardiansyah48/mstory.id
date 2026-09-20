@@ -242,23 +242,7 @@ async function fetchWebsiteContent(): Promise<WebsiteContent> {
 
 
 
-  // Fallback galeri: listing storage fanspage/gallery bila tabel belum terisi
-  if (gallery.length === 0) {
-    try {
-      const stored = await getGalleryImages();
-      gallery = stored.slice(0, 12).map((g) => ({
-        id: Number(g.id) || 0,
-        title: g.name.replace(/\.[^.]+$/, "").slice(0, 22) || "Gallery",
-        subtitle: "portfolio",
-        image_url: g.url,
-        link_url: null,
-        sort_order: 0,
-        is_active: true,
-      }));
-    } catch {
-      /* fallback kosong */
-    }
-  }
+
 
   return { settings, gallery, albums };
 }

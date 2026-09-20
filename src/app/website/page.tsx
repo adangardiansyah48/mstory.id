@@ -92,23 +92,13 @@ export default function WebsitePage() {
     ? (filteredGallery.length > 0 ? filteredGallery : gallery)
     : [];
 
-  const galleryItems = sourceGallery.length > 0
-    ? sourceGallery.map((g) => ({
-        title: g.title,
-        subtitle: g.subtitle,
-        href: g.link_url ?? "/website#paket",
-        img: g.image_url,
-        pos: { x: 50, y: 50 },
-      }))
-    : bannerSlides.length > 0
-      ? bannerSlides.map((b) => ({
-          title: settings.site_name || "Gallery",
-          subtitle: "portfolio",
-          href: "/website#paket",
-          img: b.url,
-          pos: b.pos,
-        }))
-      : [];
+  const galleryItems = sourceGallery.map((g) => ({
+    title: g.title,
+    subtitle: g.subtitle,
+    href: g.link_url ?? "/website#paket",
+    img: g.image_url,
+    pos: { x: 50, y: 50 },
+  }));
 
   const paddedGalleryItems = galleryItems.length > 0 && galleryItems.length < 9
     ? [...galleryItems, ...Array.from({ length: 9 - galleryItems.length }, (_, k) => galleryItems[k % galleryItems.length])]
@@ -403,7 +393,7 @@ export default function WebsitePage() {
         <div className="relative overflow-hidden rounded-[10px] bg-[#F3F2EE]">
           <div className="absolute inset-0">
             {(() => {
-              const bg = settings.info_image || bannerSlides[0]?.url || "";
+              const bg = settings.info_image || "";
               return bg ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={bg} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
