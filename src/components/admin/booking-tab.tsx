@@ -564,7 +564,11 @@ const filtered = bookings.filter((b) => {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-2)]" />
           <input
+            name="booking-search-vir-fix"
             value={search}
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
             onChange={(e) => { setSearch(e.target.value); resetPage(); }}
             placeholder="Cari invoice / nama / no. WA..."
             className="h-11 w-full rounded-xl border border-[var(--line)] bg-white pl-9 pr-4 text-sm text-[var(--ink)] placeholder:text-[var(--muted-5)] focus:border-[var(--brand)] focus:outline-none"
@@ -913,7 +917,7 @@ const filtered = bookings.filter((b) => {
         <BookingWizard
           open={true}
           adminMode
-          onClose={() => setShowAddWizard(false)}
+          onClose={() => { setShowAddWizard(false); setSearch(""); setPage(0); }}
           transportFeeDefault={transportFeeRate}
           onCreated={() => {
             setShowAddWizard(false);
