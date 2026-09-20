@@ -4,11 +4,102 @@ import { useEffect, useState } from "react";
 import { Pencil, Trash2, Plus } from "lucide-react";
 import Swal from "sweetalert2";
 import { useAutoRefresh } from "@/lib/use-auto-refresh";
+import { Modal } from "@/components/ui/modal";
 
 interface AdminUser {
   id: string;
   email: string;
   created_at: string;
+}
+
+function AccountForm({
+  editingUser,
+  newEmail,
+  setNewEmail,
+  newPassword,
+  setNewPassword,
+  editPassword,
+  setEditPassword,
+  saveEdit,
+  addUser,
+  closeModal,
+}: {
+  editingUser: { id: string; email: string } | null;
+  newEmail: string;
+  setNewEmail: (value: string) => void;
+  newPassword: string;
+  setNewPassword: (value: string) => void;
+  editPassword: string;
+  setEditPassword: (value: string) => void;
+  saveEdit: () => Promise<void>;
+  addUser: () => Promise<void>;
+  closeModal: () => void;
+}): React.ReactElement {
+  return (
+    <div className="rounded-2xl border border-[var(--line)] bg-white p-6">
+      <h3 className="font-serif text-base font-semibold text-[var(--ink)]">
+        {editingUser ? "Ganti Password" : "Tambah Akun Baru"}
+      </h3>
+      <div className="mt-4 space-y-4">
+        {editingUser ? (
+          <div>
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Email</p>
+            <input value={editingUser.email} disabled className="h-11 w-full rounded-xl border border-[var(--line)] bg-[var(--soft)] px-4 text-sm text-[var(--muted)]" />
+          </div>
+        ) : (
+          <div>
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Email</p>
+            <input
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              placeholder="admin@example.com"
+              className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-4 text-sm focus:border-[var(--brand)] focus:outline-none"
+            />
+          </div>
+        )}
+        <div>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+            {editingUser ? "Password Baru (min 6 karakter)" : "Password (min 6 karakter)"}
+          </p>
+          <input
+            type="password"
+            value={editingUser ? editPassword : newPassword}
+            onChange={(e) => (editingUser ? setEditPassword(e.target.value) : setNewPassword(e.target.value))}
+            placeholder="••••••••"
+            className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-4 text-sm focus:border-[var(--brand)] focus:outline-none"
+          />
+        </div>
+      </div>
+      <div className="mt-6 flex items-center gap-3">
+        <button
+          onClick={closeModal}
+          className="h-11 rounded-xl border border-[var(--line)] px-5 text-sm font-bold uppercase text-[var(--muted)]"
+        >
+          Batal
+        </button>
+        <button
+          onClick={editingUser ? saveEdit : addUser}
+          className="h-11 rounded-xl bg-[var(--brand)] px-5 text-sm font-bold uppercase text-white shadow-lg hover:bg-[var(--brand-hover)] disabled:opacity-50"
+        >
+          {editingUser ? "Simpan" : "Buat Akun"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function closeModal(
+  setShowAddForm: (value: boolean) => void,
+  setEditingUser: (value: null) => void,
+  setNewEmail: (value: string) => void,
+  setNewPassword: (value: string) => void,
+  setEditPassword: (value: string) => void
+) {
+  setShowAddForm(false);
+  setEditingUser(null);
+  setNewEmail("");
+  setNewPassword("");
+  setEditPassword("");
 }
 
 export function AccountsTab() {
@@ -135,70 +226,46 @@ export function AccountsTab() {
           className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-4 text-sm focus:border-[var(--brand)] focus:outline-none sm:w-72"
         />
         <button
-          onClick={() => setShowAddForm(true)}
+          onClick={() => {
+            setShowAddForm(true);
+            setEditingUser(null);
+          }}
           className="inline-flex h-11 items-center gap-1.5 rounded-xl bg-[var(--brand)] px-4 text-xs font-bold uppercase tracking-wider text-white shadow-md hover:bg-[var(--brand-hover)]"
         >
           <Plus className="h-4 w-4" /> Tambah Akun
         </button>
       </div>
 
-      {(showAddForm || editingUser) && (
-        <div className="rounded-2xl border border-[var(--line)] bg-white p-6">
-          <h3 className="font-serif text-base font-semibold text-[var(--ink)]">
-            {editingUser ? "Ganti Password" : "Tambah Akun Baru"}
-          </h3>
-          <div className="mt-4 space-y-4">
-            {editingUser ? (
-              <div>
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Email</p>
-                <input value={editingUser.email} disabled className="h-11 w-full rounded-xl border border-[var(--line)] bg-[var(--soft)] px-4 text-sm text-[var(--muted)]" />
-              </div>
-            ) : (
-              <div>
-                <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Email</p>
-                <input
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  placeholder="admin@example.com"
-                  className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-4 text-sm focus:border-[var(--brand)] focus:outline-none"
-                />
-              </div>
-            )}
-            <div>
-              <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
-                {editingUser ? "Password Baru (min 6 karakter)" : "Password (min 6 karakter)"}
-              </p>
-              <input
-                type="password"
-                value={editingUser ? editPassword : newPassword}
-                onChange={(e) => (editingUser ? setEditPassword(e.target.value) : setNewPassword(e.target.value))}
-                placeholder="••••••••"
-                className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-4 text-sm focus:border-[var(--brand)] focus:outline-none"
-              />
+      <Modal open={showAddForm || !!editingUser} onClose={() => closeModal(setShowAddForm, setEditingUser, setNewEmail, setNewPassword, setEditPassword)}>
+        <AccountForm
+          editingUser={editingUser}
+          newEmail={newEmail}
+          setNewEmail={setNewEmail}
+          newPassword={newPassword}
+          setNewPassword={setNewPassword}
+          editPassword={editPassword}
+          setEditPassword={setEditPassword}
+          saveEdit={saveEdit}
+          addUser={addUser}
+          closeModal={() => closeModal(setShowAddForm, setEditingUser, setNewEmail, setNewPassword, setEditPassword)}
+        />
+      </Modal>
+
+      <div className="mt-5 rounded-2xl border border-[var(--line)] bg-white p-6">
+        <h3 className="font-serif text-base font-semibold text-[var(--ink)]">Daftar Akun Admin</h3>
+
+        <div className="mt-4 space-y-4">
+          {editingUser ? (
+            <div className="mb-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-800">
+              Edit password untuk user {editingUser.email}
             </div>
-          </div>
-          <div className="mt-6 flex items-center gap-3">
-            <button
-              onClick={() => {
-                setShowAddForm(false);
-                setEditingUser(null);
-                setNewEmail("");
-                setNewPassword("");
-                setEditPassword("");
-              }}
-              className="h-11 rounded-xl border border-[var(--line)] px-5 text-sm font-bold uppercase text-[var(--muted)]"
-            >
-              Batal
-            </button>
-            <button
-              onClick={editingUser ? saveEdit : addUser}
-              className="h-11 rounded-xl bg-[var(--brand)] px-5 text-sm font-bold uppercase text-white shadow-lg hover:bg-[var(--brand-hover)] disabled:opacity-50"
-            >
-              {editingUser ? "Simpan" : "Buat Akun"}
-            </button>
-          </div>
+          ) : (
+            <div className="rounded-xl bg-blue-50 p-4 text-sm text-blue-800">
+              Klik tombol &quot;Tambah Akun&quot; di atas untuk membuat admin baru.
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       <div className="space-y-3">
         {(search.trim()

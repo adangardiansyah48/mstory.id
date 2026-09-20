@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Pencil, Plus, Trash2, Search } from "lucide-react";
 import Swal from "sweetalert2";
 import { useAutoRefresh } from "@/lib/use-auto-refresh";
+import { Modal } from "@/components/ui/modal";
 
 type Vendor = {
   id: number;
@@ -26,6 +27,85 @@ const EMPTY: Omit<Vendor, "id" | "code"> = {
   is_active: true,
 };
 
+function VendorForm({
+  editing,
+  form,
+  setForm,
+  save,
+  closeModal,
+}: {
+  editing: Vendor | null;
+  form: Omit<Vendor, "id" | "code">;
+  setForm: (updater: (prev: Omit<Vendor, "id" | "code">) => Omit<Vendor, "id" | "code">) => void;
+  save: () => Promise<void>;
+  closeModal: () => void;
+}): React.ReactElement {
+  return (
+    <div className="rounded-2xl border border-[var(--line)] bg-white p-6">
+      <h3 className="font-serif text-base font-semibold text-[var(--ink)]">{editing ? "Edit Vendor" : "Tambah Vendor"}</h3>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Nama (unik)</p>
+          <input
+            value={form.name}
+            onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))}
+            placeholder="Nama vendor"
+            className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-4 text-sm focus:border-[var(--brand)] focus:outline-none"
+          />
+        </div>
+        <div>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Nama tampilan</p>
+          <input
+            value={form.display_name ?? ""}
+            onChange={(e) => setForm((s) => ({ ...s, display_name: e.target.value }))}
+            placeholder="Nama di invoice"
+            className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-4 text-sm focus:border-[var(--brand)] focus:outline-none"
+          />
+        </div>
+        <div>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">WhatsApp</p>
+          <input
+            value={form.whatsapp ?? ""}
+            onChange={(e) => setForm((s) => ({ ...s, whatsapp: e.target.value }))}
+            placeholder="0812..."
+            className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-4 text-sm focus:border-[var(--brand)] focus:outline-none"
+          />
+        </div>
+        <div>
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Fee per booking (Rp)</p>
+          <input
+            type="number"
+            value={form.fee_per_booking}
+            onChange={(e) => setForm((s) => ({ ...s, fee_per_booking: Number(e.target.value) }))}
+            className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-4 text-sm focus:border-[var(--brand)] focus:outline-none"
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Email (opsional)</p>
+          <input
+            value={form.email ?? ""}
+            onChange={(e) => setForm((s) => ({ ...s, email: e.target.value }))}
+            className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-4 text-sm focus:border-[var(--brand)] focus:outline-none"
+          />
+        </div>
+        <label className="flex items-center gap-2 text-sm font-semibold text-[var(--ink)]">
+          <input
+            type="checkbox"
+            checked={form.is_active}
+            onChange={(e) => setForm((s) => ({ ...s, is_active: e.target.checked }))}
+            className="accent-[var(--brand)]"
+          />
+          Aktif
+        </label>
+      </div>
+      <div className="mt-6 flex items-center gap-3">
+        <button onClick={closeModal} className="h-11 rounded-xl border border-[var(--line)] px-5 text-sm font-bold uppercase text-[var(--muted)]">Batal</button>
+        <button onClick={save} className="h-11 rounded-xl bg-[var(--brand)] px-5 text-sm font-bold uppercase text-white shadow-lg hover:bg-[var(--brand-hover)]">Simpan</button>
+      </div>
+    </div>
+  );
+}
+
 export function VendorsTab() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,6 +115,12 @@ export function VendorsTab() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Vendor | null>(null);
   const [form, setForm] = useState(EMPTY);
+
+  const closeModalInner = () => {
+    setShowForm(false);
+    setEditing(null);
+    setForm({ ...EMPTY });
+  };
 
   async function loadVendors(silent = false) {
     if (!silent) setLoading(true);
@@ -88,8 +174,7 @@ export function VendorsTab() {
       if (error) { await Swal.fire({ icon: "error", title: "Gagal tambah", text: error.message }); return; }
       await Swal.fire({ icon: "success", title: "Vendor ditambahkan", timer: 1000, showConfirmButton: false });
     }
-    setShowForm(false);
-    setEditing(null);
+    closeModalInner();
     await loadVendors(true);
   }
 
@@ -142,41 +227,9 @@ export function VendorsTab() {
         <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} placeholder="Cari nama / kode / WA..." className="h-11 w-full rounded-xl border border-[var(--line)] bg-white pl-9 pr-4 text-sm focus:border-[var(--brand)] focus:outline-none" />
       </div>
 
-      {showForm && (
-        <div className="rounded-2xl border border-[var(--line)] bg-white p-6">
-          <h3 className="font-serif text-base font-semibold text-[var(--ink)]">{editing ? "Edit Vendor" : "Tambah Vendor"}</h3>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div>
-              <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Nama (unik)</p>
-              <input value={form.name} onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))} placeholder="Nama vendor" className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-4 text-sm focus:border-[var(--brand)] focus:outline-none" />
-            </div>
-            <div>
-              <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Nama tampilan</p>
-              <input value={form.display_name ?? ""} onChange={(e) => setForm((s) => ({ ...s, display_name: e.target.value }))} placeholder="Nama di invoice" className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-4 text-sm focus:border-[var(--brand)] focus:outline-none" />
-            </div>
-            <div>
-              <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">WhatsApp</p>
-              <input value={form.whatsapp ?? ""} onChange={(e) => setForm((s) => ({ ...s, whatsapp: e.target.value }))} placeholder="0812..." className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-4 text-sm focus:border-[var(--brand)] focus:outline-none" />
-            </div>
-            <div>
-              <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Fee per booking (Rp)</p>
-              <input type="number" value={form.fee_per_booking} onChange={(e) => setForm((s) => ({ ...s, fee_per_booking: Number(e.target.value) }))} className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-4 text-sm focus:border-[var(--brand)] focus:outline-none" />
-            </div>
-            <div className="sm:col-span-2">
-              <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Email (opsional)</p>
-              <input value={form.email ?? ""} onChange={(e) => setForm((s) => ({ ...s, email: e.target.value }))} className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-4 text-sm focus:border-[var(--brand)] focus:outline-none" />
-            </div>
-            <label className="flex items-center gap-2 text-sm font-semibold text-[var(--ink)]">
-              <input type="checkbox" checked={!!form.is_active} onChange={(e) => setForm((s) => ({ ...s, is_active: e.target.checked }))} className="accent-[var(--brand)]" />
-              Aktif
-            </label>
-          </div>
-          <div className="mt-6 flex items-center gap-3">
-            <button onClick={() => { setShowForm(false); setEditing(null); }} className="h-11 rounded-xl border border-[var(--line)] px-5 text-sm font-bold uppercase text-[var(--muted)]">Batal</button>
-            <button onClick={save} className="h-11 rounded-xl bg-[var(--brand)] px-5 text-sm font-bold uppercase text-white shadow-lg hover:bg-[var(--brand-hover)]">Simpan</button>
-          </div>
-        </div>
-      )}
+      <Modal open={showForm} onClose={closeModalInner}>
+        {showForm ? <VendorForm editing={editing} form={form} setForm={setForm} save={save} closeModal={closeModalInner} /> : null}
+      </Modal>
 
       <div className="space-y-3">
         {visible.map((v) => (
