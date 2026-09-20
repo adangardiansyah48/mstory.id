@@ -48,6 +48,7 @@ interface BookingRow {
   client: { full_name: string; whatsapp_number: string };
   source: string;
   vendor_name: string;
+  vendor_id?: number | null;
   details: {
     price_at_booking: number;
     packages: { name: string; dp_value?: number };
@@ -99,7 +100,7 @@ export function BookingTab({
 
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [editingBooking, setEditingBooking] = useState<BookingRow | null>(null);
-  const [vendors, setVendors] = useState<{ id: number; name: string; display_name: string | null; whatsapp: string | null; fee_per_booking: number; is_active: boolean }[]>([]);
+  const [vendors, setVendors] = useState<{ id: number; code: string | null; name: string; display_name: string | null; whatsapp: string | null; fee_per_booking: number; is_active: boolean }[]>([]);
   const [formData, setFormData] = useState<{
     full_name: string;
     whatsapp_number: string;
@@ -146,7 +147,7 @@ export function BookingTab({
       try {
         const supabase = createClient();
         if (!supabase) return;
-        const { data } = await supabase.from("vendors").select("id, name, display_name, whatsapp, fee_per_booking, is_active").eq("is_active", true).order("name", { ascending: true });
+        const { data } = await supabase.from("vendors").select("id, code, name, display_name, whatsapp, fee_per_booking, is_active").eq("is_active", true).order("name", { ascending: true });
         if (!cancelled) setVendors((data as any) ?? []);
       } catch {}
     })();
@@ -231,6 +232,7 @@ export function BookingTab({
         notes: formData.notes.trim() || null,
         source: "CLIENT",
         vendor_name: null,
+        vendor_id: null,
       })
       .select()
       .single();
@@ -241,7 +243,7 @@ export function BookingTab({
     }
     await Swal.fire({ icon: "success", title: "Booking Ditambahkan", timer: 1200, showConfirmButton: false });
     setShowBookingForm(false);
-    setFormData({ full_name: "", whatsapp_number: "", event_date: todayInput(), location_type: "KOTA_TASIK", event_address: "", subtotal: "0", transport_fee: "0", grand_total: "0", dp_amount: "0", status: "MENUNGGU_DP", notes: "", is_vendor: false, vendor_name: "" });
+    setFormData({ full_name: "", whatsapp_number: "", event_date: todayInput(), location_type: "KOTA_TASIK", event_address: "", subtotal: "0", transport_fee: "0", grand_total: "0", dp_amount: "0", status: "MENUNGGU_DP", notes: "", is_vendor: false, vendor_name: "", vendor_id: null });
     loadBookings(false);
     onChanged();
   }
@@ -285,6 +287,7 @@ export function BookingTab({
         notes: formData.notes.trim() || null,
         source: "VENDOR",
         vendor_name: formData.vendor_name.trim(),
+        vendor_id: formData.vendor_id,
       })
       .select()
       .single();
@@ -295,7 +298,7 @@ export function BookingTab({
     }
     await Swal.fire({ icon: "success", title: "Booking Vendor Ditambahkan", timer: 1200, showConfirmButton: false });
     setShowBookingForm(false);
-    setFormData({ full_name: "", whatsapp_number: "", event_date: todayInput(), location_type: "KOTA_TASIK", event_address: "", subtotal: "0", transport_fee: "0", grand_total: "0", dp_amount: "0", status: "MENUNGGU_DP", notes: "", is_vendor: false, vendor_name: "" });
+    setFormData({ full_name: "", whatsapp_number: "", event_date: todayInput(), location_type: "KOTA_TASIK", event_address: "", subtotal: "0", transport_fee: "0", grand_total: "0", dp_amount: "0", status: "MENUNGGU_DP", notes: "", is_vendor: false, vendor_name: "", vendor_id: null });
     loadBookings(false);
     onChanged();
   }
@@ -343,7 +346,7 @@ export function BookingTab({
     await Swal.fire({ icon: "success", title: "Booking Diperbarui", timer: 1200, showConfirmButton: false });
     setEditingBooking(null);
     setShowBookingForm(false);
-    setFormData({ full_name: "", whatsapp_number: "", event_date: todayInput(), location_type: "KOTA_TASIK", event_address: "", subtotal: "0", transport_fee: "0", grand_total: "0", dp_amount: "0", status: "MENUNGGU_DP", notes: "", is_vendor: false, vendor_name: "" });
+    setFormData({ full_name: "", whatsapp_number: "", event_date: todayInput(), location_type: "KOTA_TASIK", event_address: "", subtotal: "0", transport_fee: "0", grand_total: "0", dp_amount: "0", status: "MENUNGGU_DP", notes: "", is_vendor: false, vendor_name: "", vendor_id: null });
     loadBookings(false);
     onChanged();
   }
@@ -387,6 +390,7 @@ export function BookingTab({
       notes: booking.notes ?? "",
       is_vendor: booking.source === "VENDOR",
       vendor_name: booking.vendor_name ?? "",
+      vendor_id: booking.vendor_id ?? null,
     });
     setShowBookingForm(true);
   }

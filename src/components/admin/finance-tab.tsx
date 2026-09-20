@@ -19,12 +19,15 @@ interface FinanceRow {
   status: BookingStatus;
   client: { full_name: string } | null;
   booking_date: string | null;
+  vendor_name?: string | null;
+  vendor_id?: number | null;
 }
 
 export function FinanceTab() {
   const [rows, setRows] = useState<FinanceRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [vendorFee, setVendorFee] = useState(200000);
+  const [vendorMap, setVendorMap] = useState<Record<number, { name: string; code: string | null; display_name: string | null; fee_per_booking: number }>>({});
   const [previewVendor, setPreviewVendor] = useState<{
     vendorName: string;
     monthLabel: string;
@@ -56,7 +59,7 @@ export function FinanceTab() {
 
     const { data, error } = await supabase
       .from("bookings")
-      .select("id, invoice_number, event_date, grand_total, dp_amount, source, status, booking_date, client:clients(full_name)")
+      .select("id, invoice_number, event_date, grand_total, dp_amount, source, status, booking_date, client:clients(full_name), vendor_name, vendor_id")
       .neq("status", "CANCELLED")
       .gte("event_date", start)
       .lt("event_date", end)
@@ -128,29 +131,44 @@ export function FinanceTab() {
         const s = await getSiteSettings();
         if (s.logo_url) setLogoUrl(getStoredPublicUrl(s.logo_url) ?? null);
       } catch {}
+      try {
+        const supabase = createClient();
+        if (!supabase) return;
+        const { data } = await supabase.from("vendors").select("id, code, name, display_name, fee_per_booking");
+        const map: Record<number, { name: string; code: string | null; display_name: string | null; fee_per_booking: number }> = {};
+        (data as { id: number; code: string | null; name: string; display_name: string | null; fee_per_booking: number }[] | null)?.forEach((v) => { map[v.id] = v; });
+        setVendorMap(map);
+      } catch {}
     })();
   }, []);
 
   const vendorInvoices = useMemo(() => {
-    const map = new Map<string, { bookings: { invoice_number: string; event_date: string; fee: number }[]; totalFee: number }>();
+    const map = new Map<string, { vendorId: number | null; vendorCode: string | null; vendorName: string; bookings: { invoice_number: string; event_date: string; fee: number }[]; totalFee: number }>();
     for (const r of rows) {
       if (r.source !== "VENDOR") continue;
-      const vendorName = (r as unknown as { vendor_name?: string | null }).vendor_name ?? "Vendor";
-      if (!map.has(vendorName)) map.set(vendorName, { bookings: [], totalFee: 0 });
-      const entry = map.get(vendorName)!;
+      const vId = r.vendor_id ?? null;
+      const v = vId != null ? vendorMap[vId] : undefined;
+      const vendorName = v?.display_name ?? v?.name ?? r.vendor_name ?? "Vendor";
+      const vendorCode = v?.code ?? null;
+      const fee = v?.fee_per_booking ?? vendorFee;
+      const key = vId != null ? `id:${vId}` : `name:${vendorName}`;
+      if (!map.has(key)) map.set(key, { vendorId: vId, vendorCode, vendorName, bookings: [], totalFee: 0 });
+      const entry = map.get(key)!;
       entry.bookings.push({
         invoice_number: r.invoice_number,
         event_date: r.event_date,
-        fee: vendorFee,
+        fee,
       });
-      entry.totalFee += vendorFee;
+      entry.totalFee += fee;
     }
-    return Array.from(map.entries()).map(([vendorName, v]) => ({
-      vendorName,
+    return Array.from(map.entries()).map(([_, v]) => ({
+      vendorId: v.vendorId,
+      vendorCode: v.vendorCode,
+      vendorName: v.vendorName,
       bookings: v.bookings,
       totalFee: v.totalFee,
     }));
-  }, [rows, vendorFee]);
+  }, [rows, vendorFee, vendorMap]);
 
   const q = search.trim().toLowerCase();
   const filteredRows = rows.filter(
@@ -310,8 +328,8 @@ export function FinanceTab() {
               <div key={v.vendorName} className="rounded-xl border border-[var(--line)] bg-[var(--soft)]/40 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-bold text-[var(--ink)]">{v.vendorName}</p>
-                    <p className="text-xs text-[var(--muted)]">{v.bookings.length} booking · Total fee {formatCurrency(v.totalFee)} ({formatCurrency(vendorFee)}/booking)</p>
+<p className="text-sm font-bold text-[var(--ink)]">{v.vendorName}</p>
+                     <p className="text-xs text-[var(--muted)]">{v.vendorCode ?? (v.vendorId ? `ID ${v.vendorId}` : "Tanpa ID")} · {v.bookings.length} booking · Total fee {formatCurrency(v.totalFee)} (fee sesuai master vendor)</p>
                   </div>
                   <button
                     type="button"
