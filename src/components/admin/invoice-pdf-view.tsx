@@ -31,7 +31,7 @@ const s = StyleSheet.create({
   logo: { width: 140, height: 56, objectFit: "contain" },
   titleBlock: { alignItems: "flex-end" },
   title: { fontSize: 26, fontWeight: "bold", color: "#1a237e", letterSpacing: 2 },
-  titleSmall: { fontSize: 13, fontWeight: "bold", color: "#1a237e", letterSpacing: 0.8 },
+  titleSmall: { fontSize: 15, fontWeight: "bold", color: "#1a237e", letterSpacing: 0.8 },
   invoiceNo: { fontSize: 12, fontWeight: "bold", marginTop: 5 },
   dates: { fontSize: 9, color: C.muted, marginTop: 4 },
   statusBadge: { paddingVertical: 5, paddingHorizontal: 12, borderRadius: 6, marginBottom: 20, alignSelf: "flex-start", backgroundColor: "#fef3c7" },
