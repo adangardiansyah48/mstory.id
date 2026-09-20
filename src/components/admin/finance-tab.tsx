@@ -161,7 +161,7 @@ export function FinanceTab() {
       });
       entry.totalFee += fee;
     }
-    return Array.from(map.entries()).map(([_, v]) => ({
+    return Array.from(map.values()).map((v) => ({
       vendorId: v.vendorId,
       vendorCode: v.vendorCode,
       vendorName: v.vendorName,

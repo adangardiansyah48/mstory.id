@@ -148,7 +148,7 @@ export function BookingTab({
         const supabase = createClient();
         if (!supabase) return;
         const { data } = await supabase.from("vendors").select("id, code, name, display_name, whatsapp, fee_per_booking, is_active").eq("is_active", true).order("name", { ascending: true });
-        if (!cancelled) setVendors((data as any) ?? []);
+        if (!cancelled) setVendors((data as typeof vendors | null) ?? []);
       } catch {}
     })();
     return () => { cancelled = true; };
