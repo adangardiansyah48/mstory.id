@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import {
-  CalendarCheck,
   Camera,
   Search,
   MessageCircle,
@@ -11,14 +10,12 @@ import {
   Music2,
   Youtube,
 } from "lucide-react";
-import { BookingWizard } from "@/components/booking/booking-wizard";
 import { StatusChecker } from "@/components/status-checker";
 import { useFanpageSettings } from "@/lib/use-site-settings";
 import { getStoredPublicUrl, parseObjectPosition } from "@/lib/site-settings";
 import { normalizeWhatsAppNumber } from "@/lib/utils";
 
 export function LinkTreeContent() {
-  const [bookingOpen, setBookingOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
   const { settings } = useFanpageSettings();
 
@@ -49,10 +46,8 @@ export function LinkTreeContent() {
   const waNumber = normalizeWhatsAppNumber(
     settings.wa_number || "6281234567890",
   );
-  const transportFeeDefault = settings.transport_fee ?? 250000;
   const subtitle = settings.subtitle || "Photography & Videography";
   const tagline = settings.tagline || "tell us your story journey";
-  const bookingLabel = settings.booking_label || "Booking Online";
   const statusLabel = settings.status_label || "Cek Status Edit & Cetak Foto";
 
   return (
@@ -148,62 +143,12 @@ export function LinkTreeContent() {
 
         {/* Main Interactive Button Stack */}
         <main className="mt-6 flex w-full flex-col gap-3.5 px-4">
-          <button
-            onClick={() => setBookingOpen(true)}
-            className="glass fade-in-item group flex min-h-[48px] cursor-pointer items-center justify-between rounded-2xl px-4 py-4 text-[13px] font-medium text-[var(--ink)] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
-            style={{ animationDelay: "0.1s" }}
-          >
-            <span className="flex items-center gap-3.5">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[var(--line-2)] bg-[var(--soft)]">
-                <CalendarCheck className="h-5 w-5" />
-              </span>
-              <span className="text-left">
-                <span className="block text-[12px] font-bold uppercase leading-tight tracking-wider text-[var(--ink)]">
-                  BOOKING ONLINE &amp; KALKULATOR ESTIMASI
-                </span>
-                <span className="mt-0.5 block text-[11px] font-normal normal-case tracking-normal text-[var(--muted)]">
-                  {bookingLabel}
-                </span>
-              </span>
-            </span>
-            <span className="ml-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--ink)]/5 text-[var(--muted-2)] transition-all duration-300 group-hover:bg-[var(--ink)] group-hover:text-white group-hover:translate-x-1">
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </span>
-          </button>
-
-          <button
-            onClick={() => setStatusOpen(true)}
-            className="glass fade-in-item group flex min-h-[48px] cursor-pointer items-center justify-between rounded-2xl px-4 py-4 text-[13px] font-medium text-[var(--ink)] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
-            style={{ animationDelay: "0.2s" }}
-          >
-            <span className="flex items-center gap-3.5">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[var(--line-2)] bg-[var(--soft)]">
-                <Search className="h-5 w-5" />
-              </span>
-              <span className="text-left">
-                <span className="block text-[12px] font-bold uppercase tracking-wider text-[var(--ink)]">
-                  CEK STATUS EDIT &amp; CETAK FOTO
-                </span>
-                <span className="mt-0.5 block text-[11px] font-normal normal-case tracking-normal text-[var(--muted)]">
-                  {statusLabel}
-                </span>
-              </span>
-            </span>
-            <span className="ml-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--ink)]/5 text-[var(--muted-2)] transition-all duration-300 group-hover:bg-[var(--ink)] group-hover:text-white group-hover:translate-x-1">
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </span>
-          </button>
-
           <a
             href={`https://wa.me/${waNumber}`}
             target="_blank"
             rel="noopener noreferrer"
             className="glass fade-in-item group flex min-h-[48px] items-center justify-between rounded-2xl px-4 py-4 text-[13px] font-medium text-[var(--ink)] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
-            style={{ animationDelay: "0.3s" }}
+            style={{ animationDelay: "0.1s" }}
           >
             <span className="flex items-center gap-3.5">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[var(--line-2)] bg-[var(--soft)]">
@@ -228,7 +173,7 @@ export function LinkTreeContent() {
           <a
             href="/website"
             className="glass fade-in-item group flex min-h-[48px] items-center justify-between rounded-2xl px-4 py-4 text-[13px] font-medium text-[var(--ink)] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
-            style={{ animationDelay: "0.4s" }}
+            style={{ animationDelay: "0.2s" }}
           >
             <span className="flex items-center gap-3.5">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[var(--line-2)] bg-[var(--soft)]">
@@ -249,6 +194,31 @@ export function LinkTreeContent() {
               </svg>
             </span>
           </a>
+
+          <button
+            onClick={() => setStatusOpen(true)}
+            className="glass fade-in-item group flex min-h-[48px] cursor-pointer items-center justify-between rounded-2xl px-4 py-4 text-[13px] font-medium text-[var(--ink)] transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+            style={{ animationDelay: "0.3s" }}
+          >
+            <span className="flex items-center gap-3.5">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[var(--line-2)] bg-[var(--soft)]">
+                <Search className="h-5 w-5" />
+              </span>
+              <span className="text-left">
+                <span className="block text-[12px] font-bold uppercase tracking-wider text-[var(--ink)]">
+                  CEK STATUS EDIT &amp; CETAK FOTO
+                </span>
+                <span className="mt-0.5 block text-[11px] font-normal normal-case tracking-normal text-[var(--muted)]">
+                  {statusLabel}
+                </span>
+              </span>
+            </span>
+            <span className="ml-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--ink)]/5 text-[var(--muted-2)] transition-all duration-300 group-hover:bg-[var(--ink)] group-hover:text-white group-hover:translate-x-1">
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+          </button>
         </main>
 
         {/* Social Media Icon Grid */}
@@ -296,9 +266,6 @@ export function LinkTreeContent() {
         </footer>
       </div>
 
-      {bookingOpen && (
-        <BookingWizard open={true} onClose={() => setBookingOpen(false)} waNumber={waNumber} transportFeeDefault={transportFeeDefault} />
-      )}
       {statusOpen && <StatusChecker open={true} onClose={() => setStatusOpen(false)} />}
     </>
   );
