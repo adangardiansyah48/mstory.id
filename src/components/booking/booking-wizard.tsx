@@ -97,6 +97,7 @@ export function BookingWizard({
   );
   const [submitting, setSubmitting] = useState(false);
   const [vendorName, setVendorName] = useState("");
+  const [vendorOptions, setVendorOptions] = useState<{ id: number; name: string }[]>([]);
   const [submitResult, setSubmitResult] = useState<{
     invoiceNumber: string;
     waLink: string;
@@ -106,6 +107,18 @@ export function BookingWizard({
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0 });
   }, [step]);
+
+  useEffect(() => {
+    if (!adminMode) return;
+    (async () => {
+      try {
+        const supabase = createClient();
+        if (!supabase) return;
+        const { data } = await supabase.from("vendors").select("id, name, display_name").eq("is_active", true).order("name", { ascending: true });
+        setVendorOptions(((data as unknown as { id: number; name: string; display_name: string | null }[] | null) ?? []).map((v) => ({ id: v.id, name: v.display_name ?? v.name })));
+      } catch {}
+    })();
+  }, [adminMode]);
 
   useEffect(() => {
     if (submitResult && scrollRef.current) {
@@ -206,22 +219,24 @@ export function BookingWizard({
 
        let bookingData: { id: number } | null = null;
        try {
-         const basePayload: Record<string, unknown> = {
-            invoice_number: invoiceNumber,
-            client_id: clientData.id,
-            event_date: client.eventDate,
-            location_type: client.locationType,
-            event_address: client.eventAddress,
-            subtotal: subtotal,
-            transport_fee: transportFee,
-            grand_total: grandTotal,
-            dp_amount: dpAmount,
-            status: "MENUNGGU_DP",
-            notes: client.notes || null,
-          };
+          const basePayload: Record<string, unknown> = {
+             invoice_number: invoiceNumber,
+             client_id: clientData.id,
+             event_date: client.eventDate,
+             location_type: client.locationType,
+             event_address: client.eventAddress,
+             subtotal: subtotal,
+             transport_fee: transportFee,
+             grand_total: grandTotal,
+             dp_amount: dpAmount,
+             status: "MENUNGGU_DP",
+             notes: client.notes || null,
+           };
           if (adminMode && vendorName.trim()) {
             basePayload.source = "VENDOR";
             basePayload.vendor_name = vendorName.trim();
+            const v = vendorOptions.find((x) => x.name === vendorName.trim());
+            if (v) basePayload.vendor_id = v.id;
           }
 for (let attempt = 0; attempt < 3; attempt++) {
             const attemptPayload = { ...basePayload, invoice_number: invoiceNumber };
@@ -459,13 +474,22 @@ for (let attempt = 0; attempt < 3; attempt++) {
                         </label>
                         {!!vendorName && (
                           <div className="animate-fade-in">
-                            <p className="mb-1 text-[10px] font-bold uppercase text-[var(--muted-2)]">Nama Vendor</p>
-                            <input
+                            <p className="mb-1 text-[10px] font-bold uppercase text-[var(--muted-2)]">Pilih Vendor (dari master)</p>
+                            <select
                               value={vendorName === "Vendor" ? "" : vendorName}
                               onChange={(e) => setVendorName(e.target.value)}
-                              placeholder="Ketik nama vendor..."
-                              className="h-10 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none"
-                            />
+                              className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none"
+                            >
+                              <option value="">-- Pilih vendor --</option>
+                              {vendorOptions.map((v) => (
+                                <option key={v.id} value={v.name}>
+                                  {v.name}
+                                </option>
+                              ))}
+                            </select>
+                            {vendorOptions.length === 0 && (
+                              <p className="mt-1 text-[10px] text-amber-700">Belum ada vendor di master. Isi dulu di menu Admin → Vendor.</p>
+                            )}
                           </div>
                         )}
                       </div>
