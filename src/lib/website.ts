@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
-import { getSiteSettings as getBaseSiteSettings, getStoredPublicUrl, FANSPAGE_BUCKET } from "./site-settings";
+import { getSiteSettings as getBaseSiteSettings, getStoredPublicUrl, WEBSITE_BUCKET } from "./site-settings";
 
 export interface Package {
   id: number;
@@ -80,17 +80,17 @@ export async function getPackages(): Promise<{
 }
 
 /**
- * Daftar gambar galeri dari storage bucket fanspage/gallery
+ * Daftar gambar galeri dari storage bucket website/gallery
  */
 export async function getGalleryImages(): Promise<{ id: string; name: string; url: string }[]> {
   const supabase = createClient();
   if (!supabase) return [];
-  const { data, error } = await supabase.storage.from(FANSPAGE_BUCKET).list("gallery");
+  const { data, error } = await supabase.storage.from(WEBSITE_BUCKET).list("gallery");
   if (error) return [];
   return (data ?? []).map((item) => ({
     id: item.id ?? Math.random().toString(),
     name: item.name,
-    url: getStoredPublicUrl(`${FANSPAGE_BUCKET}/gallery/${item.name}`) || "",
+    url: getStoredPublicUrl(`${WEBSITE_BUCKET}/gallery/${item.name}`) || "",
   }));
 }
 

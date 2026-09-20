@@ -49,6 +49,7 @@ export const DEFAULT_SETTINGS: Omit<SiteSettings, "id" | "updated_at"> = {
 };
 
 export const FANSPAGE_BUCKET = "fanspage";
+export const WEBSITE_BUCKET = "website";
 export const BANNER_FOLDER = "banners";
 export const LOGO_FOLDER = "logos";
 export const GALLERY_FOLDER = "gallery";

@@ -102,9 +102,9 @@ export function compressedLogoPath(): string {
 }
 
 export const WEBSITE_FOLDERS = {
-  HERO: "website/hero",
-  INFO: "website/info",
-  ALBUM_COVER: "website/albums/covers",
-  ALBUM_PHOTOS: "website/albums/photos",
-  GALLERY: "website/gallery",
+  HERO: "hero",
+  INFO: "info",
+  ALBUM_COVER: "albums/covers",
+  ALBUM_PHOTOS: "albums/photos",
+  GALLERY: "gallery",
 } as const;

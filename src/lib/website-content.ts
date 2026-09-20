@@ -1,16 +1,13 @@
 import { createClient } from "@/lib/supabase/client";
-import {
-  FANSPAGE_BUCKET,
-  getStoredPublicUrl,
-} from "@/lib/site-settings";
+import { FANSPAGE_BUCKET, WEBSITE_BUCKET, getStoredPublicUrl } from "@/lib/site-settings";
 import { compressAndUploadImage, getGalleryImages } from "@/lib/website";
 
 export const WEBSITE = {
-  HERO_FOLDER: "website/hero",
-  INFO_FOLDER: "website/info",
-  GALLERY_FOLDER: "website/gallery",
-  ALBUM_COVER: "website/albums/covers",
-  ALBUM_PHOTOS: "website/albums/photos",
+  HERO_FOLDER: "hero",
+  INFO_FOLDER: "info",
+  GALLERY_FOLDER: "gallery",
+  ALBUM_COVER: "albums/covers",
+  ALBUM_PHOTOS: "albums/photos",
 } as const;
 
 export interface WebsiteSettingsRow {
@@ -459,26 +456,30 @@ export async function deleteWebsiteGalleryItem(id: number): Promise<{ ok: boolea
  */
 export async function uploadWebsiteImage(
   file: File,
-  folder: "website/hero" | "website/info" | "website/gallery" | "website/albums/covers" | "website/albums/photos",
+  folder: "hero" | "info" | "gallery" | "albums/covers" | "albums/photos",
 ): Promise<{ url?: string; error?: string }> {
-  const url = await compressAndUploadImage(file, FANSPAGE_BUCKET, folder);
+  const url = await compressAndUploadImage(file, WEBSITE_BUCKET, folder);
   if (!url) return { error: "Upload gambar gagal." };
   return { url };
 }
 
 /**
  * Hapus file storage berdasarkan full public URL.
- * URL bentuk: <SUPABASE_URL>/storage/v1/object/public/fanspage/<folder>/<name>?...
+ * Support bucket website (baru) + fanspage (legacy).
  */
 export async function deleteWebsiteImage(url: string): Promise<void> {
   const supabase = createClient();
   if (!supabase) return;
   const base = url.split("?")[0];
-  const marker = `/storage/v1/object/public/${FANSPAGE_BUCKET}/`;
-  const idx = base.indexOf(marker);
-  if (idx === -1) return;
-  const path = base.slice(idx + marker.length);
-  await supabase.storage.from(FANSPAGE_BUCKET).remove([path]);
+  for (const bucket of [WEBSITE_BUCKET, FANSPAGE_BUCKET]) {
+    const marker = `/storage/v1/object/public/${bucket}/`;
+    const idx = base.indexOf(marker);
+    if (idx !== -1) {
+      const path = base.slice(idx + marker.length);
+      await supabase.storage.from(bucket).remove([path]);
+      return;
+    }
+  }
 }
 
 // ==========================================

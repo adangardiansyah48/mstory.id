@@ -128,17 +128,19 @@ CREATE TRIGGER trg_website_gallery_updated
 
 -- ==========================================
 -- 4. Penyimpanan Foto
---    Bucket 'fanspage' (sudah ada di schema_fanspage_settings.sql)
+--    Bucket 'website' (pisah dari fanspage: fanspage=banner/logo, website=hero/info/gallery/albums)
 --    publik baca + admin CRUD via policy bucket-level.
 --    Puzzle folder di dalam bucket:
---      fanspage/website/hero/     -> slide hero
---      fanspage/website/info/     -> background info banner (opsional)
---      fanspage/website/gallery/  -> foto grid portfolio & instagram
+--      website/hero/             -> slide hero
+--      website/info/             -> background info banner (opsional)
+--      website/gallery/          -> foto grid portfolio & instagram (legacy)
+--      website/albums/covers/    -> cover album (1 per event)
+--      website/albums/photos/    -> foto isi album (zoom click)
 --
 --    Jika bucket belum ada, jalankan blok berikut:
 -- ==========================================
 -- INSERT INTO storage.buckets (id, name, public)
--- VALUES ('fanspage', 'fanspage', true)
+-- VALUES ('website', 'website', true)
 -- ON CONFLICT (id) DO NOTHING;
 --
 -- DROP POLICY IF EXISTS "fanspage_public_read" ON storage.objects;
