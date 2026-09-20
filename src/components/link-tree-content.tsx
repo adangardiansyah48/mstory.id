@@ -10,14 +10,21 @@ import {
   Music2,
   Youtube,
 } from "lucide-react";
+import { BookingWizard } from "@/components/booking/booking-wizard";
 import { StatusChecker } from "@/components/status-checker";
 import { useFanpageSettings } from "@/lib/use-site-settings";
 import { getStoredPublicUrl, parseObjectPosition } from "@/lib/site-settings";
 import { normalizeWhatsAppNumber } from "@/lib/utils";
 
 export function LinkTreeContent() {
+  const [bookingOpen, setBookingOpen] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
   const { settings } = useFanpageSettings();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("booking") === "true") setBookingOpen(true);
+  }, []);
 
   const bannerSlides = (() => {
     const raw =
@@ -267,6 +274,7 @@ export function LinkTreeContent() {
       </div>
 
       {statusOpen && <StatusChecker open={true} onClose={() => setStatusOpen(false)} />}
+      {bookingOpen && <BookingWizard open={true} onClose={() => setBookingOpen(false)} waNumber={waNumber} transportFeeDefault={settings.transport_fee ?? 250000} />}
     </>
   );
 }
