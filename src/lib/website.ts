@@ -122,10 +122,14 @@ export async function compressAndUploadImage(
       cacheControl: "31536000",
       contentType: "image/webp",
     });
-    if (upErr) return null;
+    if (upErr) {
+      console.error("Storage upload error:", upErr);
+      return null;
+    }
     const { data } = supabase.storage.from(bucket).getPublicUrl(path);
     return data.publicUrl;
-  } catch {
+  } catch (err) {
+    console.error("Upload exception:", err);
     return null;
   }
 }

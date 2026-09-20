@@ -105,7 +105,10 @@ export function WebsiteTab() {
     setMessage("");
     try {
       const { url, error } = await uploadWebsiteImage(file, WEBSITE.HERO_FOLDER);
-      if (error || !url) { setMessage(error ?? "Upload gagal."); return; }
+      if (error || !url) { 
+        setMessage(error ?? "Upload gagal. Cek koneksi atau izin bucket storage."); 
+        return; 
+      }
       const next = [...(row?.hero_slides ?? []), url];
       setRow((prev) => (prev ? { ...prev, hero_slides: next } : prev));
       setMessage(`Slide hero ke-${next.length} berhasil diunggah.`);
