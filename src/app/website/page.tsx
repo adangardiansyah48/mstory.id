@@ -466,12 +466,6 @@ export default function WebsitePage() {
             >
               {settings.wa_button_label}
             </a>
-            <Link
-              href={settings.booking_url || "/?booking=true"}
-              className="rounded-full border border-[#D8D5CC] bg-white px-7 py-3 text-xs font-medium uppercase tracking-[0.16em] hover:bg-[#FCFCF9]"
-            >
-              {settings.booking_label}
-            </Link>
           </div>
         </div>
       </section>
