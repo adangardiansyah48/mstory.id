@@ -99,6 +99,7 @@ export function BookingTab({
 
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [editingBooking, setEditingBooking] = useState<BookingRow | null>(null);
+  const [vendors, setVendors] = useState<{ id: number; name: string; display_name: string | null; whatsapp: string | null; fee_per_booking: number; is_active: boolean }[]>([]);
   const [formData, setFormData] = useState<{
     full_name: string;
     whatsapp_number: string;
@@ -113,6 +114,7 @@ export function BookingTab({
     notes: string;
     is_vendor: boolean;
     vendor_name: string;
+    vendor_id: number | null;
   }>({
     full_name: "",
     whatsapp_number: "",
@@ -127,16 +129,28 @@ export function BookingTab({
     notes: "",
     is_vendor: false,
     vendor_name: "",
+    vendor_id: null,
   });
 
   useEffect(() => {
+    let cancelled = false;
     getSiteSettings()
       .then((settings) => {
+        if (cancelled) return;
         setLogoUrl(getStoredPublicUrl(settings.logo_url));
         setTransportFeeRate(settings.transport_fee ?? 250000);
         setVendorFee(settings.vendor_fee ?? 200000);
       })
       .catch(() => {});
+    (async () => {
+      try {
+        const supabase = createClient();
+        if (!supabase) return;
+        const { data } = await supabase.from("vendors").select("id, name, display_name, whatsapp, fee_per_booking, is_active").eq("is_active", true).order("name", { ascending: true });
+        if (!cancelled) setVendors((data as any) ?? []);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   useAutoRefresh(() => loadBookings(false), 10000);
@@ -919,12 +933,36 @@ const filtered = bookings.filter((b) => {
                   <span className="text-sm font-semibold text-[var(--ink)]">Booking Vendor</span>
                 </label>
               )}
-              <div>
-                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
-                  {formData.is_vendor ? "Nama Vendor" : "Nama Lengkap"}
-                </p>
-                <input value={formData.is_vendor ? formData.vendor_name : formData.full_name} onChange={(e) => setFormData({ ...formData, [formData.is_vendor ? "vendor_name" : "full_name"]: e.target.value })} className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none" placeholder={formData.is_vendor ? "Nama vendor" : "Nama pelanggan"} />
-              </div>
+<div>
+              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+                {formData.is_vendor ? "Vendor" : "Nama Lengkap"}
+              </p>
+              {formData.is_vendor ? (
+                <select
+                  value={formData.vendor_id ?? ""}
+                  onChange={(e) => {
+                    const vId = e.target.value ? Number(e.target.value) : null;
+                    const v = vendors.find((x) => x.id === vId);
+                    setFormData((s) => ({
+                      ...s,
+                      vendor_id: vId,
+                      vendor_name: v ? v.display_name ?? v.name : "",
+                      whatsapp_number: s.whatsapp_number || (v?.whatsapp ?? ""),
+                    }));
+                  }}
+                  className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none"
+                >
+                  <option value="">-- Pilih vendor --</option>
+                  {vendors.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.code ? `${v.code} · ` : ""}{v.display_name ?? v.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input value={formData.full_name} onChange={(e) => setFormData({ ...formData, full_name: e.target.value })} placeholder="Nama pelanggan" className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none" />
+              )}
+            </div>
               <div>
                 <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">No. WhatsApp</p>
                 <input type="tel" value={formData.whatsapp_number} onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })} className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none" placeholder="08123456789" />
