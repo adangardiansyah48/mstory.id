@@ -95,86 +95,37 @@ export async function getGalleryImages(): Promise<{ id: string; name: string; ur
 }
 
 /**
- * Kompress gambar menggunakan canvas lalu unggah ke Supabase Storage
+ * Kompress gambar (WebP, maxBytes kecil, tetap jelas) lalu unggah ke bucket.
+ * Folder yang benar: website/HERO | INFO | GALLERY — bukan di root.
  */
 export async function compressAndUploadImage(
   file: File,
   bucket: string,
   folder: string
 ): Promise<string | null> {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const MAX_WIDTH = 1200;
-        const MAX_HEIGHT = 1800;
-        let width = img.width;
-        let height = img.height;
-
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height = (height * MAX_WIDTH) / width;
-            width = MAX_WIDTH;
-          }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width = (width * MAX_HEIGHT) / height;
-            height = MAX_HEIGHT;
-          }
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        ctx?.drawImage(img, 0, 0, width, height);
-
-        canvas.toBlob(
-          (blob) => {
-            if (blob) {
-              const compressedFile = new File([blob], file.name, {
-                type: "image/webp",
-              });
-              const supabase = createClient();
-              if (!supabase) {
-                resolve(null);
-                return;
-              }
-              const ext = file.name.split(".").pop() ?? "webp";
-              const timestamp = Date.now();
-              const fileName = `${folder}/${timestamp}_${Math.random()
-                .toString(36)
-                .substring(2, 8)}.${ext}`;
-              const path = fileName;
-
-              (async () => {
-                try {
-                  const { error: upErr } = await supabase.storage
-                    .from(bucket)
-                    .upload(path, compressedFile, {
-                      upsert: true,
-                      cacheControl: "3600",
-                    });
-                  if (upErr) {
-                    resolve(null);
-                    return;
-                  }
-                  const { data } = supabase.storage
-                    .from(bucket)
-                    .getPublicUrl(path);
-                  resolve(data.publicUrl);
-                } catch {
-                  resolve(null);
-                }
-              })();
-            } else resolve(null);
-          },
-          "image/webp",
-          0.8
-        );
-      };
-      img.src = e.target?.result as string;
-    };
-    reader.readAsDataURL(file);
-  });
+  const { compressImage } = await import("@/lib/image-compress");
+  let payload: File;
+  try {
+    payload = await compressImage(file, { maxWidth: 1600, maxHeight: 1200, quality: 0.7, maxBytes: 240 * 1024 });
+  } catch {
+    return null;
+  }
+  const supabase = createClient();
+  if (!supabase) return null;
+  const timestamp = Date.now();
+  const rand = Math.random().toString(36).slice(2, 6);
+  const base = payload.name.replace(/\.[^.]+$/, "");
+  const path = `${folder}/${timestamp}_${rand}_${base}.webp`;
+  try {
+    const { error: upErr } = await supabase.storage.from(bucket).upload(path, payload, {
+      upsert: true,
+      cacheControl: "31536000",
+      contentType: "image/webp",
+    });
+    if (upErr) return null;
+    const { data } = supabase.storage.from(bucket).getPublicUrl(path);
+    return data.publicUrl;
+  } catch {
+    return null;
+  }
 }

@@ -136,16 +136,14 @@ export function getStoredPublicUrl(bucketPath: string | null | undefined): strin
 
 export function makeStoragePath(
   kind: "banner" | "logo",
-  fileName: string,
+  _fileName: string,
   slot?: number,
 ): string {
-  const ext = fileName.split(".").pop()?.toLowerCase() ?? "jpg";
   if (kind === "banner") {
-    const name =
-      typeof slot === "number" && slot > 0 && slot <= 3 ? `${slot}.${ext}` : `1.${ext}`;
-    return `${BANNER_FOLDER}/${name}`;
+    const n = typeof slot === "number" && slot > 0 && slot <= 3 ? slot : 1;
+    return `${BANNER_FOLDER}/${n}.webp`;
   }
-  return `${LOGO_FOLDER}/logo.${ext}`;
+  return `${LOGO_FOLDER}/logo.webp`;
 }
 
 export function parseObjectPosition(

@@ -10,18 +10,17 @@ import {
   type ThemePreset,
 } from "@/lib/themes";
 import {
-  BANNER_FOLDER,
   DEFAULT_SETTINGS,
   FANSPAGE_BUCKET,
   getSiteSettings,
   getStoredPublicUrl,
-  LOGO_FOLDER,
   makeStoragePath,
   parseObjectPosition,
   updateSiteSettings,
   withPosition,
   type SiteSettings,
 } from "@/lib/site-settings";
+import { compressImage, compressedBannerPath, compressedLogoPath } from "@/lib/image-compress";
 import { Camera, Check, ImagePlus, Loader2, Trash2 } from "lucide-react";
 import Swal from "sweetalert2";
 
@@ -120,32 +119,26 @@ export function SettingsTab({ onThemeChanged }: { onThemeChanged?: (theme: strin
       setMessage("Supabase belum dikonfigurasi.");
       return;
     }
+    if (file.size > 12 * 1024 * 1024) {
+      setMessage("Logo terlalu besar (>12MB). Pilih file kecil.");
+      return;
+    }
     setUploading("logo");
     setMessage("");
     try {
-      const { data: existing } = await supabase.storage
-        .from(FANSPAGE_BUCKET)
-        .list(LOGO_FOLDER, { search: "logo.", limit: 20 });
-      if (existing && existing.length > 0) {
-        await supabase.storage
-          .from(FANSPAGE_BUCKET)
-          .remove(existing.map((f) => `${LOGO_FOLDER}/${f.name}`));
-      }
-
-      const path = makeStoragePath("logo", file.name);
+      const compressed = await compressImage(file, { maxWidth: 640, maxHeight: 640, quality: 0.72, maxBytes: 120 * 1024 });
+      const path = compressedLogoPath();
       const { error: uploadError } = await supabase.storage
         .from(FANSPAGE_BUCKET)
-        .upload(path, file, { upsert: true, cacheControl: "3600", contentType: file.type });
-
+        .upload(path, compressed, { upsert: true, cacheControl: "31536000", contentType: "image/webp" });
       if (uploadError) {
-        setMessage(`Upload gambar gagal: ${uploadError.message}`);
+        setMessage(`Upload logo gagal: ${uploadError.message}`);
         return;
       }
-
       const { data } = supabase.storage.from(FANSPAGE_BUCKET).getPublicUrl(path);
       setField("logo_url", `${data.publicUrl}?v=${Date.now()}`);
       setLogoPos({ x: 50, y: 30 });
-      setMessage("Logo berhasil diunggah.");
+      setMessage(`Logo diunggah (${(compressed.size / 1024).toFixed(0)}KB webp).`);
     } catch (err) {
       setMessage(`Upload gagal: ${err instanceof Error ? err.message : "terjadi kesalahan"}`);
     } finally {
@@ -155,14 +148,7 @@ export function SettingsTab({ onThemeChanged }: { onThemeChanged?: (theme: strin
 
   async function handleLogoRemove() {
     const supabase = createClient();
-    if (supabase) {
-      const { data: existing } = await supabase.storage
-        .from(FANSPAGE_BUCKET)
-        .list(LOGO_FOLDER, { search: "logo.", limit: 20 });
-      if (existing && existing.length > 0) {
-        await supabase.storage.from(FANSPAGE_BUCKET).remove(existing.map((f) => `${LOGO_FOLDER}/${f.name}`));
-      }
-    }
+    if (supabase) await supabase.storage.from(FANSPAGE_BUCKET).remove([compressedLogoPath()]);
     setField("logo_url", null);
     setLogoPos({ x: 50, y: 30 });
   }
@@ -173,34 +159,27 @@ export function SettingsTab({ onThemeChanged }: { onThemeChanged?: (theme: strin
       setMessage("Supabase belum dikonfigurasi.");
       return;
     }
+    if (file.size > 12 * 1024 * 1024) {
+      setMessage("Foto terlalu besar (>12MB). Pilih file kecil.");
+      return;
+    }
     setBannerUploading(slot);
     setMessage("");
     try {
-      const { data: existing } = await supabase.storage
-        .from(FANSPAGE_BUCKET)
-        .list(BANNER_FOLDER, { search: `${slot}.`, limit: 20 });
-      if (existing && existing.length > 0) {
-        await supabase.storage
-          .from(FANSPAGE_BUCKET)
-          .remove(existing.map((f) => `${BANNER_FOLDER}/${f.name}`));
-      }
-
-      const path = makeStoragePath("banner", file.name, slot);
+      const compressed = await compressImage(file, { maxWidth: 1680, maxHeight: 945, quality: 0.7, maxBytes: 220 * 1024 });
+      const path = compressedBannerPath(slot + 1);
+      await supabase.storage.from(FANSPAGE_BUCKET).remove([path, `banners/${slot + 1}.jpg`, `banners/${slot + 1}.jpeg`, `banners/${slot + 1}.png`]);
       const { error: uploadError } = await supabase.storage
         .from(FANSPAGE_BUCKET)
-        .upload(path, file, { upsert: true, cacheControl: "3600", contentType: file.type });
-
+        .upload(path, compressed, { upsert: true, cacheControl: "31536000", contentType: "image/webp" });
       if (uploadError) {
         setMessage(`Upload foto banner gagal: ${uploadError.message}`);
         return;
       }
-
       const { data } = supabase.storage.from(FANSPAGE_BUCKET).getPublicUrl(path);
       const newUrl = `${data.publicUrl}?v=${Date.now()}`;
-      setBanners((prev) =>
-        prev.map((b, i) => (i === slot ? { url: newUrl, pos: { x: 50, y: 50 } } : b)),
-      );
-      setMessage(`Foto banner ${slot + 1} berhasil diunggah.`);
+      setBanners((prev) => prev.map((b, i) => (i === slot ? { url: newUrl, pos: { x: 50, y: 50 } } : b)));
+      setMessage(`Banner ${slot + 1} diunggah webp (${(compressed.size / 1024).toFixed(0)}KB).`);
     } catch (err) {
       setMessage(`Upload gagal: ${err instanceof Error ? err.message : "terjadi kesalahan"}`);
     } finally {
@@ -210,17 +189,8 @@ export function SettingsTab({ onThemeChanged }: { onThemeChanged?: (theme: strin
 
   async function handleBannerRemove(slot: number) {
     const supabase = createClient();
-    if (supabase) {
-      const { data: existing } = await supabase.storage
-        .from(FANSPAGE_BUCKET)
-        .list(BANNER_FOLDER, { search: `${slot}.`, limit: 20 });
-      if (existing && existing.length > 0) {
-        await supabase.storage.from(FANSPAGE_BUCKET).remove(existing.map((f) => `${BANNER_FOLDER}/${f.name}`));
-      }
-    }
-    setBanners((prev) =>
-      prev.map((b, i) => (i === slot ? { url: null, pos: { x: 50, y: 50 } } : b)),
-    );
+    if (supabase) await supabase.storage.from(FANSPAGE_BUCKET).remove([compressedBannerPath(slot + 1), `banners/${slot + 1}.jpg`, `banners/${slot + 1}.jpeg`, `banners/${slot + 1}.png`]);
+    setBanners((prev) => prev.map((b, i) => (i === slot ? { url: null, pos: { x: 50, y: 50 } } : b)));
     setMessage(`Foto banner ${slot + 1} dihapus.`);
   }
 
