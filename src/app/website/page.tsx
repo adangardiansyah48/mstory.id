@@ -279,6 +279,7 @@ export default function WebsitePage() {
               <div className="absolute inset-0 bg-gradient-to-b from-[#F3F2EE] to-[#E8DDD0]" />
             )}
             <div className="absolute inset-0 bg-black/[0.06]" />
+            <div className="absolute bottom-0 left-0 h-20 w-40 bg-gradient-to-tr from-black/50 to-transparent pointer-events-none sm:h-24 sm:w-48" />
             <div className="absolute bottom-4 left-4 flex items-center gap-2 font-serif text-[12px] tracking-[0.18em] text-white sm:bottom-6 sm:left-6">
               <span>{String(slide + 1).padStart(2, "0")}</span>
               <span className="opacity-60">—</span>
