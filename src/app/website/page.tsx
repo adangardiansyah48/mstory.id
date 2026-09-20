@@ -30,13 +30,19 @@ export default function WebsitePage() {
   const [albumLightboxIdx, setAlbumLightboxIdx] = useState<number | null>(null);
   const [albumPhotoIdx, setAlbumPhotoIdx] = useState(0);
   const [albumZoom, setAlbumZoom] = useState(1);
+  const [testimonials, setTestimonials] = useState<{ client_name: string; rating: number; message: string; created_at: string }[]>([]);
 
   useEffect(() => {
     (async () => {
       try {
-        const [wc, pkgs] = await Promise.all([getWebsiteContent(), getPackages()]);
+        const [wc, pkgs, tm] = await Promise.all([
+          getWebsiteContent(),
+          getPackages(),
+          fetch("/api/testimonials").then((r) => r.json())
+        ]);
         setContent(wc);
         setCats(pkgs.categories);
+        setTestimonials(tm.data ?? []);
         // Resolve nav logo: prefer website_settings, fallback to linktree_settings
         let logo = wc.settings.logo_url;
         if (!logo) {
@@ -524,6 +530,24 @@ export default function WebsitePage() {
           </div>
         </div>
       </footer>
+
+      {testimonials.length > 0 && (
+        <section className="mx-auto max-w-[1200px] px-4 py-10 text-center sm:px-6 sm:py-14">
+          <p className="font-serif text-[11px] tracking-[0.2em] uppercase text-[#1C1C1A]/60">Ulasan</p>
+          <h3 className="mt-2 font-serif text-[28px] tracking-[-0.02em]">Testimoni Pelanggan</h3>
+          <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {testimonials.map((t) => (
+              <div key={`${t.client_name}-${t.created_at}`} className="rounded-[10px] border border-[#D8D5CC]/60 bg-white p-5 text-left">
+                <p className="text-[13px] tracking-[0.12em] text-amber-500">
+                  {"★".repeat(t.rating)}{"☆".repeat(5 - t.rating)}
+                </p>
+                <p className="mt-3 text-sm font-light leading-relaxed text-[#1C1C1A]/80">{t.message}</p>
+                <p className="mt-3 font-serif text-sm">{t.client_name}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <style>{`.hdr-link{font-family: ui-serif, Georgia, serif; font-size:12.5px; letter-spacing:0.14em; text-transform:uppercase; color:#1C1C1A; opacity:0.88} .hdr-link:hover{opacity:1} .hdr-active{opacity:1} @keyframes lbIn{from{opacity:0;transform:scale(0.96)}to{opacity:1;transform:scale(1)}}`}</style>
 

@@ -44,6 +44,11 @@ export function StatusSearchPanel() {
   const [results, setResults] = useState<BookingWithRelations[]>([]);
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
+  const [showTestimonialModal, setShowTestimonialModal] = useState(false);
+  const [rating, setRating] = useState(5);
+  const [messageText, setMessageText] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const result: SearchResult = results[selectedIdx] ?? null;
 
@@ -394,12 +399,101 @@ export function StatusSearchPanel() {
                       Target selesai: {formatShortDate(progress.expected_date)}
                     </p>
                   )}
+
+                  {/* Tombol Terima & Testimoni Pelanggan */}
+                  {progress?.progress_status === "DELIVERED" && !submitted && (
+                    <div className="mt-4 border-t border-white/40 pt-4">
+                      <Button
+                        onClick={() => setShowTestimonialModal(true)}
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center justify-center gap-2 rounded-xl py-3 shadow-md"
+                      >
+                        Pesanan Sudah Diterima & Beri Testimoni
+                      </Button>
+                    </div>
+                  )}
+                  {progress?.progress_status === "RECEIVED" && (
+                    <div className="mt-4 rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-center">
+                      <p className="text-xs font-semibold text-emerald-800">
+                        ✓ Pesanan telah selesai & Anda telah mengonfirmasi penerimaan. Terima kasih!
+                      </p>
+                    </div>
+                  )}
                 </div>
               </>
             )}
           </div>
         )}
       </div>
+
+      {/* Modal Testimoni */}
+      <Modal open={showTestimonialModal} onClose={() => setShowTestimonialModal(false)}>
+        <div className="p-6">
+          <h3 className="font-serif text-xl font-bold text-[var(--ink)]">Konfirmasi Penerimaan & Ulasan</h3>
+          <p className="mt-1 text-xs text-[var(--muted)]">
+            Berikan penilaian Anda atas hasil foto/video dan layanan kami.
+          </p>
+
+          <div className="mt-4 space-y-4">
+            <div>
+              <label className="text-xs font-semibold text-[var(--ink)]">Rating Layanan</label>
+              <div className="flex gap-2 mt-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setRating(star)}
+                    className={`text-2xl ${star <= rating ? "text-amber-400" : "text-gray-300"}`}
+                  >
+                    ★
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-[var(--ink)]">Pesan Testimoni</label>
+              <textarea
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                placeholder="Bagikan pengalaman Anda menggunakan jasa kami..."
+                className="w-full mt-1 rounded-xl border border-[var(--line)] p-3 text-sm focus:border-[var(--brand)] focus:outline-none min-h-[100px]"
+              />
+            </div>
+
+            <Button
+              disabled={submitting || !messageText.trim()}
+                  onClick={async () => {
+                if (!result) return;
+                setSubmitting(true);
+                try {
+                  const res = await fetch("/api/testimonials", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      booking_id: result.id,
+                      client_name: result.client?.full_name || "Pelanggan",
+                      rating,
+                      message: messageText,
+                    }),
+                  });
+                  const json = await res.json().catch(() => ({}));
+                  if (!res.ok) throw new Error(json.error ?? "Gagal mengirim testimoni");
+                  setSubmitted(true);
+                  setShowTestimonialModal(false);
+                  handleSearch(); // Refresh status
+                } catch (err) {
+                  alert(err instanceof Error ? err.message : "Gagal mengirim");
+                } finally {
+                  setSubmitting(false);
+                }
+              }}
+              className="w-full bg-[var(--brand)] text-white py-3 font-semibold rounded-xl"
+            >
+              {submitting ? "Mengirim..." : "Kirim Testimoni & Selesaikan"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

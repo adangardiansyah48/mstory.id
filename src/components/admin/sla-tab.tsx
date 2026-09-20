@@ -60,6 +60,7 @@ export function SlaTab() {
   const [dateFrom, setDateFrom] = useState(() => todayInput());
   const [dateTo, setDateTo] = useState(() => todayInput());
   const [dateFilterActive, setDateFilterActive] = useState(false);
+  const [testimonials, setTestimonials] = useState<Record<number, { client_name: string; rating: number; message: string }>>({});
 
   async function loadProjects(showSpinner = true) {
     if (showSpinner) setLoading(true);
@@ -99,11 +100,26 @@ export function SlaTab() {
       progByBooking.set(row.booking_id, p as never);
     });
 
+    const testimonialIds = bookings.map((b) => b.id);
+    const { data: testimonialData, error: testimonialErr } = await supabase
+      .from("testimonials")
+      .select("booking_id, client_name, rating, message")
+      .in("booking_id", testimonialIds);
+
+    if (testimonialErr) console.error(testimonialErr);
+
+    const testimonialsMap: Record<number, { client_name: string; rating: number; message: string }> = {};
+    (testimonialData ?? []).forEach((t) => {
+      const row = t as { booking_id: number; client_name: string; rating: number; message: string };
+      testimonialsMap[row.booking_id] = row;
+    });
+
     const merged: ProjectRow[] = (bookings as unknown as ProjectRow[]).map((b) => ({
       ...b,
       project_progress: progByBooking.has(b.id) ? [progByBooking.get(b.id) as unknown as ProjectRow["project_progress"][number]] : [],
     }));
     setRows(merged);
+    setTestimonials(testimonialsMap);
     setLoading(false);
   }
 
@@ -337,9 +353,9 @@ export function SlaTab() {
                       <button
                         key={s}
                         onClick={() => setProgressStatus(row, s)}
-                        disabled={savingId === row.id}
+                        disabled={savingId === row.id || s === "RECEIVED"}
                         className={cn(
-                          "flex-1 min-w-[80px] flex flex-col items-center gap-1 rounded-lg border px-1 py-2 text-[10px] font-semibold transition-colors disabled:opacity-50",
+                          "flex-1 min-w-[80px] flex flex-col items-center gap-1 rounded-lg border px-1 py-2 text-[10px] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
                           i <= currentIdx
                             ? "border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--muted-2)]"
                             : "border-[var(--line)] bg-white text-[var(--muted-2)] hover:border-[var(--brand)]",
@@ -357,6 +373,16 @@ export function SlaTab() {
                     onDelete={() => deleteDriveLink(row)}
                     disabled={savingId === row.id}
                   />
+                  {testimonials[row.id] && (
+                    <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/60 p-3">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-amber-800 mb-1">Testimoni Pelanggan</p>
+                      <div className="flex items-center gap-1 text-amber-500 text-xs mb-1">
+                        {"★".repeat(testimonials[row.id].rating)}{"☆".repeat(5 - testimonials[row.id].rating)}
+                      </div>
+                      <p className="text-xs text-amber-900 leading-relaxed">{testimonials[row.id].message}</p>
+                      <p className="mt-1 text-[10px] text-amber-700/70">— {testimonials[row.id].client_name}</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
