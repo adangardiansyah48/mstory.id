@@ -72,7 +72,7 @@ export function SlaTab() {
     const { data: bookings, error: bookingErr } = await supabase
       .from("bookings")
       .select("id, invoice_number, event_date, status, client:clients(full_name)")
-      .in("status", ["LUNAS", "MENUNGGU_PELUNASAN"])
+      .in("status", ["LUNAS", "MENUNGGU_PELUNASAN", "MENUNGGU_DP"])
       .order("event_date", { ascending: false })
       .limit(200);
 
@@ -114,10 +114,24 @@ export function SlaTab() {
       testimonialsMap[row.booking_id] = row;
     });
 
-    const merged: ProjectRow[] = (bookings as unknown as ProjectRow[]).map((b) => ({
+    const STATUS_PRIORITY: Record<string, number> = {
+      LUNAS: 0,
+      MENUNGGU_PELUNASAN: 1,
+      MENUNGGU_DP: 2,
+    };
+    let merged: ProjectRow[] = (bookings as unknown as ProjectRow[]).map((b) => ({
       ...b,
       project_progress: progByBooking.has(b.id) ? [progByBooking.get(b.id) as unknown as ProjectRow["project_progress"][number]] : [],
     }));
+    merged = merged.sort((a, b) => {
+      const pa = STATUS_PRIORITY[a.status] ?? 99;
+      const pb = STATUS_PRIORITY[b.status] ?? 99;
+      if (pa !== pb) return pa - pb;
+      const da = new Date(a.event_date ?? "9999-12-31").getTime();
+      const db = new Date(b.event_date ?? "9999-12-31").getTime();
+      if (db !== da) return db - da;
+      return b.id - a.id;
+    });
     setRows(merged);
     setTestimonials(testimonialsMap);
     setLoading(false);
@@ -301,7 +315,7 @@ export function SlaTab() {
 
       {filteredRows.length === 0 ? (
         <div className="rounded-2xl border border-[var(--line)] bg-white p-10 text-center text-sm text-[var(--muted)]">
-          Tidak ada project yang cocok (status LUNAS / MENUNGGU PELUNASAN).
+          Tidak ada project yang cocok (Lunas / Menunggu Pelunasan / Menunggu DP).
         </div>
       ) : (
         visibleRows.map((row) => {
@@ -328,10 +342,12 @@ export function SlaTab() {
                     "rounded-full border px-2.5 py-1 text-[10px] font-bold",
                     row.status === "LUNAS"
                       ? "border-green-200 bg-green-100 text-green-700"
-                      : "border-blue-200 bg-blue-100 text-blue-700",
+                      : row.status === "MENUNGGU_DP"
+                        ? "border-amber-200 bg-amber-100 text-amber-800"
+                        : "border-blue-200 bg-blue-100 text-blue-700",
                   )}
                 >
-                  {row.status === "LUNAS" ? "Lunas" : "Menunggu Pelunasan"}
+                  {row.status === "LUNAS" ? "Lunas" : row.status === "MENUNGGU_DP" ? "Menunggu DP" : "Menunggu Pelunasan"}
                 </span>
               </div>
 
