@@ -8,7 +8,6 @@ export const WEBSITE = {
   GALLERY_FOLDER: "gallery",
   ALBUM_COVER: "albums/covers",
   ALBUM_PHOTOS: "albums/photos",
-  CTA_FOLDER: "cta",
 } as const;
 
 export interface WebsiteSettingsRow {
@@ -23,7 +22,6 @@ export interface WebsiteSettingsRow {
   info_text: string | null;
   info_image: string | null;
   info_button_label: string | null;
-  cta_image: string | null;
   instagram_handle: string | null;
   instagram_url: string | null;
   instagram_grid_count: number | null;
@@ -93,7 +91,6 @@ export interface WebsiteResolvedSettings {
   info_text: string;
   info_image: string | null;
   info_button_label: string;
-  cta_image: string | null;
   instagram_handle: string;
   instagram_url: string;
   instagram_grid_count: number;
@@ -137,7 +134,6 @@ export const WEBSITE_DEFAULTS: Omit<WebsiteResolvedSettings, "updated_at"> = {
     "Terima kasih telah meluangkan waktu menelusuri karya kami. Semoga langkah kita bisa bertemu, dan kami diberi kesempatan mengabadikan kisah Anda selanjutnya.",
   info_image: null,
   info_button_label: "Hubungi kami",
-  cta_image: null,
   instagram_handle: "mstory.id",
   instagram_url: "https://instagram.com/mstory.id",
   instagram_grid_count: 4,
@@ -164,7 +160,7 @@ async function fetchWebsiteContent(): Promise<WebsiteContent> {
 
   if (supabase) {
     const [settingsRs, galleryRs, albumsRs, albumPhotosRs] = await Promise.allSettled([
-      supabase.from("website_settings").select("*, cta_image").maybeSingle().then((r) => (r.error && /cta_image/i.test(r.error.message) ? supabase.from("website_settings").select("*").maybeSingle() : r)),
+      supabase.from("website_settings").select("*").maybeSingle(),
       supabase
         .from("website_gallery_items")
         .select("*")
@@ -194,7 +190,6 @@ async function fetchWebsiteContent(): Promise<WebsiteContent> {
       settings.info_text = row.info_text ?? settings.info_text;
       settings.info_image = row.info_image ?? settings.info_image;
       settings.info_button_label = row.info_button_label ?? settings.info_button_label;
-      settings.cta_image = (row as { cta_image?: string | null }).cta_image ?? settings.cta_image;
       settings.instagram_handle = row.instagram_handle ?? settings.instagram_handle;
       settings.instagram_url = row.instagram_url ?? settings.instagram_url;
       settings.instagram_grid_count = row.instagram_grid_count ?? settings.instagram_grid_count;
@@ -245,37 +240,7 @@ async function fetchWebsiteContent(): Promise<WebsiteContent> {
     }
   }
 
-  // Fallback: hero dari linktree_settings (banner) bila tabel website_settings kosong/belum ada
-  if (settings.hero_slides.length === 0 || !settings.logo_url) {
-    try {
-      const { getWebsiteSettings } = await import("@/lib/website");
-      const base = await getWebsiteSettings();
-      if (settings.hero_slides.length === 0) {
-        const urls = (Array.isArray(base.banner_urls) && base.banner_urls.length > 0
-          ? base.banner_urls
-          : base.banner_url
-            ? [base.banner_url]
-            : []
-        )
-          .map((u) => getStoredPublicUrl(u))
-          .filter((u): u is string => Boolean(u));
-        settings.hero_slides = urls;
-      }
-      if (!settings.logo_url) {
-        settings.logo_url = getStoredPublicUrl(base.logo_url);
-      }
-      settings.wa_number = settings.wa_number || "6281234567890";
-      if (!settings.wa_number || settings.wa_number === "6281234567890") settings.wa_number = base.wa_number || settings.wa_number;
-      if (!settings.instagram_url || settings.instagram_url === "https://instagram.com/mstory.id") {
-        settings.instagram_url = base.instagram_url || settings.instagram_url;
-        settings.instagram_handle = base.instagram_url
-          ? base.instagram_url.replace(/^https?:\/\/(www\.)?instagram\.com\//, "").replace(/\/$/, "")
-          : settings.instagram_handle;
-      }
-    } catch {
-      /* abaikan fallback burst */
-    }
-  }
+
 
   // Fallback galeri: listing storage fanspage/gallery bila tabel belum terisi
   if (gallery.length === 0) {
@@ -356,7 +321,6 @@ export function makeWebsiteSettingsRow(row: Partial<WebsiteResolvedSettings>): O
     info_text: row.info_text ?? null,
     info_image: row.info_image ?? null,
     info_button_label: row.info_button_label ?? null,
-    cta_image: (row as { cta_image?: string | null }).cta_image ?? null,
     instagram_handle: row.instagram_handle ?? null,
     instagram_url: row.instagram_url ?? null,
     instagram_grid_count: row.instagram_grid_count ?? WEBSITE_DEFAULTS.instagram_grid_count,
@@ -462,7 +426,7 @@ export async function deleteWebsiteGalleryItem(id: number): Promise<{ ok: boolea
  */
 export async function uploadWebsiteImage(
   file: File,
-  folder: "hero" | "info" | "gallery" | "albums/covers" | "albums/photos" | "cta",
+  folder: "hero" | "info" | "gallery" | "albums/covers" | "albums/photos",
 ): Promise<{ url?: string; error?: string }> {
   const url = await compressAndUploadImage(file, WEBSITE_BUCKET, folder);
   if (!url) return { error: "Upload gambar gagal." };

@@ -140,25 +140,6 @@ export function WebsiteTab() {
     setMessage("Foto info banner dihapus.");
   }
 
-  async function handleCtaUpload(file: File) {
-    setUploading("cta");
-    setMessage("");
-    try {
-      const { url, error } = await uploadWebsiteImage(file, WEBSITE.CTA_FOLDER);
-      if (error || !url) { setMessage(error ?? "Upload gagal."); return; }
-      setRow((prev) => (prev ? { ...(prev as WebsiteSettingsRow), cta_image: url } as WebsiteSettingsRow : prev));
-      setMessage("Foto CTA berhasil diunggah (bucket website/cta, webp terkompres).");
-    } finally { setUploading(null); }
-  }
-
-  async function handleCtaRemove() {
-    const cta = (row as { cta_image?: string | null })?.cta_image;
-    if (!cta) return;
-    await deleteWebsiteImage(cta);
-    setRow({ ...(row as WebsiteSettingsRow), cta_image: null } as WebsiteSettingsRow);
-    setMessage("Foto CTA dihapus.");
-  }
-
   async function handleGalleryUpload(file: File) {
     setUploading("gallery");
     setMessage("");
@@ -345,16 +326,9 @@ export function WebsiteTab() {
       {/* === CONTACT / CTA === */}
       <div className="rounded-2xl p-5 glass">
         <h3 className="mb-4 font-serif text-sm font-semibold text-[var(--ink)]">
-          Contact / CTA — background foto (website/cta/)
+          Contact / CTA
         </h3>
         <div className="space-y-3">
-          <ImageField
-            title="Foto Background CTA (#contact)"
-            url={(row as { cta_image?: string | null })?.cta_image ? getStoredPublicUrl((row as { cta_image: string }).cta_image) : null}
-            uploading={uploading === "cta"}
-            onFile={(f) => f && handleCtaUpload(f)}
-            onRemove={handleCtaRemove}
-          />
           <Field label="Heading">
             <input type="text" value={row.contact_heading ?? ""} onChange={(e) => field("contact_heading", e.target.value)}
               className="w-full rounded-xl border border-white/50 bg-white/60 px-3 py-2 text-sm text-[var(--ink)] outline-none backdrop-blur-md transition-all focus:border-[var(--brand)] focus:bg-white/85 focus:ring-2 focus:ring-[var(--brand)]/20" />

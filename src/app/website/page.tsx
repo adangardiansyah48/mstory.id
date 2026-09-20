@@ -444,15 +444,8 @@ export default function WebsitePage() {
         </div>
       </section>
 
-      <section id="contact" className="relative overflow-hidden border-t border-[#D8D5CC]/30 bg-[#F3F2EE]/40">
-        {settings.cta_image ? (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={settings.cta_image} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" />
-            <div className="absolute inset-0 bg-white/70 backdrop-blur-[0.5px]" />
-          </>
-        ) : null}
-        <div className="relative mx-auto max-w-[1200px] px-6 py-10 text-center sm:py-12">
+      <section id="contact" className="border-t border-[#D8D5CC]/30 bg-[#F3F2EE]/40">
+        <div className="mx-auto max-w-[1200px] px-6 py-10 text-center sm:py-12">
           <h3 className="font-serif text-[20px] tracking-[-0.01em]">{settings.contact_heading}</h3>
           <p className="mx-auto mt-2 max-w-[560px] whitespace-pre-line text-sm font-light leading-[1.7] text-[#1C1C1A]/70">
             {settings.contact_text}
