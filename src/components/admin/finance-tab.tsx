@@ -97,15 +97,13 @@ export function FinanceTab() {
     let pelunasanDiterima = 0;
 
     for (const r of rows) {
-      const isVendor = r.source === "VENDOR";
-      const net = Math.max(Number(r.grand_total ?? 0) - (isVendor ? vendorFee : 0), 0);
-      const dpNet = Math.min(Number(r.dp_amount ?? 0), net);
-      const pelNet = Math.max(net - dpNet, 0);
+      const dp = Math.min(Number(r.dp_amount ?? 0), Number(r.grand_total ?? 0));
+      const pel = Math.max(Number(r.grand_total ?? 0) - dp, 0);
       if (r.status === "MENUNGGU_PELUNASAN" || r.status === "LUNAS") {
-        dpDiterima += dpNet;
+        dpDiterima += dp;
       }
       if (r.status === "LUNAS") {
-        pelunasanDiterima += pelNet;
+        pelunasanDiterima += pel;
       }
     }
 
@@ -115,7 +113,7 @@ export function FinanceTab() {
       total: dpDiterima + pelunasanDiterima,
       count: rows.length,
     };
-  }, [rows, vendorFee]);
+  }, [rows]);
 
   const monthLabel = new Date(`${month}-01`).toLocaleDateString("id-ID", {
     month: "long",
@@ -248,15 +246,17 @@ export function FinanceTab() {
               <th className="px-4 py-3 text-right">Total</th>
               <th className="px-4 py-3 text-right">DP</th>
               <th className="px-4 py-3 text-right">Pelunasan</th>
-              <th className="px-4 py-3 text-right">Diterima Mstory</th>
+              <th className="px-4 py-3 text-right">Pemasukan</th>
+              <th className="px-4 py-3 text-right">Fee Vendor</th>
               <th className="px-4 py-3 text-right">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--line)]">
             {visibleRows.map((r) => {
               const isVendor = r.source === "VENDOR";
-              const net = Math.max(Number(r.grand_total) - (isVendor ? vendorFee : 0), 0);
-              const pelunasan = r.status === "LUNAS" ? Math.max(net - Math.min(Number(r.dp_amount), net), 0) : 0;
+              const vm = r.vendor_id != null ? vendorMap[r.vendor_id] : undefined;
+              const fee = isVendor ? (vm?.fee_per_booking ?? vendorFee) : 0;
+              const pelunasan = r.status === "LUNAS" ? Math.max(Number(r.grand_total) - Math.min(Number(r.dp_amount), Number(r.grand_total)), 0) : 0;
               return (
                 <tr key={r.id} className="text-sm">
                   <td className="px-4 py-3 font-mono text-xs text-[var(--ink)]">{r.invoice_number}</td>
@@ -265,7 +265,8 @@ export function FinanceTab() {
                   <td className="px-4 py-3 text-right font-semibold text-[var(--ink)]">{formatCurrency(r.grand_total)}</td>
                   <td className="px-4 py-3 text-right text-amber-700">{r.status !== "MENUNGGU_DP" ? formatCurrency(r.dp_amount) : "-"}</td>
                   <td className="px-4 py-3 text-right text-blue-700">{pelunasan > 0 ? formatCurrency(pelunasan) : "-"}</td>
-                  <td className="px-4 py-3 text-right font-semibold text-green-700">{formatCurrency(isVendor ? net : Number(r.grand_total))}</td>
+                  <td className="px-4 py-3 text-right font-semibold text-green-700">{formatCurrency(Number(r.grand_total))}</td>
+                  <td className="px-4 py-3 text-right text-[var(--muted-2)]">{isVendor ? formatCurrency(fee) : "-"}</td>
                   <td className="px-4 py-3 text-right">
                     <span
                       className={cn(
