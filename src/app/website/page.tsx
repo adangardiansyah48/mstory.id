@@ -279,25 +279,26 @@ export default function WebsitePage() {
               <div className="absolute inset-0 bg-gradient-to-b from-[#F3F2EE] to-[#E8DDD0]" />
             )}
             <div className="absolute inset-0 bg-black/[0.06]" />
-            <div className="absolute bottom-0 left-0 h-20 w-40 bg-gradient-to-tr from-black/50 to-transparent pointer-events-none sm:h-24 sm:w-48" />
-            <div className="absolute bottom-4 left-4 flex items-center gap-2 font-serif text-[12px] tracking-[0.18em] text-white sm:bottom-6 sm:left-6">
-              <span>{String(slide + 1).padStart(2, "0")}</span>
-              <span className="opacity-60">—</span>
-              <span className="opacity-80">{String(Math.max(bannerSlides.length, 3)).padStart(2, "0")}</span>
-            </div>
-            {bannerSlides.length > 1 && (
-              <div className="absolute bottom-4 right-4 flex gap-2 sm:bottom-6 sm:right-6" onClick={(e) => e.stopPropagation()}>
-                {bannerSlides.map((_, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    aria-label={`Go ${i + 1}`}
-                    onClick={() => setSlide(i)}
-                    className={`h-1 rounded-full transition-all ${i === slide ? "w-8 bg-white" : "w-3 bg-white/60"}`}
-                  />
-                ))}
+            <div className="absolute bottom-4 right-4 flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
+              <div className="flex items-center gap-2 font-serif text-[12px] tracking-[0.18em] text-white">
+                <span>{String(slide + 1).padStart(2, "0")}</span>
+                <span className="opacity-60">—</span>
+                <span className="opacity-80">{String(Math.max(bannerSlides.length, 1)).padStart(2, "0")}</span>
               </div>
-            )}
+              {bannerSlides.length > 1 && (
+                <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                  {bannerSlides.map((_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      aria-label={`Go ${i + 1}`}
+                      onClick={() => setSlide(i)}
+                      className={`h-1 rounded-full transition-all ${i === slide ? "w-8 bg-white" : "w-3 bg-white/60"}`}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </section>
