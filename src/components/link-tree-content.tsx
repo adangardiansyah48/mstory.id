@@ -23,7 +23,9 @@ export function LinkTreeContent() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("booking") === "true") setBookingOpen(true);
+    if (params.get("booking") === "true") {
+      window.setTimeout(() => setBookingOpen(true), 0);
+    }
   }, []);
 
   const bannerSlides = (() => {
