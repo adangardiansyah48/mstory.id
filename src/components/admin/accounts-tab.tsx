@@ -219,12 +219,6 @@ export function AccountsTab() {
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-serif text-lg font-semibold text-[var(--ink)]">Manajemen Akun</h2>
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Cari email..."
-          className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-4 text-sm focus:border-[var(--brand)] focus:outline-none sm:w-72"
-        />
         <button
           onClick={() => {
             setShowAddForm(true);
@@ -234,6 +228,11 @@ export function AccountsTab() {
         >
           <Plus className="h-4 w-4" /> Tambah Akun
         </button>
+      </div>
+
+      <div className="relative">
+        <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-2)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20L16 16"/></svg>
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari email..." className="h-11 w-full rounded-xl border border-[var(--line)] bg-white pl-9 pr-4 text-sm focus:border-[var(--brand)] focus:outline-none" />
       </div>
 
       <Modal open={showAddForm || !!editingUser} onClose={() => closeModal(setShowAddForm, setEditingUser, setNewEmail, setNewPassword, setEditPassword)}>
@@ -250,22 +249,6 @@ export function AccountsTab() {
           closeModal={() => closeModal(setShowAddForm, setEditingUser, setNewEmail, setNewPassword, setEditPassword)}
         />
       </Modal>
-
-      <div className="mt-5 rounded-2xl border border-[var(--line)] bg-white p-6">
-        <h3 className="font-serif text-base font-semibold text-[var(--ink)]">Daftar Akun Admin</h3>
-
-        <div className="mt-4 space-y-4">
-          {editingUser ? (
-            <div className="mb-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-800">
-              Edit password untuk user {editingUser.email}
-            </div>
-          ) : (
-            <div className="rounded-xl bg-blue-50 p-4 text-sm text-blue-800">
-              Klik tombol &quot;Tambah Akun&quot; di atas untuk membuat admin baru.
-            </div>
-          )}
-        </div>
-      </div>
 
       <div className="space-y-3">
         {(search.trim()
