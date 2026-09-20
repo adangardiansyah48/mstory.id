@@ -57,7 +57,7 @@ interface BookingRow {
 }
 
 const STATUS_STYLES: Record<BookingStatus, string> = {
-  MENUNGGU_DP: "bg-amber-100 text-amber-800 border-amber-200",
+  MENUNGGU_DP: "bg-orange-100 text-orange-700 border-orange-200",
   MENUNGGU_PELUNASAN: "bg-blue-100 text-blue-800 border-blue-200",
   LUNAS: "bg-green-100 text-green-800 border-green-200",
   CANCELLED: "bg-red-100 text-red-800 border-red-200",

@@ -343,7 +343,7 @@ export function SlaTab() {
                     row.status === "LUNAS"
                       ? "border-green-200 bg-green-100 text-green-700"
                       : row.status === "MENUNGGU_DP"
-                        ? "border-amber-200 bg-amber-100 text-amber-800"
+                        ? "border-orange-200 bg-orange-100 text-orange-700"
                         : "border-blue-200 bg-blue-100 text-blue-700",
                   )}
                 >
