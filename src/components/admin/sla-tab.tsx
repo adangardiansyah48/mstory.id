@@ -40,7 +40,15 @@ interface ProgressPayload {
   expected_date?: string | null;
 }
 
-const WORKFLOW_STEPS: WorkflowStatus[] = ["SHOOTING", "EDIT", "PRINTING", "READY", "DELIVERED"];
+const WORKFLOW_STEPS: WorkflowStatus[] = [
+  "SHOOTING",
+  "EDIT",
+  "EDIT_DONE",
+  "PRINTING",
+  "PRINT_DONE",
+  "DELIVERED",
+  "RECEIVED",
+];
 
 export function SlaTab() {
   const [rows, setRows] = useState<ProjectRow[]>([]);
@@ -195,7 +203,7 @@ export function SlaTab() {
     await upsertProgress(row, {
       booking_id: row.id,
       progress_status: status,
-      expected_date: calcDeadline(row.event_date, status === "EDIT" ? SLA_RETOUCH_WEEKS : SLA_PRINT_WEEKS),
+      expected_date: calcDeadline(row.event_date, status === "EDIT" || status === "EDIT_DONE" ? SLA_RETOUCH_WEEKS : SLA_PRINT_WEEKS),
     });
   }
 

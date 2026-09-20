@@ -4,7 +4,14 @@ export type BookingStatus =
   | "LUNAS"
   | "CANCELLED";
 export type LocationType = "KOTA_TASIK" | "LUAR_KOTA";
-export type WorkflowStatus = "SHOOTING" | "EDIT" | "PRINTING" | "READY" | "DELIVERED";
+export type WorkflowStatus =
+  | "SHOOTING"
+  | "EDIT"
+  | "EDIT_DONE"
+  | "PRINTING"
+  | "PRINT_DONE"
+  | "DELIVERED"
+  | "RECEIVED";
 
 export interface Category {
   id: number;
@@ -150,9 +157,11 @@ export const INVOICE_PDF_META: Record<InvoicePdfKind, string> = {
 export const WORKFLOW_STATUS_LABELS: Record<WorkflowStatus, string> = {
   SHOOTING: "Mulai Shooting",
   EDIT: "Proses Edit",
+  EDIT_DONE: "Selesai Edit",
   PRINTING: "Proses Cetak",
-  READY: "Siap Kirim",
+  PRINT_DONE: "Selesai Cetak",
   DELIVERED: "Terkirim",
+  RECEIVED: "Diterima",
 };
 
 export const ADDON_ICONS: Record<string, string> = {

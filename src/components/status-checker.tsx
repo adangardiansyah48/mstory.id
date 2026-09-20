@@ -358,7 +358,7 @@ export function StatusSearchPanel() {
                     <Progress
                       status={progress?.progress_status ?? "SHOOTING"}
                       labels={WORKFLOW_STATUS_LABELS}
-                      steps={["SHOOTING", "EDIT", "PRINTING", "READY", "DELIVERED"]}
+                      steps={["SHOOTING", "EDIT", "EDIT_DONE", "PRINTING", "PRINT_DONE", "DELIVERED", "RECEIVED"]}
                     />
                   </div>
                   {progress?.drive_link && progress.drive_link.trim().length > 0 && (
