@@ -355,10 +355,12 @@ export function SlaTab() {
                         onClick={() => setProgressStatus(row, s)}
                         disabled={savingId === row.id || s === "RECEIVED"}
                         className={cn(
-                          "flex-1 min-w-[80px] flex flex-col items-center gap-1 rounded-lg border px-1 py-2 text-[10px] font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
-                          i <= currentIdx
-                            ? "border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--muted-2)]"
-                            : "border-[var(--line)] bg-white text-[var(--muted-2)] hover:border-[var(--brand)]",
+                          "flex-1 min-w-[80px] flex flex-col items-center gap-1 rounded-lg border px-1 py-2 text-[10px] font-semibold transition-colors disabled:cursor-not-allowed",
+                          s === "RECEIVED"
+                            ? "border-emerald-300 bg-emerald-50 text-emerald-700 disabled:opacity-100"
+                            : i <= currentIdx
+                              ? "border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--muted-2)] disabled:opacity-50"
+                              : "border-[var(--line)] bg-white text-[var(--muted-2)] hover:border-[var(--brand)] disabled:opacity-50",
                         )}
                       >
                         {i <= currentIdx && <Check className="h-3 w-3 text-[var(--muted-2)]" />}
