@@ -333,20 +333,8 @@ export function WebsiteTab() {
             <textarea value={row.contact_text ?? ""} onChange={(e) => field("contact_text", e.target.value)} rows={2}
               className="w-full rounded-xl border border-white/50 bg-white/60 px-3 py-2 text-sm text-[var(--ink)] outline-none backdrop-blur-md transition-all focus:border-[var(--brand)] focus:bg-white/85 focus:ring-2 focus:ring-[var(--brand)]/20" />
           </Field>
-          <Field label="Nomor WhatsApp">
-            <input type="text" value={row.wa_number ?? ""} onChange={(e) => field("wa_number", e.target.value)}
-              className="w-full rounded-xl border border-white/50 bg-white/60 px-3 py-2 text-sm text-[var(--ink)] outline-none backdrop-blur-md transition-all focus:border-[var(--brand)] focus:bg-white/85 focus:ring-2 focus:ring-[var(--brand)]/20" />
-          </Field>
           <Field label="Label Tombol WhatsApp">
             <input type="text" value={row.wa_button_label ?? ""} onChange={(e) => field("wa_button_label", e.target.value)}
-              className="w-full rounded-xl border border-white/50 bg-white/60 px-3 py-2 text-sm text-[var(--ink)] outline-none backdrop-blur-md transition-all focus:border-[var(--brand)] focus:bg-white/85 focus:ring-2 focus:ring-[var(--brand)]/20" />
-          </Field>
-          <Field label="Label Tombol Booking">
-            <input type="text" value={row.booking_label ?? ""} onChange={(e) => field("booking_label", e.target.value)}
-              className="w-full rounded-xl border border-white/50 bg-white/60 px-3 py-2 text-sm text-[var(--ink)] outline-none backdrop-blur-md transition-all focus:border-[var(--brand)] focus:bg-white/85 focus:ring-2 focus:ring-[var(--brand)]/20" />
-          </Field>
-          <Field label="URL Booking">
-            <input type="text" value={row.booking_url ?? ""} onChange={(e) => field("booking_url", e.target.value)}
               className="w-full rounded-xl border border-white/50 bg-white/60 px-3 py-2 text-sm text-[var(--ink)] outline-none backdrop-blur-md transition-all focus:border-[var(--brand)] focus:bg-white/85 focus:ring-2 focus:ring-[var(--brand)]/20" />
           </Field>
         </div>
