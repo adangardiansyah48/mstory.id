@@ -85,6 +85,10 @@ export function PackagesTab() {
   const [expandedCats, setExpandedCats] = useState<Record<number, boolean>>({});
   const [activeSection, setActiveSection] = useState<EntityType>("categories");
   const [search, setSearch] = useState("");
+  const [catPage, setCatPage] = useState(0);
+  const [pkgPage, setPkgPage] = useState(0);
+  const [addonPage, setAddonPage] = useState(0);
+  const PAGE_SIZE = 10;
 
   const [newCatName, setNewCatName] = useState("");
   const [newCatIcon, setNewCatIcon] = useState("Gem");
@@ -549,6 +553,12 @@ export function PackagesTab() {
   }
 
   const q = search.trim().toLowerCase();
+  const filteredCats = categories.filter((cat) => !q || cat.name.toLowerCase().includes(q));
+  const filteredPkgs = packages.filter((pkg) => !q || pkg.name.toLowerCase().includes(q));
+  const filteredAddons = addons.filter((addon) => !q || addon.name.toLowerCase().includes(q));
+  const catVisible = filteredCats.slice(catPage * PAGE_SIZE, (catPage + 1) * PAGE_SIZE);
+  const pkgVisible = filteredPkgs.slice(pkgPage * PAGE_SIZE, (pkgPage + 1) * PAGE_SIZE);
+  const addonVisible = filteredAddons.slice(addonPage * PAGE_SIZE, (addonPage + 1) * PAGE_SIZE);
 
   return (
     <div className="space-y-5">
@@ -562,7 +572,7 @@ export function PackagesTab() {
         ).map((s) => (
           <button
             key={s.key}
-            onClick={() => setActiveSection(s.key)}
+            onClick={() => { setActiveSection(s.key); setCatPage(0); setPkgPage(0); setAddonPage(0); }}
             className={cn(
               "shrink-0 rounded-lg px-4 py-2 text-xs font-semibold transition-colors",
               activeSection === s.key
@@ -578,7 +588,7 @@ export function PackagesTab() {
       <div>
         <input
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => { setSearch(e.target.value); setCatPage(0); setPkgPage(0); setAddonPage(0); }}
           placeholder="Cari kategori / paket / add-on..."
           className="h-10 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm text-[var(--ink)] placeholder:text-[var(--muted-5)] focus:border-[var(--brand)] focus:outline-none"
         />
@@ -599,9 +609,7 @@ export function PackagesTab() {
           </div>
 
           <div className="space-y-3">
-            {categories
-              .filter((cat) => !q || cat.name.toLowerCase().includes(q))
-              .map((cat) => (
+            {catVisible.map((cat) => (
               <div key={cat.id} className="rounded-2xl border border-[var(--line)] bg-white p-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold text-[var(--ink)]">{cat.name}</span>
@@ -685,6 +693,13 @@ export function PackagesTab() {
               </div>
             ))}
           </div>
+          {filteredCats.length > PAGE_SIZE && (
+            <div className="flex items-center justify-between gap-3 pt-1">
+              <button type="button" onClick={() => setCatPage(Math.max(0, catPage - 1))} disabled={catPage === 0} className="rounded-full border border-[var(--line)] bg-white px-4 py-2 text-xs font-semibold text-[var(--muted)] hover:border-[var(--brand)] disabled:opacity-40">Sebelumnya</button>
+              <span className="text-xs font-semibold text-[var(--muted)]">Halaman {catPage + 1} dari {Math.ceil(filteredCats.length / PAGE_SIZE)} ({filteredCats.length} data)</span>
+              <button type="button" onClick={() => setCatPage((p) => p + 1)} disabled={(catPage + 1) * PAGE_SIZE >= filteredCats.length} className="rounded-full border border-[var(--line)] bg-white px-4 py-2 text-xs font-semibold text-[var(--muted)] hover:border-[var(--brand)] disabled:opacity-40">Berikutnya</button>
+            </div>
+          )}
         </div>
       )}
 
@@ -703,9 +718,7 @@ export function PackagesTab() {
           </div>
 
           <div className="space-y-2">
-            {packages
-              .filter((pkg) => !q || pkg.name.toLowerCase().includes(q))
-              .map((pkg) => (
+            {pkgVisible.map((pkg) => (
               <div
                 key={pkg.id}
                 className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-white px-4 py-3"
@@ -750,6 +763,13 @@ export function PackagesTab() {
               </div>
             ))}
           </div>
+          {filteredPkgs.length > PAGE_SIZE && (
+            <div className="flex items-center justify-between gap-3 pt-1">
+              <button type="button" onClick={() => setPkgPage(Math.max(0, pkgPage - 1))} disabled={pkgPage === 0} className="rounded-full border border-[var(--line)] bg-white px-4 py-2 text-xs font-semibold text-[var(--muted)] hover:border-[var(--brand)] disabled:opacity-40">Sebelumnya</button>
+              <span className="text-xs font-semibold text-[var(--muted)]">Halaman {pkgPage + 1} dari {Math.ceil(filteredPkgs.length / PAGE_SIZE)} ({filteredPkgs.length} data)</span>
+              <button type="button" onClick={() => setPkgPage((p) => p + 1)} disabled={(pkgPage + 1) * PAGE_SIZE >= filteredPkgs.length} className="rounded-full border border-[var(--line)] bg-white px-4 py-2 text-xs font-semibold text-[var(--muted)] hover:border-[var(--brand)] disabled:opacity-40">Berikutnya</button>
+            </div>
+          )}
         </div>
       )}
 
@@ -767,9 +787,7 @@ export function PackagesTab() {
             </button>
           </div>
           <div className="space-y-2">
-            {addons
-              .filter((addon) => !q || addon.name.toLowerCase().includes(q))
-              .map((addon) => (
+            {addonVisible.map((addon) => (
               <div
                 key={addon.id}
                 className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-white px-4 py-3"
@@ -805,6 +823,13 @@ export function PackagesTab() {
               </div>
             ))}
           </div>
+          {filteredAddons.length > PAGE_SIZE && (
+            <div className="flex items-center justify-between gap-3 pt-1">
+              <button type="button" onClick={() => setAddonPage(Math.max(0, addonPage - 1))} disabled={addonPage === 0} className="rounded-full border border-[var(--line)] bg-white px-4 py-2 text-xs font-semibold text-[var(--muted)] hover:border-[var(--brand)] disabled:opacity-40">Sebelumnya</button>
+              <span className="text-xs font-semibold text-[var(--muted)]">Halaman {addonPage + 1} dari {Math.ceil(filteredAddons.length / PAGE_SIZE)} ({filteredAddons.length} data)</span>
+              <button type="button" onClick={() => setAddonPage((p) => p + 1)} disabled={(addonPage + 1) * PAGE_SIZE >= filteredAddons.length} className="rounded-full border border-[var(--line)] bg-white px-4 py-2 text-xs font-semibold text-[var(--muted)] hover:border-[var(--brand)] disabled:opacity-40">Berikutnya</button>
+            </div>
+          )}
         </div>
       )}
       {(editingPackageId !== null || showPkgModal) && (
