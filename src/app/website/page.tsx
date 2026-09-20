@@ -139,9 +139,9 @@ export default function WebsitePage() {
       <header className="sticky top-0 z-40 border-b border-[#D8D5CC]/0 bg-[#FCFCF9]">
         <div className="mx-auto hidden h-[68px] max-w-[1200px] items-center justify-between px-6 lg:flex">
           <nav className="flex items-center gap-7">
-            <Link href="/website" className="hdr-link hdr-active">
+            <a href="#hero" className="hdr-link hdr-active">
               Home
-            </Link>
+            </a>
             <a href="#about" className="hdr-link">
               About
             </a>
@@ -187,7 +187,7 @@ export default function WebsitePage() {
             </div>
           </nav>
 
-          <Link href="/website" className="flex items-center gap-2">
+          <a href="#hero" className="flex items-center gap-2">
             <span className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-white ring-1 ring-[#D8D5CC]">
               {logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -197,7 +197,7 @@ export default function WebsitePage() {
               )}
             </span>
             <span className="font-serif text-[14px] tracking-[0.22em] uppercase">{settings.site_name}</span>
-          </Link>
+          </a>
 
           <nav className="flex items-center gap-7">
             <a href="#contact" className="hdr-link">
@@ -207,7 +207,7 @@ export default function WebsitePage() {
         </div>
 
         <div className="flex h-[56px] items-center justify-between px-4 lg:hidden">
-          <Link href="/website" className="flex items-center gap-2">
+          <a href="#hero" className="flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white ring-1 ring-[#D8D5CC]">
               {logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -217,7 +217,7 @@ export default function WebsitePage() {
               )}
             </span>
             <span className="font-serif text-[13px] tracking-[0.18em] uppercase">{settings.site_name}</span>
-          </Link>
+          </a>
           <button
             type="button"
             aria-label="Menu"
@@ -230,9 +230,9 @@ export default function WebsitePage() {
         {navOpen && (
           <div className="border-t border-[#D8D5CC] bg-[#FCFCF9] px-4 py-5 lg:hidden">
             <div className="flex flex-col">
-              <Link href="/website" onClick={() => setNavOpen(false)} className="hdr-link py-3 text-base">
+              <a href="#hero" onClick={() => setNavOpen(false)} className="hdr-link py-3 text-base">
                 Home
-              </Link>
+              </a>
               <a href="#about" onClick={() => setNavOpen(false)} className="hdr-link py-3 text-base">
                 About
               </a>
@@ -247,7 +247,7 @@ export default function WebsitePage() {
         )}
       </header>
 
-      <section className="bg-[#FCFCF9]">
+      <section id="hero" className="bg-[#FCFCF9]">
         <div className="mx-auto max-w-[1200px] px-0 sm:px-6">
           <div
             className="relative h-[58vh] min-h-[420px] overflow-hidden bg-[#F3F2EE] sm:h-[64vh] sm:min-h-[560px] sm:rounded-[6px]"

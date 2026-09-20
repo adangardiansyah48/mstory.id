@@ -226,8 +226,8 @@ export function WebsiteTab() {
           </Field>
 
           <div>
-            <span className="mb-1 block text-xs font-semibold text-[var(--muted)]">Slide Hero</span>
-            <p className="mb-2 text-[11px] text-[var(--muted-3)]">Foto banner slider di halaman /website. Maks 6 slide.</p>
+            <span className="mb-1 block text-xs font-semibold text-[var(--muted)]">Slide Hero (3 foto — slider di #hero)</span>
+            <p className="mb-2 text-[11px] text-[var(--muted-3)]">Upload tepat 3 foto, auto-slide 2 detik di hero. Max 3.</p>
             <div className="flex flex-col gap-2">
               {(row.hero_slides ?? []).map((url, idx) => (
                 <div key={idx} className="relative flex items-center gap-2 rounded-lg border border-[var(--line)] bg-white p-2">
@@ -239,10 +239,10 @@ export function WebsiteTab() {
                   <button type="button" onClick={() => handleHeroRemove(idx)} className="rounded bg-red-50 p-1 text-red-500 hover:bg-red-100"><X className="h-3 w-3" /></button>
                 </div>
               ))}
-              {(row.hero_slides ?? []).length < 6 && (
+              {(row.hero_slides ?? []).length < 3 && (
                 <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--line)] py-3 text-[11px] font-semibold text-[var(--muted)] hover:border-[var(--brand)] hover:text-[var(--brand)]">
                   {uploading === "hero" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
-                  Tambah slide hero
+                  {(row.hero_slides ?? []).length === 0 ? "Tambah slide hero (1/3)" : `Tambah slide hero (${(row.hero_slides?.length ?? 0) + 1}/3)`}
                   <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleHeroUpload(f); e.target.value = ""; }} />
                 </label>
               )}
@@ -305,7 +305,7 @@ export function WebsiteTab() {
       {/* === INSTAGRAM === */}
       <div className="rounded-2xl p-5 glass">
         <h3 className="mb-4 font-serif text-sm font-semibold text-[var(--ink)]">
-          Instagram
+          Instagram (tampil #follow)
         </h3>
         <div className="space-y-3">
           <Field label="Handle (@)">
@@ -314,10 +314,6 @@ export function WebsiteTab() {
           </Field>
           <Field label="URL">
             <input type="url" value={row.instagram_url ?? ""} onChange={(e) => field("instagram_url", e.target.value)}
-              className="w-full rounded-xl border border-white/50 bg-white/60 px-3 py-2 text-sm text-[var(--ink)] outline-none backdrop-blur-md transition-all focus:border-[var(--brand)] focus:bg-white/85 focus:ring-2 focus:ring-[var(--brand)]/20" />
-          </Field>
-          <Field label="Jumlah Foto Grid">
-            <input type="number" value={row.instagram_grid_count ?? 4} onChange={(e) => field("instagram_grid_count", Number(e.target.value))}
               className="w-full rounded-xl border border-white/50 bg-white/60 px-3 py-2 text-sm text-[var(--ink)] outline-none backdrop-blur-md transition-all focus:border-[var(--brand)] focus:bg-white/85 focus:ring-2 focus:ring-[var(--brand)]/20" />
           </Field>
         </div>
