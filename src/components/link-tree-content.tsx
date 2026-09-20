@@ -142,11 +142,7 @@ export function LinkTreeContent() {
               &ldquo;{tagline}&rdquo;
             </p>
 
-            <div className="mt-3 text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted-2)]">
-                WEDDING&nbsp;PREWEDDING&nbsp;ENGAGEMENT&nbsp;EVENT
-              </p>
-            </div>
+
           </div>
         </header>
 
