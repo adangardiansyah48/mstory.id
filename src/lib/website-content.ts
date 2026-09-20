@@ -8,6 +8,7 @@ export const WEBSITE = {
   GALLERY_FOLDER: "gallery",
   ALBUM_COVER: "albums/covers",
   ALBUM_PHOTOS: "albums/photos",
+  CTA_FOLDER: "cta",
 } as const;
 
 export interface WebsiteSettingsRow {
@@ -22,6 +23,7 @@ export interface WebsiteSettingsRow {
   info_text: string | null;
   info_image: string | null;
   info_button_label: string | null;
+  cta_image: string | null;
   instagram_handle: string | null;
   instagram_url: string | null;
   instagram_grid_count: number | null;
@@ -91,6 +93,7 @@ export interface WebsiteResolvedSettings {
   info_text: string;
   info_image: string | null;
   info_button_label: string;
+  cta_image: string | null;
   instagram_handle: string;
   instagram_url: string;
   instagram_grid_count: number;
@@ -134,6 +137,7 @@ export const WEBSITE_DEFAULTS: Omit<WebsiteResolvedSettings, "updated_at"> = {
     "Terima kasih telah meluangkan waktu menelusuri karya kami. Semoga langkah kita bisa bertemu, dan kami diberi kesempatan mengabadikan kisah Anda selanjutnya.",
   info_image: null,
   info_button_label: "Hubungi kami",
+  cta_image: null,
   instagram_handle: "mstory.id",
   instagram_url: "https://instagram.com/mstory.id",
   instagram_grid_count: 4,
@@ -160,7 +164,7 @@ async function fetchWebsiteContent(): Promise<WebsiteContent> {
 
   if (supabase) {
     const [settingsRs, galleryRs, albumsRs, albumPhotosRs] = await Promise.allSettled([
-      supabase.from("website_settings").select("*").maybeSingle(),
+      supabase.from("website_settings").select("*, cta_image").maybeSingle().then((r) => (r.error && /cta_image/i.test(r.error.message) ? supabase.from("website_settings").select("*").maybeSingle() : r)),
       supabase
         .from("website_gallery_items")
         .select("*")
@@ -190,6 +194,7 @@ async function fetchWebsiteContent(): Promise<WebsiteContent> {
       settings.info_text = row.info_text ?? settings.info_text;
       settings.info_image = row.info_image ?? settings.info_image;
       settings.info_button_label = row.info_button_label ?? settings.info_button_label;
+      settings.cta_image = (row as { cta_image?: string | null }).cta_image ?? settings.cta_image;
       settings.instagram_handle = row.instagram_handle ?? settings.instagram_handle;
       settings.instagram_url = row.instagram_url ?? settings.instagram_url;
       settings.instagram_grid_count = row.instagram_grid_count ?? settings.instagram_grid_count;
@@ -351,6 +356,7 @@ export function makeWebsiteSettingsRow(row: Partial<WebsiteResolvedSettings>): O
     info_text: row.info_text ?? null,
     info_image: row.info_image ?? null,
     info_button_label: row.info_button_label ?? null,
+    cta_image: (row as { cta_image?: string | null }).cta_image ?? null,
     instagram_handle: row.instagram_handle ?? null,
     instagram_url: row.instagram_url ?? null,
     instagram_grid_count: row.instagram_grid_count ?? WEBSITE_DEFAULTS.instagram_grid_count,
@@ -456,7 +462,7 @@ export async function deleteWebsiteGalleryItem(id: number): Promise<{ ok: boolea
  */
 export async function uploadWebsiteImage(
   file: File,
-  folder: "hero" | "info" | "gallery" | "albums/covers" | "albums/photos",
+  folder: "hero" | "info" | "gallery" | "albums/covers" | "albums/photos" | "cta",
 ): Promise<{ url?: string; error?: string }> {
   const url = await compressAndUploadImage(file, WEBSITE_BUCKET, folder);
   if (!url) return { error: "Upload gambar gagal." };
