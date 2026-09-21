@@ -259,6 +259,7 @@ export interface VendorFeeRow {
 
 interface VendorFeeProps {
   vendorName: string;
+  vendorCode?: string | null;
   monthLabel: string;
   logoUrl?: string | null;
   rows: VendorFeeRow[];
@@ -274,9 +275,10 @@ function slugifyVendor(input: string): string {
     .replace(/^-|-$/g, "");
 }
 
-export function VendorFeePdfDocument({ vendorName, monthLabel, logoUrl, rows }: VendorFeeProps) {
+export function VendorFeePdfDocument({ vendorName, vendorCode, monthLabel, logoUrl, rows }: VendorFeeProps) {
   const totalFee = rows.reduce((s, r) => s + (Number(r.fee) || 0), 0);
   const feeEach = rows[0]?.fee ?? 0;
+  const vendorHeader = vendorCode ? `${vendorCode} — ${vendorName}` : vendorName;
 
   return (
     <Document>
@@ -292,9 +294,10 @@ export function VendorFeePdfDocument({ vendorName, monthLabel, logoUrl, rows }: 
 
         <View style={{ backgroundColor: C.bg, borderRadius: 6, padding: 12, marginBottom: 20 }}>
           <Text style={s.sectionTitle}>DISERAHKAN KEPADA VENDOR</Text>
+          <Text style={{ fontSize: 10, color: C.muted }}>{vendorCode ?? ""}</Text>
           <Text style={{ fontSize: 16, fontWeight: "bold" }}>{vendorName}</Text>
           <Text style={{ fontSize: 9, color: C.muted, marginTop: 4 }}>
-            Akumulasi fee vendor bulan {monthLabel} — {rows.length} booking × {fmt(feeEach)}. Mstory.id menyatakan telah menyerahkan fee atas booking yang ditangani {vendorName}.
+            Akumulasi fee vendor bulan {monthLabel} — {rows.length} booking × {fmt(feeEach)}. Mstory.id menyatakan telah menyerahkan fee atas booking yang ditangani {vendorHeader}.
           </Text>
         </View>
 
@@ -334,7 +337,7 @@ export function VendorFeePdfDocument({ vendorName, monthLabel, logoUrl, rows }: 
             <Text style={{ fontSize: 9, color: C.muted, marginTop: 48 }}>( ............................ )</Text>
           </View>
           <View style={{ width: "40%", alignItems: "center" }}>
-            <Text style={{ fontSize: 9, color: C.muted }}>Vendor ({vendorName}),</Text>
+            <Text style={{ fontSize: 9, color: C.muted }}>Vendor ({vendorHeader}),</Text>
             <Text style={{ fontSize: 9, color: C.muted, marginTop: 48 }}>( ............................ )</Text>
           </View>
         </View>
@@ -347,8 +350,8 @@ export function VendorFeePdfDocument({ vendorName, monthLabel, logoUrl, rows }: 
 
 export function VendorFeePdfPreview(props: VendorFeeProps) {
   const doc = useMemo(
-    () => <VendorFeePdfDocument vendorName={props.vendorName} monthLabel={props.monthLabel} logoUrl={props.logoUrl} rows={props.rows} />,
-    [props.vendorName, props.monthLabel, props.logoUrl, props.rows],
+    () => <VendorFeePdfDocument vendorName={props.vendorName} vendorCode={props.vendorCode} monthLabel={props.monthLabel} logoUrl={props.logoUrl} rows={props.rows} />,
+    [props.vendorName, props.vendorCode, props.monthLabel, props.logoUrl, props.rows],
   );
   return (
     <PDFViewer width="100%" height="100%" showToolbar={false}>
@@ -360,11 +363,12 @@ export function VendorFeePdfPreview(props: VendorFeeProps) {
 export async function downloadVendorFeePdfBlob(input: VendorFeeProps) {
   const { pdf } = await import("@react-pdf/renderer");
   const blob = await pdf(
-    <VendorFeePdfDocument vendorName={input.vendorName} monthLabel={input.monthLabel} logoUrl={input.logoUrl} rows={input.rows} />,
+    <VendorFeePdfDocument vendorName={input.vendorName} vendorCode={input.vendorCode} monthLabel={input.monthLabel} logoUrl={input.logoUrl} rows={input.rows} />,
   ).toBlob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  const fileSafe = slugifyVendor(input.vendorName) || "vendor";
+  const codePart = input.vendorCode ? slugifyVendor(input.vendorCode) + "-" : "";
+  const fileSafe = codePart + (slugifyVendor(input.vendorName) || "vendor");
   a.href = url;
   a.download = `fee-vendor-${fileSafe}-${slugifyVendor(input.monthLabel)}.pdf`;
   document.body.appendChild(a);

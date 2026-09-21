@@ -30,6 +30,7 @@ export function FinanceTab() {
   const [vendorMap, setVendorMap] = useState<Record<number, { name: string; code: string | null; display_name: string | null; fee_per_booking: number }>>({});
   const [previewVendor, setPreviewVendor] = useState<{
     vendorName: string;
+    vendorCode: string | null;
     monthLabel: string;
     rows: VendorFeeRow[];
   } | null>(null);
@@ -142,15 +143,19 @@ export function FinanceTab() {
 
   const vendorInvoices = useMemo(() => {
     const map = new Map<string, { vendorId: number | null; vendorCode: string | null; vendorName: string; bookings: { invoice_number: string; event_date: string; fee: number }[]; totalFee: number }>();
+    const codeMap = new Map<string, typeof vendorMap[number]>();
+    Object.values(vendorMap).forEach((v) => { if (v.code) codeMap.set(v.code.toLowerCase(), v); });
     for (const r of rows) {
       if (r.source !== "VENDOR") continue;
       const vId = r.vendor_id ?? null;
-      const v = vId != null ? vendorMap[vId] : undefined;
+      let v = vId != null ? vendorMap[vId] : undefined;
+      if (!v && r.vendor_name) v = codeMap.get(r.vendor_name.toLowerCase()) ?? Object.values(vendorMap).find((x) => x.name.toLowerCase() === r.vendor_name!.toLowerCase());
+      const vendorIdResolved = (v as unknown as { id?: number })?.id ?? vId;
       const vendorName = v?.display_name ?? v?.name ?? r.vendor_name ?? "Vendor";
-      const vendorCode = v?.code ?? null;
+      const vendorCode = v?.code ?? (r.vendor_name && /^VEND-/i.test(r.vendor_name) ? r.vendor_name : null);
       const fee = v?.fee_per_booking ?? vendorFee;
-      const key = vId != null ? `id:${vId}` : `name:${vendorName}`;
-      if (!map.has(key)) map.set(key, { vendorId: vId, vendorCode, vendorName, bookings: [], totalFee: 0 });
+      const key = vendorIdResolved != null ? `id:${vendorIdResolved}` : vendorCode ? `code:${vendorCode.toLowerCase()}` : `name:${vendorName.toLowerCase()}`;
+      if (!map.has(key)) map.set(key, { vendorId: vendorIdResolved ?? null, vendorCode, vendorName, bookings: [], totalFee: 0 });
       const entry = map.get(key)!;
       entry.bookings.push({
         invoice_number: r.invoice_number,
@@ -326,16 +331,17 @@ export function FinanceTab() {
         ) : (
           <div className="mt-4 space-y-4">
             {vendorInvoices.map((v) => (
-              <div key={v.vendorName} className="rounded-xl border border-[var(--line)] bg-[var(--soft)]/40 p-4">
+              <div key={v.vendorId != null ? `id:${v.vendorId}` : v.vendorCode ?? v.vendorName} className="rounded-xl border border-[var(--line)] bg-[var(--soft)]/40 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-<p className="text-sm font-bold text-[var(--ink)]">{v.vendorName}</p>
+<p className="text-sm font-bold text-[var(--ink)]">{v.vendorCode ? `${v.vendorCode} — ${v.vendorName}` : v.vendorName}</p>
                      <p className="text-xs text-[var(--muted)]">{v.vendorCode ?? (v.vendorId ? `ID ${v.vendorId}` : "Tanpa ID")} · {v.bookings.length} booking · Total fee {formatCurrency(v.totalFee)} (fee sesuai master vendor)</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setPreviewVendor({
                       vendorName: v.vendorName,
+                      vendorCode: v.vendorCode,
                       monthLabel,
                       rows: v.bookings.map((b) => ({ invoice_number: b.invoice_number, event_date: b.event_date, fee: b.fee })),
                     })}
@@ -363,13 +369,14 @@ export function FinanceTab() {
           <div className="relative flex w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl h-[90vh]" onClick={(e) => e.stopPropagation()}>
             <div className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-200 px-5 py-3">
               <p className="text-sm font-semibold text-gray-700">
-                {previewVendor.vendorName} — {previewVendor.monthLabel} ({previewVendor.rows.length} booking)
+                {previewVendor.vendorCode ? `${previewVendor.vendorCode} — ` : ""}{previewVendor.vendorName} — {previewVendor.monthLabel} ({previewVendor.rows.length} booking)
               </p>
               <div className="flex items-center gap-2">
                 <button
                   onClick={async () => {
                     await downloadVendorFeePdfBlob({
                       vendorName: previewVendor.vendorName,
+                      vendorCode: previewVendor.vendorCode,
                       monthLabel: previewVendor.monthLabel,
                       logoUrl: logoUrlState,
                       rows: previewVendor.rows,
@@ -391,6 +398,7 @@ export function FinanceTab() {
             <div className="min-h-0 flex-1 bg-gray-100 p-3">
               <VendorFeePdfPreview
                 vendorName={previewVendor.vendorName}
+                vendorCode={previewVendor.vendorCode}
                 monthLabel={previewVendor.monthLabel}
                 logoUrl={logoUrlState}
                 rows={previewVendor.rows}

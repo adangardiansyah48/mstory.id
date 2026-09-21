@@ -429,6 +429,7 @@ function drawBullets(
 
 export function downloadVendorFeeMonthlyInvoice(input: {
   vendorName: string;
+  vendorCode?: string | null;
   monthLabel: string;
   logoUrl?: string | null;
   rows: {
@@ -437,7 +438,8 @@ export function downloadVendorFeeMonthlyInvoice(input: {
     fee: number;
   }[];
 }): Promise<void> {
-  const { vendorName, monthLabel, logoUrl, rows } = input;
+  const { vendorName, vendorCode, monthLabel, logoUrl, rows } = input;
+  const vendorHeader = vendorCode ? `${vendorCode} — ${vendorName}` : vendorName;
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   async function build(): Promise<void> {
     const logoDataUrl = logoUrl ? await loadLogoDataUrl(logoUrl) : null;
@@ -475,6 +477,10 @@ export function downloadVendorFeeMonthlyInvoice(input: {
     doc.text("DISERAHKAN KEPADA VENDOR", MARGIN, y);
     y += 8;
     doc.setFont("Helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(...MUTED);
+    if (vendorCode) { doc.text(vendorCode, MARGIN, y); y += 5; }
+    doc.setFont("Helvetica", "bold");
     doc.setFontSize(16);
     doc.setTextColor(...INK);
     const vendorLines = doc.splitTextToSize(vendorName, CONTENT_W) as string[];
@@ -483,7 +489,7 @@ export function downloadVendorFeeMonthlyInvoice(input: {
     doc.setFont("Helvetica", "normal");
     doc.setFontSize(9.5);
     doc.setTextColor(...MUTED);
-    doc.text(`Akumulasi fee vendor bulan ${monthLabel} · Mstory.id menyatakan telah menyerahkan fee atas booking yang ditangani ${vendorName}.`, MARGIN, y);
+    doc.text(`Akumulasi fee vendor bulan ${monthLabel} · Mstory.id menyatakan telah menyerahkan fee atas booking yang ditangani ${vendorHeader}.`, MARGIN, y);
     y += 8;
 
     const tableTop = Math.max(y, 100);
@@ -560,7 +566,8 @@ export function downloadVendorFeeMonthlyInvoice(input: {
 
   fy += 6;
 
-    const fileSafe = slugify(vendorName) || "vendor";
+    const codePart = vendorCode ? slugify(vendorCode) + "-" : "";
+    const fileSafe = codePart + (slugify(vendorName) || "vendor");
     doc.save(`fee-vendor-${fileSafe}-${slugify(monthLabel)}.pdf`);
   }
 
