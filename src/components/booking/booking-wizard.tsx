@@ -96,6 +96,7 @@ export function BookingWizard({
     () => peekBookingData() === null,
   );
   const [submitting, setSubmitting] = useState(false);
+  const [isVendorBooking, setIsVendorBooking] = useState(false);
   const [vendorName, setVendorName] = useState("");
   const [vendorOptions, setVendorOptions] = useState<{ id: number; name: string }[]>([]);
   const [submitResult, setSubmitResult] = useState<{
@@ -232,7 +233,8 @@ export function BookingWizard({
              status: "MENUNGGU_DP",
              notes: client.notes || null,
            };
-          if (adminMode && vendorName.trim()) {
+           if (adminMode && isVendorBooking) {
+            if (!vendorName.trim()) throw new Error("Pilih vendor dulu");
             basePayload.source = "VENDOR";
             basePayload.vendor_name = vendorName.trim();
             const v = vendorOptions.find((x) => x.name === vendorName.trim());
@@ -345,6 +347,7 @@ for (let attempt = 0; attempt < 3; attempt++) {
   function closeWizard() {
     setSubmitResult(null);
     setStep(1);
+    setIsVendorBooking(false);
     setVendorName("");
     onClose();
   }
@@ -469,14 +472,14 @@ for (let attempt = 0; attempt < 3; attempt++) {
                       <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--brand)]">Data Vendor (Admin)</p>
                       <div className="space-y-3">
                         <label className="flex items-center gap-2 text-sm font-semibold text-[var(--ink)]">
-                          <input type="checkbox" checked={!!vendorName} onChange={(e) => setVendorName(e.target.checked ? "Vendor" : "")} className="accent-[var(--brand)]" />
+                          <input type="checkbox" checked={isVendorBooking} onChange={(e) => { setIsVendorBooking(e.target.checked); if (!e.target.checked) setVendorName(""); }} className="accent-[var(--brand)]" />
                           Ini Booking dari Vendor
                         </label>
-                        {!!vendorName && (
+                        {isVendorBooking && (
                           <div className="animate-fade-in">
                             <p className="mb-1 text-[10px] font-bold uppercase text-[var(--muted-2)]">Pilih Vendor (dari master)</p>
                             <select
-                              value={vendorName === "Vendor" ? "" : vendorName}
+                              value={vendorName}
                               onChange={(e) => setVendorName(e.target.value)}
                               className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none"
                             >
