@@ -334,8 +334,8 @@ export function FinanceTab() {
               <div key={v.vendorId != null ? `id:${v.vendorId}` : v.vendorCode ?? v.vendorName} className="rounded-xl border border-[var(--line)] bg-[var(--soft)]/40 p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-<p className="text-sm font-bold text-[var(--ink)]">{v.vendorCode ? `${v.vendorCode} — ${v.vendorName}` : v.vendorName}</p>
-                     <p className="text-xs text-[var(--muted)]">{v.vendorCode ?? (v.vendorId ? `ID ${v.vendorId}` : "Tanpa ID")} · {v.bookings.length} booking · Total fee {formatCurrency(v.totalFee)} (fee sesuai master vendor)</p>
+<p className="text-sm font-bold text-[var(--ink)]">{v.vendorName}</p>
+                     <p className="text-xs text-[var(--muted)]">{v.bookings.length} booking · Total fee {formatCurrency(v.totalFee)} (fee sesuai master vendor)</p>
                   </div>
                   <button
                     type="button"
@@ -369,7 +369,7 @@ export function FinanceTab() {
           <div className="relative flex w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl h-[90vh]" onClick={(e) => e.stopPropagation()}>
             <div className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-200 px-5 py-3">
               <p className="text-sm font-semibold text-gray-700">
-                {previewVendor.vendorCode ? `${previewVendor.vendorCode} — ` : ""}{previewVendor.vendorName} — {previewVendor.monthLabel} ({previewVendor.rows.length} booking)
+                {previewVendor.vendorName} — {previewVendor.monthLabel} ({previewVendor.rows.length} booking)
               </p>
               <div className="flex items-center gap-2">
                 <button
