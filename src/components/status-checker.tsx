@@ -21,6 +21,8 @@ import type { BookingWithRelations } from "@/lib/types";
 import {
   STATUS_LABELS,
   WORKFLOW_STATUS_LABELS,
+  getWorkflowStepsForSubCategory,
+  isFileOnlySubCategory,
 } from "@/lib/types";
 
 interface StatusCheckerProps {
@@ -72,6 +74,19 @@ export function StatusSearchPanel() {
     try {
       const { data: rpcData, error: rpcError } = await supabase.rpc("lookup_bookings", { p_query: trimmed });
       if (!rpcError && Array.isArray(rpcData) && rpcData.length > 0) {
+        const needsEnrich = !(rpcData[0] as unknown as BookingWithRelations)?.details?.[0]?.packages?.sub_categories;
+        if (needsEnrich) {
+          const ids = (rpcData as unknown as { id: number }[]).map((r) => r.id);
+          const { data: enriched } = await supabase
+            .from("bookings")
+            .select(`*, client:clients(*), details:booking_details(*, packages:packages(*, sub_categories:sub_categories(*, categories:categories(*)))), addons:booking_addons(*, add_ons:addons(*)), project_progress(*)`)
+            .in("id", ids);
+          if (enriched && enriched.length > 0) {
+            setResults(enriched as unknown as BookingWithRelations[]);
+            setSearchState("found");
+            return;
+          }
+        }
         setResults(rpcData as unknown as BookingWithRelations[]);
         setSearchState("found");
         return;
@@ -356,15 +371,32 @@ export function StatusSearchPanel() {
                   <h4 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
                     <Brush className="h-3.5 w-3.5" /> Progress Pengerjaan
                   </h4>
-                  <div className="mt-3">
-                    <Progress
-                      status={progress?.progress_status ?? "SHOOTING"}
-                      labels={WORKFLOW_STATUS_LABELS}
-                      steps={["SHOOTING", "EDIT", "EDIT_DONE", "PRINTING", "PRINT_DONE", "DELIVERED", "RECEIVED"]}
-                    />
-                  </div>
                   {(() => {
-                    const order: Record<string, number> = {
+                    const subName = result.details?.[0]?.packages?.sub_categories?.name ?? null;
+                    const steps = getWorkflowStepsForSubCategory(subName);
+                    const isFileOnly = isFileOnlySubCategory(subName);
+                    return (
+                      <>
+                        {isFileOnly && (
+                          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-amber-700">
+                            FILE ONLY — sampai Selesai Edit + via GDrive
+                          </p>
+                        )}
+                        <div className="mt-1">
+                          <Progress
+                            status={progress?.progress_status ?? "SHOOTING"}
+                            labels={WORKFLOW_STATUS_LABELS}
+                            steps={steps}
+                          />
+                        </div>
+                      </>
+                    );
+                  })()}
+                  {(() => {
+                    const subName2 = result.details?.[0]?.packages?.sub_categories?.name ?? null;
+                    const steps2 = getWorkflowStepsForSubCategory(subName2);
+                    const order: Record<string, number> = Object.fromEntries(steps2.map((s, i) => [s, i]));
+                    const fullOrder: Record<string, number> = {
                       SHOOTING: 0,
                       EDIT: 1,
                       EDIT_DONE: 2,
@@ -373,10 +405,12 @@ export function StatusSearchPanel() {
                       DELIVERED: 5,
                       RECEIVED: 6,
                     };
+                    const curIdx = order[progress?.progress_status ?? ""] ?? fullOrder[progress?.progress_status ?? ""] ?? -1;
+                    const editIdx = order["EDIT_DONE"] ?? fullOrder["EDIT_DONE"];
                     const isVisible =
                       progress?.drive_link != null &&
                       progress.drive_link.trim().length > 0 &&
-                      (order[progress.progress_status] ?? 0) >= order["EDIT_DONE"];
+                      curIdx >= editIdx;
                     if (!isVisible || !progress?.drive_link) return null;
                     const link = progress.drive_link as string;
                     return (

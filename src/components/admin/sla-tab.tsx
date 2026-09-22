@@ -10,6 +10,9 @@ import {
   SLA_PRINT_WEEKS,
   SLA_RETOUCH_WEEKS,
   WORKFLOW_STATUS_LABELS,
+  WORKFLOW_STEPS,
+  getWorkflowStepsForSubCategory,
+  isFileOnlySubCategory,
 } from "@/lib/types";
 import type {
   WorkflowStatus,
@@ -23,6 +26,8 @@ interface ProjectRow {
   event_date: string;
   status: string;
   client: { full_name: string } | null;
+  sub_category_name?: string | null;
+  is_file_only?: boolean;
   project_progress: {
     id: number;
     progress_status: WorkflowStatus;
@@ -40,15 +45,7 @@ interface ProgressPayload {
   expected_date?: string | null;
 }
 
-const WORKFLOW_STEPS: WorkflowStatus[] = [
-  "SHOOTING",
-  "EDIT",
-  "EDIT_DONE",
-  "PRINTING",
-  "PRINT_DONE",
-  "DELIVERED",
-  "RECEIVED",
-];
+
 
 export function SlaTab() {
   const [rows, setRows] = useState<ProjectRow[]>([]);
@@ -71,7 +68,7 @@ export function SlaTab() {
     }
     const { data: bookings, error: bookingErr } = await supabase
       .from("bookings")
-      .select("id, invoice_number, event_date, status, client:clients(full_name)")
+      .select("id, invoice_number, event_date, status, client:clients(full_name), details:booking_details(packages:packages(sub_categories:sub_categories(name)))")
       .in("status", ["LUNAS", "MENUNGGU_PELUNASAN", "MENUNGGU_DP"])
       .order("event_date", { ascending: false })
       .limit(200);
@@ -119,10 +116,15 @@ export function SlaTab() {
       MENUNGGU_PELUNASAN: 1,
       MENUNGGU_DP: 2,
     };
-    let merged: ProjectRow[] = (bookings as unknown as ProjectRow[]).map((b) => ({
-      ...b,
-      project_progress: progByBooking.has(b.id) ? [progByBooking.get(b.id) as unknown as ProjectRow["project_progress"][number]] : [],
-    }));
+    let merged: ProjectRow[] = (bookings as unknown as any[]).map((b) => {
+      const subName = (b.details?.[0]?.packages?.sub_categories?.name ?? null) as string | null;
+      return {
+        ...b,
+        sub_category_name: subName,
+        is_file_only: isFileOnlySubCategory(subName),
+        project_progress: progByBooking.has(b.id) ? [progByBooking.get(b.id) as unknown as ProjectRow["project_progress"][number]] : [],
+      };
+    });
     merged = merged.sort((a, b) => {
       const pa = STATUS_PRIORITY[a.status] ?? 99;
       const pb = STATUS_PRIORITY[b.status] ?? 99;
@@ -320,7 +322,12 @@ export function SlaTab() {
       ) : (
         visibleRows.map((row) => {
           const prog = row.project_progress?.[0];
-          const currentIdx = WORKFLOW_STEPS.indexOf(prog?.progress_status ?? "SHOOTING");
+          const steps = getWorkflowStepsForSubCategory(row.sub_category_name);
+          let currentIdx = steps.indexOf(prog?.progress_status ?? "SHOOTING");
+          if (currentIdx === -1 && row.is_file_only) {
+            const fullIdx = WORKFLOW_STEPS.indexOf(prog?.progress_status as typeof WORKFLOW_STEPS[number]);
+            if (fullIdx >= WORKFLOW_STEPS.indexOf("PRINTING")) currentIdx = steps.indexOf("EDIT_DONE");
+          }
           const clientName = row.client?.full_name ?? row.client_name;
 
           return (
@@ -334,7 +341,7 @@ export function SlaTab() {
                     {clientName || "Client"}
                   </p>
                   <p className="font-mono text-[11px] text-[var(--muted)]">
-                    {row.invoice_number} · Event {formatShortDate(row.event_date)}
+                    {row.invoice_number} · Event {formatShortDate(row.event_date)}{row.sub_category_name ? ` · ${row.sub_category_name}` : ""}{row.is_file_only ? " · FILE ONLY" : ""}
                   </p>
                 </div>
                 <span
@@ -355,17 +362,17 @@ export function SlaTab() {
                 <div>
                   <div className="flex items-center justify-between">
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-                      Progress Pengerjaan
+                      Progress Pengerjaan{row.is_file_only ? " — FILE ONLY (sampai Selesai Edit)" : ""}
                     </p>
                     <p className="text-[10px] text-[var(--muted-2)]">
                       Estimasi Selesai:{" "}
                       {prog?.expected_date
                         ? formatShortDate(prog.expected_date)
-                        : formatShortDate(calcDeadline(row.event_date, SLA_PRINT_WEEKS))}
+                        : formatShortDate(calcDeadline(row.event_date, row.is_file_only ? SLA_RETOUCH_WEEKS : SLA_PRINT_WEEKS))}
                     </p>
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-1">
-                    {WORKFLOW_STEPS.map((s, i) => (
+                    {steps.map((s, i) => (
                       <button
                         key={s}
                         onClick={() => setProgressStatus(row, s)}

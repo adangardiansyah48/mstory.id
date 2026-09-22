@@ -164,6 +164,32 @@ export const WORKFLOW_STATUS_LABELS: Record<WorkflowStatus, string> = {
   RECEIVED: "Diterima",
 };
 
+export const WORKFLOW_STEPS: WorkflowStatus[] = [
+  "SHOOTING",
+  "EDIT",
+  "EDIT_DONE",
+  "PRINTING",
+  "PRINT_DONE",
+  "DELIVERED",
+  "RECEIVED",
+];
+
+export const WORKFLOW_STEPS_FILE_ONLY: WorkflowStatus[] = [
+  "SHOOTING",
+  "EDIT",
+  "EDIT_DONE",
+  "RECEIVED",
+];
+
+export function isFileOnlySubCategory(name?: string | null): boolean {
+  if (!name) return false;
+  return name.trim().toUpperCase().includes("FILE ONLY");
+}
+
+export function getWorkflowStepsForSubCategory(subName?: string | null): WorkflowStatus[] {
+  return isFileOnlySubCategory(subName) ? WORKFLOW_STEPS_FILE_ONLY : WORKFLOW_STEPS;
+}
+
 export const ADDON_ICONS: Record<string, string> = {
   SIRAMAN: "🛁",
   EXTRA_PRINTS: "🖼️",
