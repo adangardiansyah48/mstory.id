@@ -24,6 +24,7 @@ import {
   deleteWebsiteAlbum,
   addWebsiteAlbumPhoto,
   deleteWebsiteAlbumPhoto,
+  clearWebsiteContentCache,
   WEBSITE,
 } from "@/lib/website-content";
 import { getPackages } from "@/lib/website";
@@ -104,12 +105,16 @@ export function WebsiteTab() {
     setUploading("hero");
     setMessage("");
     try {
+      if ((row?.hero_slides ?? []).length >= 3) {
+        setMessage("Hero sudah 3 slide — hapus salah satu dulu.");
+        return;
+      }
       const { url, error } = await uploadWebsiteImage(file, WEBSITE.HERO_FOLDER);
       if (error || !url) { 
         setMessage(error ?? "Upload gagal. Cek koneksi atau izin bucket storage."); 
         return; 
       }
-      const next = [...(row?.hero_slides ?? []), url];
+      const next = [...(row?.hero_slides ?? []), url].slice(0, 3);
       setRow((prev) => (prev ? { ...prev, hero_slides: next } : prev));
       setMessage(`Slide hero ke-${next.length} berhasil diunggah.`);
     } finally { setUploading(null); }
@@ -161,32 +166,44 @@ export function WebsiteTab() {
 
   async function handleGalleryDelete(id: number, imageUrl: string) {
     await deleteWebsiteImage(imageUrl);
-    await deleteWebsiteGalleryItem(id);
+    const { ok, error } = await deleteWebsiteGalleryItem(id);
+    if (!ok) { setMessage(`Gagal hapus: ${error ?? "unknown"}`); return; }
     setGallery((prev) => prev.filter((g) => g.id !== id));
     setMessage("Item galeri dihapus.");
   }
 
   async function handleGalleryMove(id: number, direction: 1 | -1) {
+    const visible = filterCategory === null ? gallery : gallery.filter((g) => g.category_id === filterCategory);
+    const vIdx = visible.findIndex((g) => g.id === id);
+    const targetVisible = visible[vIdx + direction];
+    if (!targetVisible) return;
     const idx = gallery.findIndex((g) => g.id === id);
-    const target = gallery[idx + direction];
-    if (!target) return;
+    const tIdx = gallery.findIndex((g) => g.id === targetVisible.id);
+    if (idx === -1 || tIdx === -1) return;
     const a = gallery[idx].sort_order;
-    const b = target.sort_order;
-    await Promise.all([
-      updateWebsiteGalleryItem(id, { sort_order: b }),
-      updateWebsiteGalleryItem(target.id, { sort_order: a }),
-    ]);
+    const b = gallery[tIdx].sort_order;
+    const r1 = await updateWebsiteGalleryItem(id, { sort_order: b });
+    const r2 = await updateWebsiteGalleryItem(targetVisible.id, { sort_order: a });
+    if (!r1.ok || !r2.ok) {
+      setMessage(`Gagal urutkan: ${r1.error ?? r2.error ?? "unknown"}`);
+      return;
+    }
     setGallery((prev) => {
       const next = [...prev];
-      next[idx] = { ...next[idx], sort_order: b };
-      next[idx + direction] = { ...next[idx + direction], sort_order: a };
+      const i = next.findIndex((g) => g.id === id);
+      const j = next.findIndex((g) => g.id === targetVisible.id);
+      if (i === -1 || j === -1) return prev;
+      next[i] = { ...next[i], sort_order: b };
+      next[j] = { ...next[j], sort_order: a };
       return next.sort((x, y) => x.sort_order - y.sort_order);
     });
   }
 
   async function handleGalleryToggle(id: number, isActive: boolean) {
-    await updateWebsiteGalleryItem(id, { is_active: isActive });
+    const { ok, error } = await updateWebsiteGalleryItem(id, { is_active: isActive });
+    if (!ok) { setMessage(`Gagal toggle: ${error ?? "unknown"}`); return; }
     setGallery((prev) => prev.map((g) => (g.id === id ? { ...g, is_active: isActive } : g)));
+    clearWebsiteContentCache();
   }
 
   if (loading) {
@@ -404,8 +421,9 @@ export function WebsiteTab() {
             ))}
           </select>
         </div>
+        {(() => { const visibleGallery = gallery.filter((g) => filterCategory === null || g.category_id === filterCategory); return (
         <div className="space-y-2">
-          {gallery.filter((g) => filterCategory === null || g.category_id === filterCategory).map((g, idx) => (
+          {visibleGallery.map((g, idx) => (
             <div key={g.id} className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-white p-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={getStoredPublicUrl(g.image_path) ?? g.image_path} alt={g.title} className="h-14 w-14 shrink-0 rounded object-cover" />
@@ -436,11 +454,12 @@ export function WebsiteTab() {
                 <button type="button" onClick={async () => { await updateWebsiteGalleryItem(g.id, { title: g.title, subtitle: g.subtitle, link_url: g.link_url, category_id: g.category_id ?? null }); setMessage(`Item "${g.title}" disimpan.`); }} className="rounded border border-[var(--line)] px-2 py-0.5 text-[10px] font-semibold text-[var(--muted)] hover:bg-[var(--soft)]">Simpan</button>
               </div>
               <button type="button" onClick={() => handleGalleryMove(g.id, -1)} disabled={idx === 0} className="rounded p-1 hover:bg-[var(--soft)] disabled:opacity-30"><ArrowUp className="h-3 w-3" /></button>
-              <button type="button" onClick={() => handleGalleryMove(g.id, 1)} disabled={idx === gallery.length - 1} className="rounded p-1 hover:bg-[var(--soft)] disabled:opacity-30"><ArrowDown className="h-3 w-3" /></button>
+              <button type="button" onClick={() => handleGalleryMove(g.id, 1)} disabled={idx === visibleGallery.length - 1} className="rounded p-1 hover:bg-[var(--soft)] disabled:opacity-30"><ArrowDown className="h-3 w-3" /></button>
               <button type="button" onClick={() => handleGalleryDelete(g.id, g.image_path)} className="rounded bg-red-50 p-1 text-red-500 hover:bg-red-100"><Trash2 className="h-3 w-3" /></button>
             </div>
           ))}
         </div>
+        );})()}
       </div>
 
       <div className="flex items-center gap-3 pt-1">
@@ -614,8 +633,8 @@ export function WebsiteTab() {
                           <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6">
                             {photos.map((photo) => (
                               <div key={photo.id} className="group relative">
-                                <img src={photo.image_path} alt="" className="h-20 w-full rounded-lg object-cover sm:h-24" />
-                                <button onClick={async () => { await deleteWebsiteAlbumPhoto(photo.id); setAlbumPhotos((prev) => prev.filter((p) => p.id !== photo.id)); }}
+                                <img src={getStoredPublicUrl(photo.image_path) ?? photo.image_path} alt="" className="h-20 w-full rounded-lg object-cover sm:h-24" />
+                                <button onClick={async () => { await deleteWebsiteImage(photo.image_path); await deleteWebsiteAlbumPhoto(photo.id); setAlbumPhotos((prev) => prev.filter((p) => p.id !== photo.id)); }}
                                   className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white opacity-0 transition-opacity group-hover:opacity-100">
                                   <X className="h-3 w-3" />
                                 </button>

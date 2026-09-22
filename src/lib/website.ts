@@ -70,7 +70,10 @@ export async function getPackages(): Promise<{
     supabase.from("packages").select("*").eq("is_active", true).order("id"),
   ]);
 
-  if (catRes.error || subRes.error || pkgRes.error) throw new Error("Gagal load data paket");
+  if (catRes.error || subRes.error || pkgRes.error) {
+    console.error("Gagal load data paket", catRes.error ?? subRes.error ?? pkgRes.error);
+    return { categories: [], subCategories: [], packages: [] };
+  }
 
   return {
     categories: catRes.data ?? [],

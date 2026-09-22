@@ -37,22 +37,19 @@ export default function WebsitePage() {
       try {
         const [wc, pkgs, tm] = await Promise.all([
           getWebsiteContent(),
-          getPackages(),
-          fetch("/api/testimonials").then((r) => r.json())
+          getPackages().catch(() => ({ categories: [] as { id: number; name: string }[], subCategories: [] as never[], packages: [] as never[] })),
+          fetch("/api/testimonials").then((r) => r.json()).catch(() => ({ data: [] })),
         ]);
         setContent(wc);
         setCats(pkgs.categories);
         setTestimonials(tm.data ?? []);
-        // Resolve nav logo: prefer website_settings, fallback to linktree_settings
-        let logo = wc.settings.logo_url;
+        let logo: string | null = wc.settings.logo_url ?? null;
         if (!logo) {
           try {
             const base = await getSiteSettings();
-            const raw = base.logo_url;
-            logo = getStoredPublicUrl(raw);
+            logo = getStoredPublicUrl(base.logo_url);
           } catch { /* fallback kosong */ }
         }
-        // Ensure full public URL if stored as bucket path
         const full = logo ? (getStoredPublicUrl(logo) ?? logo) : null;
         setNavLogoUrl(full);
         if (full) setNavLogoPos(parseObjectPosition(full, 50, 30));
@@ -87,10 +84,9 @@ export default function WebsitePage() {
     ? gallery.filter((g) => g.category_id === activeCategory)
     : gallery;
 
-  // Sumber galeri: kategori aktif bila ada, fallback semua item bila kategori kosong
-  const sourceGallery = (activeCategory !== null && filteredGallery.length === 0) || gallery.length > 0
-    ? (filteredGallery.length > 0 ? filteredGallery : gallery)
-    : [];
+  const sourceGallery = activeCategory !== null
+    ? (filteredGallery.length > 0 ? filteredGallery : [])
+    : gallery;
 
   const galleryItems = sourceGallery.map((g) => ({
     title: g.title,
@@ -100,9 +96,7 @@ export default function WebsitePage() {
     pos: { x: 50, y: 50 },
   }));
 
-  const paddedGalleryItems = galleryItems.length > 0 && galleryItems.length < 9
-    ? [...galleryItems, ...Array.from({ length: 9 - galleryItems.length }, (_, k) => galleryItems[k % galleryItems.length])]
-    : galleryItems;
+  const paddedGalleryItems = galleryItems;
 
   useEffect(() => {
     if (bannerSlides.length <= 1) return;

@@ -47,13 +47,20 @@ export function InvoiceModal({
 }: InvoiceModalProps) {
   const [kind, setKind] = useState<InvoiceKind>(defaultKind);
 
-  const pkg = booking.details?.[0]?.packages;
+  const pkg = booking.details?.[0]?.packages as unknown as { name: string; sub_categories?: { name: string; categories?: { name: string } | null } | null } | undefined;
   const dpLabel = "DP";
+  function fullPkg(p?: typeof pkg): string {
+    if (!p) return "Paket";
+    const cat = p.sub_categories?.categories?.name?.trim();
+    const sub = p.sub_categories?.name?.trim();
+    const name = p.name?.trim() ?? "Paket";
+    return [cat, sub, name].filter(Boolean).join(" - ");
+  }
 
   const packageLines: string[] = [];
   if (booking.details?.[0]) {
     packageLines.push(
-      `• ${pkg?.name ?? "Paket"} (${formatCurrency(booking.details[0].price_at_booking)})`,
+      `• ${fullPkg(pkg)} (${formatCurrency(booking.details[0].price_at_booking)})`,
     );
   }
   (booking.addons ?? []).forEach((a) => {

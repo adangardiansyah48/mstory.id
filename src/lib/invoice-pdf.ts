@@ -33,6 +33,7 @@ export interface InvoicePdfBooking {
       name: string;
       dp_value?: number;
       inclusions?: string | null;
+      sub_categories?: { name: string; categories?: { name: string } | null } | null;
     };
   }[];
   addons: {
@@ -40,6 +41,14 @@ export interface InvoicePdfBooking {
     price_at_booking: number;
     qty?: number;
   }[];
+}
+
+function packageFullName(pkg?: { name: string; sub_categories?: { name: string; categories?: { name: string } | null } | null } | null): string {
+  if (!pkg) return "Paket";
+  const cat = pkg.sub_categories?.categories?.name?.trim();
+  const sub = pkg.sub_categories?.name?.trim();
+  const name = pkg.name?.trim() ?? "Paket";
+  return [cat, sub, name].filter(Boolean).join(" - ");
 }
 
 const INK: [number, number, number] = [26, 26, 26];
@@ -246,7 +255,7 @@ export async function downloadInvoicePdf(input: {
   const rows: { name: string; qty: number; unit: number }[] = [];
   if (booking.details?.[0]) {
     rows.push({
-      name: booking.details[0].packages?.name ?? "Paket",
+      name: packageFullName(booking.details[0].packages) ?? "Paket",
       qty: 1,
       unit: Number(booking.details[0].price_at_booking) || 0,
     });

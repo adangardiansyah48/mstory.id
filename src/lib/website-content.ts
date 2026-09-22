@@ -181,14 +181,14 @@ async function fetchWebsiteContent(): Promise<WebsiteContent> {
     if (settingsRs.status === "fulfilled" && settingsRs.value.data) {
       const row = settingsRs.value.data as WebsiteSettingsRow;
       settings.site_name = row.site_name ?? settings.site_name;
-      settings.logo_url = row.logo_url ?? settings.logo_url;
-      settings.hero_slides = (row.hero_slides ?? []).filter(Boolean) as string[];
+      settings.logo_url = getStoredPublicUrl(row.logo_url) ?? row.logo_url ?? settings.logo_url;
+      settings.hero_slides = (row.hero_slides ?? []).filter(Boolean).map((u) => getStoredPublicUrl(u) ?? u) as string[];
       settings.hero_duration_ms = row.hero_duration_ms ?? settings.hero_duration_ms;
       settings.intro_heading = row.intro_heading ?? settings.intro_heading;
       settings.intro_text = row.intro_text ?? settings.intro_text;
       settings.info_heading = row.info_heading ?? settings.info_heading;
       settings.info_text = row.info_text ?? settings.info_text;
-      settings.info_image = row.info_image ?? settings.info_image;
+      settings.info_image = (row.info_image ? (getStoredPublicUrl(row.info_image) ?? row.info_image) : settings.info_image);
       settings.info_button_label = row.info_button_label ?? settings.info_button_label;
       settings.instagram_handle = row.instagram_handle ?? settings.instagram_handle;
       settings.instagram_url = row.instagram_url ?? settings.instagram_url;
@@ -323,10 +323,10 @@ export async function updateWebsiteSettings(
 ): Promise<{ ok: boolean; error?: string }> {
   const supabase = createClient();
   if (!supabase) return { ok: false, error: "Supabase tidak dikonfigurasi." };
+  const payload = { id: 1, ...patch, updated_at: new Date().toISOString() };
   const { error } = await supabase
     .from("website_settings")
-    .update({ ...patch, updated_at: new Date().toISOString() })
-    .eq("id", 1);
+    .upsert(payload as never, { onConflict: "id" });
   if (error) return { ok: false, error: error.message };
   clearWebsiteContentCache();
   return { ok: true };

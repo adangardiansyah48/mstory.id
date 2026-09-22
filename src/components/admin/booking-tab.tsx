@@ -51,7 +51,7 @@ interface BookingRow {
   vendor_id?: number | null;
   details: {
     price_at_booking: number;
-    packages: { name: string; dp_value?: number };
+    packages: { name: string; dp_value?: number; sub_categories?: { name: string; categories?: { name: string } | null } | null };
   }[];
   addons: { add_ons?: { name: string }; price_at_booking: number; qty?: number }[];
 }
@@ -178,7 +178,7 @@ export function BookingTab({
         `
         *,
         client:clients(full_name, whatsapp_number),
-        details:booking_details(price_at_booking, packages:packages(name, dp_value)),
+        details:booking_details(price_at_booking, packages:packages(name, dp_value, sub_categories:sub_categories(name, categories:categories(name)))),
         addons:booking_addons(add_ons:addons(name), price_at_booking, qty)
       `
       )
@@ -833,7 +833,7 @@ const filtered = bookings.filter((b) => {
                         </p>
                         <p>
                           <span className="text-[var(--muted)]">Paket:</span>{" "}
-                          {booking.details?.[0]?.packages?.name ?? "-"}
+                          {[booking.details?.[0]?.packages?.sub_categories?.categories?.name, booking.details?.[0]?.packages?.sub_categories?.name, booking.details?.[0]?.packages?.name].filter(Boolean).join(" - ") || "-"}
                         </p>
                         <p>
                           <span className="text-[var(--muted)]">Event:</span>{" "}

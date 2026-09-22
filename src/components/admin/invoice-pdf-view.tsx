@@ -84,10 +84,18 @@ function subDays(d: string, days: number): string {
   return date.toDateString();
 }
 
+function packageFullName(pkg?: { name: string; sub_categories?: { name: string; categories?: { name: string } | null } | null } | null): string {
+  if (!pkg) return "Paket";
+  const cat = pkg.sub_categories?.categories?.name?.trim();
+  const sub = pkg.sub_categories?.name?.trim();
+  const name = pkg.name?.trim() ?? "Paket";
+  return [cat, sub, name].filter(Boolean).join(" - ");
+}
+
 export function InvoicePdfDocument({ booking, kind, logoUrl, vendorFee }: Props) {
   const rows: { name: string; price: number }[] = [];
   if (booking.details?.[0]) {
-    rows.push({ name: booking.details[0].packages?.name ?? "Paket", price: Number(booking.details[0].price_at_booking) || 0 });
+    rows.push({ name: packageFullName(booking.details[0].packages as unknown as Parameters<typeof packageFullName>[0]), price: Number(booking.details[0].price_at_booking) || 0 });
   }
   (booking.addons ?? []).forEach((a) => {
     rows.push({ name: a.add_ons?.name ?? "-", price: Number(a.price_at_booking) || 0 });
