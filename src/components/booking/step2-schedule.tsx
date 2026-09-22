@@ -177,7 +177,7 @@ export function Step2Schedule({
                     bookingCount(date) > 0 &&
                     !isDateFull(date) && (
                       <span className="absolute right-0 top-0 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[var(--brand)] px-0.5 text-[8px] font-bold leading-none text-white">
-                        {MAX_BOOKINGS_PER_DATE - bookingCount(date)}
+                        {bookingCount(date)}
                       </span>
                     )}
                 </button>
@@ -191,9 +191,9 @@ export function Step2Schedule({
             </span>
             <span className="flex items-center gap-1.5">
               <span className="flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[var(--brand)] px-0.5 text-[8px] font-bold text-white">
-                {MAX_BOOKINGS_PER_DATE - 1}
+                1
               </span>
-              Sisa slot
+              Terisi
             </span>
             <span className="flex items-center gap-1.5">
               <span className="h-2.5 w-2.5 rounded-sm bg-[var(--brand)]" /> Penuh ({MAX_BOOKINGS_PER_DATE} booking)
