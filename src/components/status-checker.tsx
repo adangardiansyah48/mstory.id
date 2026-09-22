@@ -319,14 +319,11 @@ export function StatusSearchPanel() {
                     <div>
                     <p className="text-xs text-[var(--muted)]">Paket Utama:</p>
                     {result.details.map((detail) => (
-                      <div key={detail.id} className="mt-1 space-y-0.5">
+                      <div key={detail.id} className="mt-1">
                         <div className="flex justify-between text-xs">
                           <span className="text-[var(--ink)] font-medium">{[detail.packages?.sub_categories?.categories?.name, detail.packages?.sub_categories?.name, detail.packages?.name].filter(Boolean).join(" - ")}</span>
                           <span className="text-[var(--muted-2)] font-semibold">{formatCurrency(detail.price_at_booking)}</span>
                         </div>
-                        <p className="text-[10px] text-[var(--muted)]">
-                          {detail.packages?.sub_categories?.categories?.name} · {detail.packages?.sub_categories?.name}
-                        </p>
                       </div>
                     ))}
                   </div>
