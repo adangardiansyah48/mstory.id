@@ -398,13 +398,13 @@ export function StatusSearchPanel() {
                   )}
 
                   {/* Tombol Terima & Testimoni Pelanggan */}
-                  {progress?.progress_status === "DELIVERED" && !submitted && (
+                  {(progress?.progress_status === "DELIVERED" || progress?.progress_status === "EDIT_DONE") && !submitted && (
                     <div className="mt-4 border-t border-white/40 pt-4">
                       <Button
                         onClick={() => setShowTestimonialModal(true)}
                         className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center justify-center gap-2 rounded-xl py-3 shadow-md"
                       >
-                        Pesanan Sudah Diterima & Beri Testimoni
+                        {progress?.progress_status === "EDIT_DONE" ? "Selesai Edit — Beri Testimoni" : "Pesanan Sudah Diterima & Beri Testimoni"}
                       </Button>
                     </div>
                   )}

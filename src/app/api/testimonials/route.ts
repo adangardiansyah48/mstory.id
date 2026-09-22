@@ -24,9 +24,9 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   const status = progress?.progress_status as string | undefined;
-  if (status !== "DELIVERED" && status !== "RECEIVED") {
+  if (status !== "DELIVERED" && status !== "RECEIVED" && status !== "EDIT_DONE") {
     return NextResponse.json(
-      { error: "Pesanan belum berstatus Terkirim." },
+      { error: "Pesanan belum berstatus Terkirim / Selesai Edit." },
       { status: 400 },
     );
   }
