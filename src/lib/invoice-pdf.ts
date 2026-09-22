@@ -476,7 +476,7 @@ export function downloadVendorFeeMonthlyInvoice(input: {
     doc.text("DISERAHKAN KEPADA VENDOR", MARGIN, y);
     y += 8;
     doc.setFont("Helvetica", "bold");
-    doc.setFontSize(16);
+    doc.setFontSize(15);
     doc.setTextColor(...INK);
     const vendorLines = doc.splitTextToSize(vendorName, CONTENT_W) as string[];
     doc.text(vendorLines, MARGIN, y);

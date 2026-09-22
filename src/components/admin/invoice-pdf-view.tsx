@@ -293,7 +293,7 @@ export function VendorFeePdfDocument({ vendorName, monthLabel, logoUrl, rows }: 
 
         <View style={{ backgroundColor: C.bg, borderRadius: 6, padding: 12, marginBottom: 20 }}>
           <Text style={s.sectionTitle}>DISERAHKAN KEPADA VENDOR</Text>
-          <Text style={{ fontSize: 16, fontWeight: "bold" }}>{vendorName}</Text>
+          <Text style={{ fontSize: 15, fontWeight: "bold" }}>{vendorName}</Text>
           <Text style={{ fontSize: 9, color: C.muted, marginTop: 4 }}>
             Akumulasi fee vendor bulan {monthLabel} — {rows.length} booking × {fmt(feeEach)}. Mstory.id menyatakan telah menyerahkan fee atas booking yang ditangani {vendorName}.
           </Text>
