@@ -727,13 +727,19 @@ export function PackagesTab() {
                   <p className="truncate text-sm font-bold text-[var(--ink)]">
                     {pkg.name}
                   </p>
+                  {(() => {
+                    const sub = subCategories.find((s) => s.id === pkg.sub_category_id);
+                    const cat = sub ? categories.find((c) => c.id === sub.category_id) : undefined;
+                    return (
+                      <p className="text-[11px] text-[var(--muted)]">
+                        {(cat?.name ?? "-") + " · " + (sub?.name ?? "Tanpa kategori")}
+                      </p>
+                    );
+                  })()}
                   <p className="text-[11px] text-[var(--muted)]">
-                    {subCategories.find((s) => s.id === pkg.sub_category_id)?.name ?? "Tanpa kategori"}
-                    {" · "}
                     {formatCurrency(pkg.price)}
-                  </p>
-                  <p className="mt-0.5 text-[10px] text-[var(--muted-2)]">
-                    DP: {formatCurrency(Number(pkg.dp_value) || 0)}
+                    {" · DP: "}
+                    {formatCurrency(Number(pkg.dp_value) || 0)}
                   </p>
                 </div>
                 <button
