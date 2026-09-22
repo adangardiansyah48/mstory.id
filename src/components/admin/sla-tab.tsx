@@ -362,7 +362,7 @@ export function SlaTab() {
                 <div>
                   <div className="flex items-center justify-between">
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">
-                      Progress Pengerjaan{row.is_file_only ? " — FILE ONLY (sampai Selesai Edit)" : ""}
+                      Progress Pengerjaan
                     </p>
                     <p className="text-[10px] text-[var(--muted-2)]">
                       Estimasi Selesai:{" "}
