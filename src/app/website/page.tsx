@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Menu, X, ArrowUp, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Instagram, Youtube, Facebook, MessageCircle, Globe } from "lucide-react";
+import { Menu, X, ArrowUp, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Instagram, Youtube, Facebook } from "lucide-react";
 import {
   getWebsiteContent,
   peekWebsiteContent,
@@ -185,7 +185,7 @@ export default function WebsitePage() {
           </nav>
         </div>
 
-        <div className="flex h-[56px] items-center justify-between px-4 lg:hidden">
+          <div className="flex h-[56px] items-center justify-between gap-3 px-4 lg:hidden">
           <a href="#hero" className="flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-white ring-1 ring-[#D8D5CC]">
               {logoUrl ? (
@@ -229,7 +229,7 @@ export default function WebsitePage() {
       <section id="hero" className="bg-[#FCFCF9]">
         <div className="mx-auto max-w-[1200px] px-0 sm:px-6">
           <div
-            className="relative h-[58vh] min-h-[420px] overflow-hidden bg-[#F3F2EE] sm:h-[64vh] sm:min-h-[560px] sm:rounded-[6px]"
+            className="relative h-[52vh] min-h-[360px] overflow-hidden bg-[#F3F2EE] sm:h-[64vh] sm:min-h-[560px] sm:rounded-[6px]"
           >
             {bannerSlides.length > 0 ? (
               bannerSlides.map((s, i) => (
@@ -272,18 +272,18 @@ export default function WebsitePage() {
         </div>
       </section>
 
-      <section id="about" className="mx-auto max-w-[760px] px-6 py-10 text-center sm:py-14">
-        <h1 className="font-serif text-[30px] leading-[1.15] tracking-[-0.02em] sm:text-[36px]">{settings.intro_heading}</h1>
-        <p className="mx-auto mt-5 max-w-[620px] whitespace-pre-line text-[14px] font-light leading-[1.9] text-[#1C1C1A]/80 sm:text-[15px]">
+      <section id="about" className="mx-auto max-w-[760px] px-4 py-8 text-center sm:px-6 sm:py-14">
+        <h1 className="font-serif text-[26px] leading-[1.15] tracking-[-0.02em] sm:text-[36px]">{settings.intro_heading}</h1>
+        <p className="mx-auto mt-4 max-w-[620px] whitespace-pre-line text-[13px] font-light leading-[1.8] text-[#1C1C1A]/80 sm:mt-5 sm:text-[15px] sm:leading-[1.9]">
           {settings.intro_text}
         </p>
       </section>
 
-      <div className="mx-auto max-w-[760px] px-6">
-        <div className="mx-auto h-px w-[180px] bg-[#D8D5CC] sm:w-[220px]" />
+      <div className="mx-auto max-w-[760px] px-4 sm:px-6">
+        <div className="mx-auto h-px w-[140px] bg-[#D8D5CC] sm:w-[220px]" />
       </div>
 
-<section id="paket" className="mx-auto max-w-[1200px] px-4 py-8 sm:px-6 sm:py-10">
+ <section id="paket" className="mx-auto max-w-[1200px] px-4 py-6 sm:px-6 sm:py-10">
         {cats.length > 0 && (
           <div className="mb-6 flex flex-wrap justify-center gap-2">
             <button
@@ -307,7 +307,7 @@ export default function WebsitePage() {
         )}
 
         {filteredAlbums.length > 0 ? (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-5">
             {filteredAlbums.map((album) => (
               <button
                 key={album.id}
@@ -315,7 +315,7 @@ export default function WebsitePage() {
                 onClick={() => { setAlbumLightboxIdx(album.id); setAlbumPhotoIdx(0); setAlbumZoom(1); }}
                 className="group relative overflow-hidden rounded-[10px] bg-white text-left ring-1 ring-[#D8D5CC]/60 transition hover:ring-[#B9AA96]/70"
               >
-                <div className="relative h-[320px] overflow-hidden bg-[#F3F2EE]">
+                <div className="relative h-[280px] overflow-hidden bg-[#F3F2EE] sm:h-[320px]">
                   {album.cover_image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={album.cover_image_url} alt={album.couple_name} loading="lazy" decoding="async" className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.06]" />
@@ -343,7 +343,7 @@ export default function WebsitePage() {
         )}
       </section>
 
-      <section className="mx-auto max-w-[1200px] px-4 py-6 sm:px-6">
+      <section className="mx-auto max-w-[1200px] px-4 py-5 sm:px-6 sm:py-6">
         <div className="relative overflow-hidden rounded-[10px] bg-[#F3F2EE]">
           <div className="absolute inset-0">
             {(() => {
@@ -355,18 +355,18 @@ export default function WebsitePage() {
             })()}
             <div className="absolute inset-0 bg-[#FCFCF9]/70 sm:bg-[#FCFCF9]/60" />
           </div>
-          <div className="relative grid grid-cols-1 gap-6 px-6 py-10 sm:grid-cols-2 sm:px-10 sm:py-14">
+          <div className="relative grid grid-cols-1 gap-6 px-4 py-8 sm:grid-cols-2 sm:px-10 sm:py-14">
             <div>
-              <h2 className="font-serif text-[28px] leading-[1.1] tracking-[-0.02em] sm:text-[34px]">{settings.info_heading}</h2>
-              <div className="mt-4 h-px w-16 bg-[#D8D5CC]" />
-              <p className="mt-4 max-w-[460px] whitespace-pre-line text-[14px] font-light leading-[1.8] text-[#1C1C1A]/80">
+              <h2 className="font-serif text-[24px] leading-[1.1] tracking-[-0.02em] sm:text-[34px]">{settings.info_heading}</h2>
+              <div className="mt-3 h-px w-12 bg-[#D8D5CC] sm:mt-4 sm:w-16" />
+              <p className="mt-3 max-w-[460px] whitespace-pre-line text-[13px] font-light leading-[1.7] text-[#1C1C1A]/80 sm:mt-4 sm:text-[14px] sm:leading-[1.8]">
                 {settings.info_text}
               </p>
               <a
                 href={`https://wa.me/${waNumber}?text=${encodeURIComponent(settings.info_button_label || "Halo Mstory.id")}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-6 inline-flex rounded-full bg-[#1C1C1A] px-6 py-2.5 text-xs font-medium uppercase tracking-[0.16em] text-white hover:bg-black"
+                className="mt-5 inline-flex rounded-full bg-[#1C1C1A] px-5 py-2.5 text-xs font-medium uppercase tracking-[0.16em] text-white hover:bg-black sm:mt-6 sm:px-6"
               >
                 {settings.info_button_label}
               </a>
@@ -376,36 +376,36 @@ export default function WebsitePage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-[1200px] px-4 py-6 sm:px-6">
+      <section className="mx-auto max-w-[1200px] px-4 py-5 sm:px-6 sm:py-6">
         <a
           href={settings.instagram_url || "https://instagram.com"}
           target="_blank"
           rel="noopener noreferrer"
-          className="block rounded-[10px] border border-[#D8D5CC]/40 bg-white p-8 text-center transition hover:border-[#B9AA96]/50 sm:p-10"
+          className="block rounded-[10px] border border-[#D8D5CC]/40 bg-white p-6 text-center transition hover:border-[#B9AA96]/50 sm:p-8 sm:py-10"
         >
-          <p className="font-serif text-[11px] tracking-[0.2em] uppercase text-[#1C1C1A]/60">Follow our Instagram</p>
-          <p className="mt-2 inline-block text-[18px] font-light tracking-wide hover:underline">@{settings.instagram_handle}</p>
+          <p className="font-serif text-[10px] tracking-[0.2em] uppercase text-[#1C1C1A]/60 sm:text-[11px]">Follow our Instagram</p>
+          <p className="mt-2 inline-block text-[16px] font-light tracking-wide hover:underline sm:text-[18px]">@{settings.instagram_handle}</p>
         </a>
       </section>
 
       <section id="contact" className="border-t border-[#D8D5CC]/30 bg-[#F3F2EE]/40">
-        <div className="mx-auto max-w-[1200px] px-6 py-10 text-center sm:py-12">
-          <h3 className="font-serif text-[20px] tracking-[-0.01em]">{settings.contact_heading}</h3>
-          <p className="mx-auto mt-2 max-w-[560px] whitespace-pre-line text-sm font-light leading-[1.7] text-[#1C1C1A]/70">
+        <div className="mx-auto max-w-[1200px] px-4 py-8 text-center sm:px-6 sm:py-12">
+          <h3 className="font-serif text-[18px] tracking-[-0.01em] sm:text-[20px]">{settings.contact_heading}</h3>
+          <p className="mx-auto mt-2 max-w-[560px] whitespace-pre-line text-[13px] font-light leading-[1.6] text-[#1C1C1A]/70 sm:text-sm sm:leading-[1.7]">
             {settings.contact_text}
           </p>
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <div className="mt-5 flex flex-col items-stretch gap-3 sm:mt-6 sm:flex-row sm:flex-wrap sm:justify-center">
             <a
               href={`https://wa.me/${waNumber}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-full bg-[#B9AA96] px-7 py-3 text-xs font-medium uppercase tracking-[0.16em] text-white hover:bg-[#6A655D]"
+              className="rounded-full bg-[#B9AA96] px-7 py-3 text-center text-xs font-medium uppercase tracking-[0.16em] text-white hover:bg-[#6A655D]"
             >
               {settings.wa_button_label}
             </a>
             <Link
               href="/"
-              className="rounded-full border border-[#D8D5CC] bg-white px-7 py-3 text-xs font-medium uppercase tracking-[0.16em] text-[#1C1C1A]/70 hover:bg-[#F3F2EE]"
+              className="rounded-full border border-[#D8D5CC] bg-white px-7 py-3 text-center text-xs font-medium uppercase tracking-[0.16em] text-[#1C1C1A]/70 hover:bg-[#F3F2EE]"
             >
               Fanspage
             </Link>
@@ -414,10 +414,10 @@ export default function WebsitePage() {
       </section>
 
       {testimonials.length > 0 && (
-        <section className="mx-auto max-w-[1200px] px-4 py-10 text-center sm:px-6 sm:py-14">
+        <section className="mx-auto max-w-[1200px] px-4 py-8 text-center sm:px-6 sm:py-14">
           <p className="font-serif text-[11px] tracking-[0.2em] uppercase text-[#1C1C1A]/60">Ulasan</p>
-          <h3 className="mt-2 font-serif text-[28px] tracking-[-0.02em]">Testimoni Pelanggan</h3>
-          <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <h3 className="mt-2 font-serif text-[24px] tracking-[-0.02em] sm:text-[28px]">Testimoni Pelanggan</h3>
+          <div className="mt-6 grid grid-cols-1 gap-3 sm:mt-8 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {testimonials.map((t) => (
               <div key={`${t.client_name}-${t.created_at}`} className="rounded-[10px] border border-[#D8D5CC]/60 bg-white p-5 text-left">
                 <p className="text-[13px] tracking-[0.12em] text-amber-500">
@@ -432,9 +432,9 @@ export default function WebsitePage() {
       )}
 
       <footer className="border-t border-[#D8D5CC]/60 bg-[#FCFCF9]">
-        <div className="mx-auto max-w-[1200px] px-6">
-          <div className="flex flex-col gap-6 py-8 sm:flex-row sm:items-start sm:justify-between">
-            <nav className="flex flex-wrap gap-x-6 gap-y-2 text-[12px] tracking-[0.14em] uppercase">
+        <div className="mx-auto max-w-[1200px] px-4 sm:px-6">
+          <div className="flex flex-col gap-4 py-6 sm:flex-row sm:items-start sm:justify-between sm:gap-6 sm:py-8">
+            <nav className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-[11px] tracking-[0.14em] uppercase sm:justify-start sm:text-[12px]">
               <Link href="/website" className="hdr-link hdr-active">
                 Home
               </Link>
@@ -445,30 +445,32 @@ export default function WebsitePage() {
                 Portfolio
               </a>
             </nav>
-            <nav className="flex flex-wrap gap-x-6 gap-y-2 text-[12px] tracking-[0.14em] uppercase">
-              <a href="#contact" className="hdr-link">
-                Contact Us
+            <div className="flex items-center justify-center gap-4 sm:justify-end">
+              <nav className="flex flex-wrap gap-x-5 gap-y-2 text-[11px] tracking-[0.14em] uppercase sm:text-[12px]">
+                <a href="#contact" className="hdr-link">
+                  Contact Us
+                </a>
+                <Link href="/website" className="hdr-link">
+                  {settings.site_name}
+                </Link>
+              </nav>
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#D8D5CC] sm:ml-4"
+              >
+                <ArrowUp className="h-4 w-4" />
               </a>
-              <Link href="/website" className="hdr-link">
-                {settings.site_name}
-              </Link>
-            </nav>
-            <a
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#D8D5CC] sm:ml-4"
-            >
-              <ArrowUp className="h-4 w-4" />
-            </a>
+            </div>
           </div>
-          <div className="flex flex-col items-center justify-between gap-3 border-t border-[#D8D5CC] py-5 sm:flex-row">
-            <p className="text-center text-xs font-light text-[#1C1C1A]/60 sm:text-left">
+          <div className="flex flex-col items-center gap-3 border-t border-[#D8D5CC] py-4 sm:flex-row sm:justify-between sm:py-5">
+            <p className="text-center text-[11px] font-light leading-relaxed text-[#1C1C1A]/60 sm:text-left sm:text-xs">
               {settings.footer_copyright} © {year} {settings.site_name}
             </p>
-            <div className="flex items-center gap-3 text-[#1C1C1A]/60">
+            <div className="flex items-center gap-2 sm:gap-3 text-[#1C1C1A]/60">
               <a
                 href={settings.instagram_url || "https://instagram.com"}
                 target="_blank"
@@ -486,15 +488,6 @@ export default function WebsitePage() {
               </a>
               <a href={youtubeUrl} target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#D8D5CC] hover:border-[#1C1C1A] hover:text-[#1C1C1A]">
                 <Youtube className="h-4 w-4" />
-              </a>
-              <a
-                href={`https://wa.me/${waNumber}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="WhatsApp"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#B9AA96] text-white hover:bg-[#1C1C1A]"
-              >
-                WA
               </a>
             </div>
           </div>
