@@ -583,7 +583,6 @@ export default function WebsitePage() {
                 className={`h-1.5 rounded-full transition-all ${i === lightboxIdx ? "w-8 bg-white" : "w-3 bg-white/40 hover:bg-white/70"}`} aria-label={`Go ${i+1}`} />
             ))}
           </div>
-          <p className="pb-3 text-center text-xs tracking-[0.14em] uppercase text-white/60">{lightboxIdx + 1} / {paddedGalleryItems.length} • klik foto untuk zoom • Esc tutup • ← → navigasi</p>
         </div>
       )}
 
@@ -645,7 +644,6 @@ export default function WebsitePage() {
                   className={`h-1.5 rounded-full transition-all ${i === albumPhotoIdx ? "w-8 bg-white" : "w-3 bg-white/40 hover:bg-white/70"}`} aria-label={`Go ${i+1}`} />
               ))}
             </div>
-            <p className="pb-3 text-center text-xs tracking-[0.14em] uppercase text-white/60">{albumPhotoIdx + 1} / {photos.length} • klik foto untuk zoom • Esc tutup • ← → navigasi</p>
           </div>
         );
       })()}
