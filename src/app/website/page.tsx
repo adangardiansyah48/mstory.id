@@ -12,7 +12,6 @@ import {
 } from "@/lib/website-content";
 import { getStoredPublicUrl, parseObjectPosition, getSiteSettings, type SiteSettings } from "@/lib/site-settings";
 import { getPackages } from "@/lib/website";
-import { BookingWizard } from "@/components/booking/booking-wizard";
 import { normalizeWhatsAppNumber } from "@/lib/utils";
 
 export default function WebsitePage() {
@@ -31,7 +30,6 @@ export default function WebsitePage() {
   const [albumPhotoIdx, setAlbumPhotoIdx] = useState(0);
   const [albumZoom, setAlbumZoom] = useState(1);
   const [testimonials, setTestimonials] = useState<{ client_name: string; rating: number; message: string; created_at: string }[]>([]);
-  const [bookingOpen, setBookingOpen] = useState(false);
   const [fanpageSettings, setFanpageSettings] = useState<SiteSettings | null>(null);
 
   useEffect(() => {
@@ -75,7 +73,6 @@ export default function WebsitePage() {
   const tiktokUrl = fanpageSettings?.tiktok_url || "https://tiktok.com";
   const facebookUrl = fanpageSettings?.facebook_url || "https://facebook.com";
   const youtubeUrl = fanpageSettings?.youtube_url || "https://youtube.com";
-  const transportFeeDefault = fanpageSettings?.transport_fee ?? 250000;
 
   const bannerSlides = (() => {
     const urls = settings.hero_slides.filter(Boolean) as string[];
@@ -185,9 +182,6 @@ export default function WebsitePage() {
             <a href="#contact" className="hdr-link">
               Contact Us
             </a>
-            <button type="button" onClick={() => setBookingOpen(true)} className="rounded-full bg-[#B9AA96] px-5 py-2 text-xs font-medium uppercase tracking-[0.16em] text-white hover:bg-[#6A655D]">
-              {settings.booking_label || "Booking Online"}
-            </button>
           </nav>
         </div>
 
@@ -227,9 +221,6 @@ export default function WebsitePage() {
               <a href="#contact" onClick={() => setNavOpen(false)} className="hdr-link py-3 text-base">
                 Contact Us
               </a>
-              <button type="button" onClick={() => { setNavOpen(false); setBookingOpen(true); }} className="mt-3 rounded-full bg-[#B9AA96] px-6 py-3 text-center text-xs font-medium uppercase tracking-[0.16em] text-white hover:bg-[#6A655D]">
-                {settings.booking_label || "Booking Online"}
-              </button>
             </div>
           </div>
         )}
@@ -412,13 +403,6 @@ export default function WebsitePage() {
             >
               {settings.wa_button_label}
             </a>
-            <button
-              type="button"
-              onClick={() => setBookingOpen(true)}
-              className="rounded-full border border-[#1C1C1A] bg-white px-7 py-3 text-xs font-medium uppercase tracking-[0.16em] text-[#1C1C1A] hover:bg-[#1C1C1A] hover:text-white"
-            >
-              {settings.booking_label || "Booking Online"}
-            </button>
             <Link
               href="/"
               className="rounded-full border border-[#D8D5CC] bg-white px-7 py-3 text-xs font-medium uppercase tracking-[0.16em] text-[#1C1C1A]/70 hover:bg-[#F3F2EE]"
@@ -518,8 +502,6 @@ export default function WebsitePage() {
       </footer>
 
       <style>{`.hdr-link{font-family: ui-serif, Georgia, serif; font-size:12.5px; letter-spacing:0.14em; text-transform:uppercase; color:#1C1C1A; opacity:0.88} .hdr-link:hover{opacity:1} .hdr-active{opacity:1} @keyframes lbIn{from{opacity:0;transform:scale(0.96)}to{opacity:1;transform:scale(1)}}`}</style>
-
-      {bookingOpen && <BookingWizard open={true} onClose={() => setBookingOpen(false)} waNumber={waNumber} transportFeeDefault={transportFeeDefault} />}
 
       {/* Album Lightbox */}
       {albumLightboxIdx !== null && (() => {
