@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Menu, X, ArrowUp, ZoomIn, ZoomOut, ChevronLeft, ChevronRight } from "lucide-react";
+import { Menu, X, ArrowUp, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Instagram, Youtube, Facebook, MessageCircle, Globe } from "lucide-react";
 import {
   getWebsiteContent,
   peekWebsiteContent,
@@ -10,8 +10,10 @@ import {
   type WebsiteContent,
   type WebsiteResolvedSettings,
 } from "@/lib/website-content";
-import { getStoredPublicUrl, parseObjectPosition, getSiteSettings } from "@/lib/site-settings";
+import { getStoredPublicUrl, parseObjectPosition, getSiteSettings, type SiteSettings } from "@/lib/site-settings";
 import { getPackages } from "@/lib/website";
+import { BookingWizard } from "@/components/booking/booking-wizard";
+import { normalizeWhatsAppNumber } from "@/lib/utils";
 
 export default function WebsitePage() {
   const cachedInitial = peekWebsiteContent();
@@ -23,32 +25,31 @@ export default function WebsitePage() {
   const [loading, setLoading] = useState(() => cachedInitial === null);
   const [slide, setSlide] = useState(0);
   const [navOpen, setNavOpen] = useState(false);
-  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
-  const [zoom, setZoom] = useState(1);
   const [navLogoUrl, setNavLogoUrl] = useState<string | null>(null);
   const [navLogoPos, setNavLogoPos] = useState({ x: 50, y: 30 });
   const [albumLightboxIdx, setAlbumLightboxIdx] = useState<number | null>(null);
   const [albumPhotoIdx, setAlbumPhotoIdx] = useState(0);
   const [albumZoom, setAlbumZoom] = useState(1);
   const [testimonials, setTestimonials] = useState<{ client_name: string; rating: number; message: string; created_at: string }[]>([]);
+  const [bookingOpen, setBookingOpen] = useState(false);
+  const [fanpageSettings, setFanpageSettings] = useState<SiteSettings | null>(null);
 
   useEffect(() => {
     (async () => {
       try {
-        const [wc, pkgs, tm] = await Promise.all([
+        const [wc, pkgs, tm, fp] = await Promise.all([
           getWebsiteContent(),
           getPackages().catch(() => ({ categories: [] as { id: number; name: string }[], subCategories: [] as never[], packages: [] as never[] })),
           fetch("/api/testimonials").then((r) => r.json()).catch(() => ({ data: [] })),
+          getSiteSettings().catch(() => null),
         ]);
         setContent(wc);
         setCats(pkgs.categories);
         setTestimonials(tm.data ?? []);
+        if (fp) setFanpageSettings(fp as SiteSettings);
         let logo: string | null = wc.settings.logo_url ?? null;
-        if (!logo) {
-          try {
-            const base = await getSiteSettings();
-            logo = getStoredPublicUrl(base.logo_url);
-          } catch { /* fallback kosong */ }
+        if (!logo && fp) {
+          try { logo = getStoredPublicUrl((fp as SiteSettings).logo_url); } catch { /* fallback kosong */ }
         }
         const full = logo ? (getStoredPublicUrl(logo) ?? logo) : null;
         setNavLogoUrl(full);
@@ -67,9 +68,14 @@ export default function WebsitePage() {
       ...WEBSITE_DEFAULTS,
       updated_at: new Date().toISOString(),
     } as WebsiteResolvedSettings);
-  const gallery = content?.gallery ?? [];
   const year = new Date().getFullYear();
   const logoUrl = navLogoUrl ?? settings.logo_url ?? null;
+  const waNumberRaw = settings.wa_number || fanpageSettings?.wa_number || "6281234567890";
+  const waNumber = normalizeWhatsAppNumber(waNumberRaw);
+  const tiktokUrl = fanpageSettings?.tiktok_url || "https://tiktok.com";
+  const facebookUrl = fanpageSettings?.facebook_url || "https://facebook.com";
+  const youtubeUrl = fanpageSettings?.youtube_url || "https://youtube.com";
+  const transportFeeDefault = fanpageSettings?.transport_fee ?? 250000;
 
   const bannerSlides = (() => {
     const urls = settings.hero_slides.filter(Boolean) as string[];
@@ -79,24 +85,6 @@ export default function WebsitePage() {
   const heroDurationMs = Math.max(1200, settings.hero_duration_ms);
 
   const filteredAlbums = (content?.albums ?? []).filter((a) => activeCategory === null || a.category_id === activeCategory);
-
-  const filteredGallery = activeCategory !== null
-    ? gallery.filter((g) => g.category_id === activeCategory)
-    : gallery;
-
-  const sourceGallery = activeCategory !== null
-    ? (filteredGallery.length > 0 ? filteredGallery : [])
-    : gallery;
-
-  const galleryItems = sourceGallery.map((g) => ({
-    title: g.title,
-    subtitle: g.subtitle,
-    href: g.link_url ?? "/website#paket",
-    img: g.image_url,
-    pos: { x: 50, y: 50 },
-  }));
-
-  const paddedGalleryItems = galleryItems;
 
   useEffect(() => {
     if (bannerSlides.length <= 1) return;
@@ -197,6 +185,9 @@ export default function WebsitePage() {
             <a href="#contact" className="hdr-link">
               Contact Us
             </a>
+            <button type="button" onClick={() => setBookingOpen(true)} className="rounded-full bg-[#B9AA96] px-5 py-2 text-xs font-medium uppercase tracking-[0.16em] text-white hover:bg-[#6A655D]">
+              {settings.booking_label || "Booking Online"}
+            </button>
           </nav>
         </div>
 
@@ -236,6 +227,9 @@ export default function WebsitePage() {
               <a href="#contact" onClick={() => setNavOpen(false)} className="hdr-link py-3 text-base">
                 Contact Us
               </a>
+              <button type="button" onClick={() => { setNavOpen(false); setBookingOpen(true); }} className="mt-3 rounded-full bg-[#B9AA96] px-6 py-3 text-center text-xs font-medium uppercase tracking-[0.16em] text-white hover:bg-[#6A655D]">
+                {settings.booking_label || "Booking Online"}
+              </button>
             </div>
           </div>
         )}
@@ -348,36 +342,11 @@ export default function WebsitePage() {
               </button>
             ))}
           </div>
-        ) : galleryItems.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:gap-5">
-            {paddedGalleryItems.map((it, idx) => (
-              <button
-                key={`${it.title}-${idx}`}
-                type="button"
-                onClick={() => { setLightboxIdx(idx); setZoom(1); }}
-                className="group relative overflow-hidden rounded-[8px] bg-white text-left ring-1 ring-[#D8D5CC]/60 transition hover:ring-[#B9AA96]/70"
-              >
-                <div className="relative h-[300px] overflow-hidden bg-[#F3F2EE] sm:h-[320px]">
-                  {it.img ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={it.img} alt={it.title} loading="lazy" decoding="async" className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.06]" style={{ objectPosition: `${it.pos.x}% ${it.pos.y}%` }} />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-[#B9AA96]">{it.title.slice(0, 1)}</div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/0 to-transparent opacity-90 transition group-hover:from-black/60" />
-                  <div className="absolute inset-x-0 bottom-0 p-5 text-center">
-                    <p className="font-serif text-[18px] tracking-[-0.01em] text-white drop-shadow">{it.title}</p>
-                    <p className="mt-1 text-[11px] font-light tracking-[0.18em] text-white/85 uppercase">{it.subtitle}</p>
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
         ) : (
           <div className="rounded-[10px] border border-dashed border-[#D8D5CC] bg-white px-6 py-14 text-center">
             <p className="font-serif text-sm tracking-[0.14em] uppercase text-[#1C1C1A]/60">Belum ada portfolio</p>
             <p className="mx-auto mt-2 max-w-[520px] text-sm font-light text-[#1C1C1A]/60">
-              Tambah album atau foto di Admin → <strong>Website</strong> → Galeri Portfolio / Album Portfolio.
+              Tambah album di Admin → <strong>Website</strong> → Album Portfolio.
             </p>
           </div>
         )}
@@ -403,7 +372,9 @@ export default function WebsitePage() {
                 {settings.info_text}
               </p>
               <a
-                href="#contact"
+                href={`https://wa.me/${waNumber}?text=${encodeURIComponent(settings.info_button_label || "Halo Mstory.id")}`}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="mt-6 inline-flex rounded-full bg-[#1C1C1A] px-6 py-2.5 text-xs font-medium uppercase tracking-[0.16em] text-white hover:bg-black"
               >
                 {settings.info_button_label}
@@ -415,17 +386,15 @@ export default function WebsitePage() {
       </section>
 
       <section className="mx-auto max-w-[1200px] px-4 py-6 sm:px-6">
-        <div className="rounded-[10px] border border-[#D8D5CC]/40 bg-white p-8 text-center sm:p-10">
+        <a
+          href={settings.instagram_url || "https://instagram.com"}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block rounded-[10px] border border-[#D8D5CC]/40 bg-white p-8 text-center transition hover:border-[#B9AA96]/50 sm:p-10"
+        >
           <p className="font-serif text-[11px] tracking-[0.2em] uppercase text-[#1C1C1A]/60">Follow our Instagram</p>
-          <a
-            href={settings.instagram_url || "https://instagram.com"}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-2 inline-block text-[18px] font-light tracking-wide hover:underline"
-          >
-            @{settings.instagram_handle}
-          </a>
-        </div>
+          <p className="mt-2 inline-block text-[18px] font-light tracking-wide hover:underline">@{settings.instagram_handle}</p>
+        </a>
       </section>
 
       <section id="contact" className="border-t border-[#D8D5CC]/30 bg-[#F3F2EE]/40">
@@ -436,13 +405,26 @@ export default function WebsitePage() {
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <a
-              href={`https://wa.me/${String(settings.wa_number || "6281234567890").replace(/\D/g, "")}`}
+              href={`https://wa.me/${waNumber}`}
               target="_blank"
               rel="noopener noreferrer"
               className="rounded-full bg-[#B9AA96] px-7 py-3 text-xs font-medium uppercase tracking-[0.16em] text-white hover:bg-[#6A655D]"
             >
               {settings.wa_button_label}
             </a>
+            <button
+              type="button"
+              onClick={() => setBookingOpen(true)}
+              className="rounded-full border border-[#1C1C1A] bg-white px-7 py-3 text-xs font-medium uppercase tracking-[0.16em] text-[#1C1C1A] hover:bg-[#1C1C1A] hover:text-white"
+            >
+              {settings.booking_label || "Booking Online"}
+            </button>
+            <Link
+              href="/"
+              className="rounded-full border border-[#D8D5CC] bg-white px-7 py-3 text-xs font-medium uppercase tracking-[0.16em] text-[#1C1C1A]/70 hover:bg-[#F3F2EE]"
+            >
+              Fanspage
+            </Link>
           </div>
         </div>
       </section>
@@ -508,19 +490,25 @@ export default function WebsitePage() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Instagram"
-                className="hover:text-[#1C1C1A]"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#D8D5CC] hover:border-[#1C1C1A] hover:text-[#1C1C1A]"
               >
-                IG
+                <Instagram className="h-4 w-4" />
               </a>
-              <a href="https://tiktok.com" target="_blank" rel="noopener noreferrer" aria-label="Tiktok" className="hover:text-[#1C1C1A]">
+              <a href={tiktokUrl} target="_blank" rel="noopener noreferrer" aria-label="Tiktok" className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#D8D5CC] hover:border-[#1C1C1A] hover:text-[#1C1C1A]">
                 TT
               </a>
+              <a href={facebookUrl} target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#D8D5CC] hover:border-[#1C1C1A] hover:text-[#1C1C1A]">
+                <Facebook className="h-4 w-4" />
+              </a>
+              <a href={youtubeUrl} target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#D8D5CC] hover:border-[#1C1C1A] hover:text-[#1C1C1A]">
+                <Youtube className="h-4 w-4" />
+              </a>
               <a
-                href={`https://wa.me/${String(settings.wa_number || "").replace(/\D/g, "")}`}
+                href={`https://wa.me/${waNumber}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="WhatsApp"
-                className="hover:text-[#1C1C1A]"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#B9AA96] text-white hover:bg-[#1C1C1A]"
               >
                 WA
               </a>
@@ -531,60 +519,7 @@ export default function WebsitePage() {
 
       <style>{`.hdr-link{font-family: ui-serif, Georgia, serif; font-size:12.5px; letter-spacing:0.14em; text-transform:uppercase; color:#1C1C1A; opacity:0.88} .hdr-link:hover{opacity:1} .hdr-active{opacity:1} @keyframes lbIn{from{opacity:0;transform:scale(0.96)}to{opacity:1;transform:scale(1)}}`}</style>
 
-      {lightboxIdx !== null && paddedGalleryItems[lightboxIdx] && (
-        <div
-          className="fixed inset-0 z-[100] flex flex-col bg-black/85 backdrop-blur-sm"
-          onClick={() => { setLightboxIdx(null); setZoom(1); }}
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="flex items-center justify-between px-4 py-3 text-white sm:px-6" onClick={(e) => e.stopPropagation()}>
-            <p className="truncate font-serif text-sm tracking-wide">
-              {paddedGalleryItems[lightboxIdx].title} <span className="font-sans text-xs opacity-60">— {paddedGalleryItems[lightboxIdx].subtitle}</span>
-            </p>
-            <div className="flex items-center gap-2">
-              <button type="button" onClick={() => setZoom((z) => Math.max(1, +(z - 0.25).toFixed(2)))} className="rounded-full bg-white/15 p-2 hover:bg-white/25" aria-label="Zoom out"><ZoomOut className="h-4 w-4" /></button>
-              <button type="button" onClick={() => setZoom((z) => Math.min(3, +(z + 0.25).toFixed(2)))} className="rounded-full bg-white/15 p-2 hover:bg-white/25" aria-label="Zoom in"><ZoomIn className="h-4 w-4" /></button>
-              <button type="button" onClick={() => { setLightboxIdx(null); setZoom(1); }} className="rounded-full bg-white p-2 text-black hover:bg-zinc-100" aria-label="Close"><X className="h-4 w-4" /></button>
-            </div>
-          </div>
-
-          <div className="relative flex flex-1 items-center justify-center overflow-hidden p-4 sm:p-8" onClick={(e) => e.stopPropagation()}>
-            <button
-              type="button"
-              onClick={() => { setLightboxIdx((i) => i !== null ? (i - 1 + paddedGalleryItems.length) % paddedGalleryItems.length : i); setZoom(1); }}
-              className="absolute left-2 z-10 rounded-full bg-white/15 p-2 text-white backdrop-blur hover:bg-white/25 sm:left-6"
-              aria-label="Prev"
-            ><ChevronLeft className="h-6 w-6" /></button>
-
-            <div className="max-h-[78vh] max-w-[92vw] overflow-auto sm:max-h-[82vh]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={paddedGalleryItems[lightboxIdx].img}
-                alt={paddedGalleryItems[lightboxIdx].title}
-                className="max-h-[78vh] max-w-[92vw] cursor-zoom-in select-none rounded-[8px] object-contain shadow-2xl transition duration-300 will-change-transform sm:max-h-[82vh]"
-                style={{ transform: `scale(${zoom})`, animation: "lbIn 260ms ease-out" }}
-                onClick={() => setZoom((z) => (z >= 2 ? 1 : +(z + 0.5).toFixed(2)))}
-                draggable={false}
-              />
-            </div>
-
-            <button
-              type="button"
-              onClick={() => { setLightboxIdx((i) => i !== null ? (i + 1) % paddedGalleryItems.length : i); setZoom(1); }}
-              className="absolute right-2 z-10 rounded-full bg-white/15 p-2 text-white backdrop-blur hover:bg-white/25 sm:right-6"
-              aria-label="Next"
-            ><ChevronRight className="h-6 w-6" /></button>
-          </div>
-
-          <div className="flex justify-center gap-2 px-4 pb-4" onClick={(e) => e.stopPropagation()}>
-            {paddedGalleryItems.slice(0, 12).map((it, i) => (
-              <button key={i} type="button" onClick={() => { setLightboxIdx(i); setZoom(1); }}
-                className={`h-1.5 rounded-full transition-all ${i === lightboxIdx ? "w-8 bg-white" : "w-3 bg-white/40 hover:bg-white/70"}`} aria-label={`Go ${i+1}`} />
-            ))}
-          </div>
-        </div>
-      )}
+      {bookingOpen && <BookingWizard open={true} onClose={() => setBookingOpen(false)} waNumber={waNumber} transportFeeDefault={transportFeeDefault} />}
 
       {/* Album Lightbox */}
       {albumLightboxIdx !== null && (() => {

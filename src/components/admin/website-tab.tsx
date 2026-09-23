@@ -9,17 +9,12 @@ import {
 } from "@/lib/site-settings";
 import {
   WebsiteSettingsRow,
-  WebsiteGalleryRow,
   WebsiteAlbumRow,
   WebsiteAlbumPhotoRow,
   fetchWebsiteSettingsRow,
-  fetchWebsiteGalleryRows,
   fetchWebsiteAlbums,
   fetchWebsiteAlbumPhotos,
   updateWebsiteSettings,
-  addWebsiteGalleryItem,
-  updateWebsiteGalleryItem,
-  deleteWebsiteGalleryItem,
   uploadWebsiteImage,
   deleteWebsiteImage,
   addWebsiteAlbum,
@@ -31,7 +26,7 @@ import {
   WEBSITE,
 } from "@/lib/website-content";
 import { getPackages } from "@/lib/website";
-import { Check, ImagePlus, Loader2, Trash2, X, ArrowUp, ArrowDown, Camera } from "lucide-react";
+import { Check, ImagePlus, Loader2, Trash2, X, Camera } from "lucide-react";
 
 function notify(icon: "success" | "error" | "warning" | "info", title: string, text?: string) {
   void Swal.fire({ icon, title, text, timer: icon === "success" ? 1600 : undefined, showConfirmButton: icon !== "success" });
@@ -51,13 +46,10 @@ function confirmDelete(title: string, text: string) {
 
 export function WebsiteTab() {
   const [row, setRow] = useState<WebsiteSettingsRow | null>(null);
-  const [gallery, setGallery] = useState<WebsiteGalleryRow[]>([]);
   const [cats, setCats] = useState<{ id: number; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
-  const [newGalleryCategory, setNewGalleryCategory] = useState<number | null>(null);
-  const [filterCategory, setFilterCategory] = useState<number | null>(null);
   const [albums, setAlbums] = useState<WebsiteAlbumRow[]>([]);
   const [albumPhotos, setAlbumPhotos] = useState<WebsiteAlbumPhotoRow[]>([]);
   const [albumUploading, setAlbumUploading] = useState<string | null>(null);
@@ -73,18 +65,15 @@ export function WebsiteTab() {
     let cancelled = false;
     (async () => {
       try {
-        const [settings, galleryRows, pkgs, albumRows] = await Promise.all([
+        const [settings, pkgs, albumRows] = await Promise.all([
           fetchWebsiteSettingsRow(),
-          fetchWebsiteGalleryRows(),
           getPackages(),
           fetchWebsiteAlbums(),
         ]);
         if (!cancelled) {
           setRow(settings);
-          setGallery(galleryRows);
           setCats(pkgs.categories);
           setAlbums(albumRows);
-          // load all photos
           if (albumRows.length > 0) {
             const allPhotos = await fetchWebsiteAlbumPhotos();
             if (!cancelled) setAlbumPhotos(allPhotos);
@@ -190,65 +179,6 @@ function field<K extends keyof WebsiteSettingsRow>(key: K, value: WebsiteSetting
     await deleteWebsiteImage(row.info_image);
     setRow({ ...row, info_image: null });
     notify("success", "Foto info banner dihapus.");
-  }
-
-  async function handleGalleryUpload(file: File) {
-    setUploading("gallery");
-    try {
-      const { url, error } = await uploadWebsiteImage(file, WEBSITE.GALLERY_FOLDER);
-      if (error || !url) { notify("error", "Upload gagal", error ?? "Gagal upload galeri."); return; }
-      const name = file.name.replace(/\.[^.]+$/, "").slice(0, 22) || "Gallery";
-      const { ok, error: err2 } = await addWebsiteGalleryItem({ title: name, subtitle: "portfolio", image_path: url, category_id: newGalleryCategory ?? null });
-      if (!ok) { notify("error", "Gagal tambah galeri", err2 ?? "unknown"); return; }
-      const galleryRows = await fetchWebsiteGalleryRows();
-      setGallery(galleryRows);
-      setNewGalleryCategory(null);
-      notify("success", `Foto galeri "${name}" berhasil ditambahkan.`);
-    } finally { setUploading(null); }
-  }
-
-  async function handleGalleryDelete(id: number, imageUrl: string) {
-    const r = await confirmDelete("Hapus item galeri?", "Foto dan data galeri akan dihapus.");
-    if (!r.isConfirmed) return;
-    await deleteWebsiteImage(imageUrl);
-    const { ok, error } = await deleteWebsiteGalleryItem(id);
-    if (!ok) { notify("error", "Gagal hapus", error ?? "unknown"); return; }
-    setGallery((prev) => prev.filter((g) => g.id !== id));
-    notify("success", "Item galeri dihapus.");
-  }
-
-  async function handleGalleryMove(id: number, direction: 1 | -1) {
-    const visible = filterCategory === null ? gallery : gallery.filter((g) => g.category_id === filterCategory);
-    const vIdx = visible.findIndex((g) => g.id === id);
-    const targetVisible = visible[vIdx + direction];
-    if (!targetVisible) return;
-    const idx = gallery.findIndex((g) => g.id === id);
-    const tIdx = gallery.findIndex((g) => g.id === targetVisible.id);
-    if (idx === -1 || tIdx === -1) return;
-    const a = gallery[idx].sort_order;
-    const b = gallery[tIdx].sort_order;
-    const r1 = await updateWebsiteGalleryItem(id, { sort_order: b });
-    const r2 = await updateWebsiteGalleryItem(targetVisible.id, { sort_order: a });
-    if (!r1.ok || !r2.ok) {
-      notify("error", "Gagal urutkan", r1.error ?? r2.error ?? "unknown");
-      return;
-    }
-    setGallery((prev) => {
-      const next = [...prev];
-      const i = next.findIndex((g) => g.id === id);
-      const j = next.findIndex((g) => g.id === targetVisible.id);
-      if (i === -1 || j === -1) return prev;
-      next[i] = { ...next[i], sort_order: b };
-      next[j] = { ...next[j], sort_order: a };
-      return next.sort((x, y) => x.sort_order - y.sort_order);
-    });
-  }
-
-  async function handleGalleryToggle(id: number, isActive: boolean) {
-    const { ok, error } = await updateWebsiteGalleryItem(id, { is_active: isActive });
-    if (!ok) { notify("error", "Gagal toggle", error ?? "unknown"); return; }
-    setGallery((prev) => prev.map((g) => (g.id === id ? { ...g, is_active: isActive } : g)));
-    clearWebsiteContentCache();
   }
 
   if (loading) {
@@ -383,6 +313,21 @@ function field<K extends keyof WebsiteSettingsRow>(key: K, value: WebsiteSetting
             <input type="text" value={row.wa_button_label ?? ""} onChange={(e) => field("wa_button_label", e.target.value)}
               className="w-full rounded-xl border border-white/50 bg-white/60 px-3 py-2 text-sm text-[var(--ink)] outline-none backdrop-blur-md transition-all focus:border-[var(--brand)] focus:bg-white/85 focus:ring-2 focus:ring-[var(--brand)]/20" />
           </Field>
+          <Field label="Nomor WhatsApp (tanpa +, cth 6281234567890)" hint="Link WA di semua tombol. Kosong = fallback fanspage">
+            <input type="text" value={row.wa_number ?? ""} onChange={(e) => field("wa_number", e.target.value.replace(/[^0-9]/g, ""))}
+              placeholder="6281234567890"
+              className="w-full rounded-xl border border-white/50 bg-white/60 px-3 py-2 text-sm text-[var(--ink)] outline-none backdrop-blur-md transition-all focus:border-[var(--brand)] focus:bg-white/85 focus:ring-2 focus:ring-[var(--brand)]/20" />
+          </Field>
+          <Field label="Label Booking">
+            <input type="text" value={row.booking_label ?? ""} onChange={(e) => field("booking_label", e.target.value)}
+              placeholder="Booking Online"
+              className="w-full rounded-xl border border-white/50 bg-white/60 px-3 py-2 text-sm text-[var(--ink)] outline-none backdrop-blur-md transition-all focus:border-[var(--brand)] focus:bg-white/85 focus:ring-2 focus:ring-[var(--brand)]/20" />
+          </Field>
+          <Field label="URL Booking (opsional)">
+            <input type="text" value={row.booking_url ?? ""} onChange={(e) => field("booking_url", e.target.value)}
+              placeholder="/?booking=true atau https://..."
+              className="w-full rounded-xl border border-white/50 bg-white/60 px-3 py-2 text-sm text-[var(--ink)] outline-none backdrop-blur-md transition-all focus:border-[var(--brand)] focus:bg-white/85 focus:ring-2 focus:ring-[var(--brand)]/20" />
+          </Field>
         </div>
       </div>
 
@@ -395,97 +340,6 @@ function field<K extends keyof WebsiteSettingsRow>(key: K, value: WebsiteSetting
           <input type="text" value={row.footer_copyright ?? ""} onChange={(e) => field("footer_copyright", e.target.value)}
             className="w-full rounded-xl border border-white/50 bg-white/60 px-3 py-2 text-sm text-[var(--ink)] outline-none backdrop-blur-md transition-all focus:border-[var(--brand)] focus:bg-white/85 focus:ring-2 focus:ring-[var(--brand)]/20" />
         </Field>
-      </div>
-
-      {/* === GALERI PORTFOLIO === */}
-      <div className="rounded-2xl p-5 glass">
-        <h3 className="mb-4 font-serif text-sm font-semibold text-[var(--ink)]">
-          Galeri Portfolio (Grid #paket)
-        </h3>
-        <p className="mb-4 text-[11px] text-[var(--muted-3)]">
-          Upload & urutkan item yang tampil di grid 3×3 halaman /website. Tentukan kategori foto (Wedding / Prewedding / Engagement / Event / WCC) — kategori digunakan untuk filter di menu Portfolio. Edit nama & subtitle, klik Simpan untuk menyimpan.
-        </p>
-
-        {/* Filter per kategori */}
-        {cats.length > 0 && (
-          <div className="mb-4 flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--muted)]">Filter:</span>
-            <button
-              type="button"
-              onClick={() => setFilterCategory(null)}
-              className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest transition ${filterCategory === null ? "bg-[var(--brand)] text-white" : "border border-[var(--line)] bg-white text-[var(--muted)] hover:border-[var(--brand)]"}`}
-            >
-              Semua
-            </button>
-            {cats.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => setFilterCategory(c.id)}
-                className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest transition ${filterCategory === c.id ? "bg-[var(--brand)] text-white" : "border border-[var(--line)] bg-white text-[var(--muted)] hover:border-[var(--brand)]"}`}
-              >
-                {c.name}
-              </button>
-            ))}
-          </div>
-        )}
-
-        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end">
-          <label className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--line)] py-3 text-[11px] font-semibold text-[var(--muted)] hover:border-[var(--brand)] hover:text-[var(--brand)]">
-            {uploading === "gallery" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
-            Tambah foto galeri
-            <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleGalleryUpload(f); e.target.value = ""; }} />
-          </label>
-          <select
-            value={newGalleryCategory ?? ""}
-            onChange={(e) => setNewGalleryCategory(e.target.value ? Number(e.target.value) : null)}
-            className="rounded-lg border border-[var(--line)] bg-white px-3 py-2.5 text-xs font-semibold text-[var(--muted)] outline-none focus:border-[var(--brand)]"
-          >
-            <option value="">Kategori (opsional)</option>
-            {cats.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-        </div>
-        {(() => { const visibleGallery = gallery.filter((g) => filterCategory === null || g.category_id === filterCategory); return (
-        <div className="space-y-2">
-          {visibleGallery.map((g, idx) => (
-            <div key={g.id} className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-white p-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={getStoredPublicUrl(g.image_path) ?? g.image_path} alt={g.title} className="h-14 w-14 shrink-0 rounded object-cover" />
-              <div className="flex-1 space-y-1">
-                <input type="text" value={g.title} onChange={(e) => { const v = e.target.value; setGallery((prev) => prev.map((r) => r.id === g.id ? { ...r, title: v } : r)); }}
-                  className="w-full rounded border border-[var(--line)] bg-white px-2 py-1 text-xs text-[var(--ink)] outline-none focus:border-[var(--brand)]" />
-                <input type="text" value={g.subtitle} onChange={(e) => { const v = e.target.value; setGallery((prev) => prev.map((r) => r.id === g.id ? { ...r, subtitle: v } : r)); }}
-                  className="w-full rounded border border-[var(--line)] bg-white px-2 py-1 text-xs text-[var(--ink)] outline-none focus:border-[var(--brand)]" />
-                <select
-                  value={g.category_id ?? ""}
-                  onChange={(e) => { const v = e.target.value ? Number(e.target.value) : null; setGallery((prev) => prev.map((r) => r.id === g.id ? { ...r, category_id: v } : r)); }}
-                  className="w-full rounded border border-[var(--line)] bg-white px-2 py-1 text-xs text-[var(--ink)] outline-none focus:border-[var(--brand)]"
-                >
-                  <option value="">Tanpa Kategori</option>
-                  {cats.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-                <input type="text" value={g.link_url ?? ""} onChange={(e) => { const v = e.target.value; setGallery((prev) => prev.map((r) => r.id === g.id ? { ...r, link_url: v } : r)); }}
-                  placeholder="link (opsional)"
-                  className="w-full rounded border border-[var(--line)] bg-white px-2 py-1 text-xs text-[var(--ink)] outline-none focus:border-[var(--brand)] placeholder:text-[var(--muted-3)]" />
-              </div>
-              <div className="flex flex-col items-center gap-1">
-                <label className="flex items-center gap-1 text-[10px] text-[var(--muted)]">
-                  <input type="checkbox" checked={g.is_active} onChange={(e) => handleGalleryToggle(g.id, e.target.checked)} />
-                  aktif
-                </label>
-                <button type="button" onClick={async () => { const { ok, error } = await updateWebsiteGalleryItem(g.id, { title: g.title, subtitle: g.subtitle, link_url: g.link_url, category_id: g.category_id ?? null }); if (ok) notify("success", `Item "${g.title}" disimpan.`); else notify("error", "Gagal simpan", error ?? "unknown"); }} className="rounded border border-[var(--line)] px-2 py-0.5 text-[10px] font-semibold text-[var(--muted)] hover:bg-[var(--soft)]">Simpan</button>
-              </div>
-              <button type="button" onClick={() => handleGalleryMove(g.id, -1)} disabled={idx === 0} className="rounded p-1 hover:bg-[var(--soft)] disabled:opacity-30"><ArrowUp className="h-3 w-3" /></button>
-              <button type="button" onClick={() => handleGalleryMove(g.id, 1)} disabled={idx === visibleGallery.length - 1} className="rounded p-1 hover:bg-[var(--soft)] disabled:opacity-30"><ArrowDown className="h-3 w-3" /></button>
-              <button type="button" onClick={() => handleGalleryDelete(g.id, g.image_path)} className="rounded bg-red-50 p-1 text-red-500 hover:bg-red-100"><Trash2 className="h-3 w-3" /></button>
-            </div>
-          ))}
-        </div>
-        );})()}
       </div>
 
       <div className="flex items-center gap-3 pt-1">
