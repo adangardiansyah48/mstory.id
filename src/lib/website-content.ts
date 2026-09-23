@@ -412,8 +412,8 @@ export async function uploadWebsiteImage(
   file: File,
   folder: "hero" | "info" | "gallery" | "albums/covers" | "albums/photos",
 ): Promise<{ url?: string; error?: string }> {
-  const url = await compressAndUploadImage(file, WEBSITE_BUCKET, folder);
-  if (!url) return { error: "Upload gambar gagal." };
+  const { url, error } = await compressAndUploadImage(file, WEBSITE_BUCKET, folder);
+  if (!url) return { error: error ?? "Upload gambar gagal." };
   return { url };
 }
 

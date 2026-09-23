@@ -97,15 +97,11 @@ export async function getGalleryImages(): Promise<{ id: string; name: string; ur
   }));
 }
 
-/**
- * Kompress gambar (WebP, maxBytes kecil, tetap jelas) lalu unggah ke bucket.
- * Folder yang benar: website/HERO | INFO | GALLERY — bukan di root.
- */
 export async function compressAndUploadImage(
   file: File,
   bucket: string,
   folder: string
-): Promise<string | null> {
+): Promise<{ url: string | null; error?: string }> {
   const { compressImage, getWebsiteCompressOpts } = await import("@/lib/image-compress");
   const opts = bucket === WEBSITE_BUCKET
     ? getWebsiteCompressOpts(folder)
@@ -113,11 +109,15 @@ export async function compressAndUploadImage(
   let payload: File;
   try {
     payload = await compressImage(file, opts);
-  } catch {
-    return null;
+  } catch (e) {
+    return { url: null, error: e instanceof Error ? e.message : "Gagal kompres gambar." };
   }
   const supabase = createClient();
-  if (!supabase) return null;
+  if (!supabase) return { url: null, error: "Supabase tidak dikonfigurasi." };
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) return { url: null, error: "Sesi login habis — silakan login ulang lalu coba lagi." };
   const timestamp = Date.now();
   const rand = Math.random().toString(36).slice(2, 6);
   const base = payload.name.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9-_]+/g, "-").slice(0, 40) || "img";
@@ -131,12 +131,12 @@ export async function compressAndUploadImage(
     });
     if (upErr) {
       console.error("Storage upload error:", upErr);
-      return null;
+      return { url: null, error: upErr.message };
     }
     const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-    return data.publicUrl;
+    return { url: data.publicUrl };
   } catch (err) {
     console.error("Upload exception:", err);
-    return null;
+    return { url: null, error: err instanceof Error ? err.message : "Upload gagal." };
   }
 }
