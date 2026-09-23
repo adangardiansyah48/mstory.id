@@ -108,3 +108,15 @@ export const WEBSITE_FOLDERS = {
   ALBUM_PHOTOS: "albums/photos",
   GALLERY: "gallery",
 } as const;
+
+export const WEBSITE_COMPRESS_OPTS: Record<string, CompressOpts> = {
+  hero: { maxWidth: 1600, maxHeight: 900, quality: 0.68, maxBytes: 180 * 1024 },
+  info: { maxWidth: 1600, maxHeight: 900, quality: 0.65, maxBytes: 160 * 1024 },
+  gallery: { maxWidth: 1280, maxHeight: 1280, quality: 0.62, maxBytes: 140 * 1024 },
+  "albums/covers": { maxWidth: 800, maxHeight: 800, quality: 0.65, maxBytes: 110 * 1024 },
+  "albums/photos": { maxWidth: 1600, maxHeight: 1200, quality: 0.62, maxBytes: 150 * 1024 },
+};
+
+export function getWebsiteCompressOpts(folder: string): CompressOpts {
+  return WEBSITE_COMPRESS_OPTS[folder] ?? DEFAULTS;
+}

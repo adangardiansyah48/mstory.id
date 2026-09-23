@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   getStoredPublicUrl,
+  parseObjectPosition,
+  withPosition,
 } from "@/lib/site-settings";
 import {
   WebsiteSettingsRow,
@@ -28,7 +30,7 @@ import {
   WEBSITE,
 } from "@/lib/website-content";
 import { getPackages } from "@/lib/website";
-import { Check, ImagePlus, Loader2, Trash2, X, ArrowUp, ArrowDown } from "lucide-react";
+import { Check, ImagePlus, Loader2, Trash2, X, ArrowUp, ArrowDown, Camera } from "lucide-react";
 
 export function WebsiteTab() {
   const [row, setRow] = useState<WebsiteSettingsRow | null>(null);
@@ -45,6 +47,11 @@ export function WebsiteTab() {
   const [albumUploading, setAlbumUploading] = useState<string | null>(null);
   const [newAlbum, setNewAlbum] = useState({ title: "", couple_name: "", category_id: null as number | null });
   const [expandedAlbum, setExpandedAlbum] = useState<number | null>(null);
+  const [heroBanners, setHeroBanners] = useState<{ url: string | null; pos: { x: number; y: number } }[]>([
+    { url: null, pos: { x: 50, y: 50 } },
+    { url: null, pos: { x: 50, y: 50 } },
+    { url: null, pos: { x: 50, y: 50 } },
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -66,6 +73,12 @@ export function WebsiteTab() {
             const allPhotos = await fetchWebsiteAlbumPhotos();
             if (!cancelled) setAlbumPhotos(allPhotos);
           }
+          const slides = settings?.hero_slides ?? [];
+          const padded = [...slides, ...Array(Math.max(0, 3 - slides.length)).fill(null)].slice(0, 3);
+          setHeroBanners(padded.map((url: string | null) => ({
+            url: url ?? null,
+            pos: parseObjectPosition(url, 50, 50),
+          })));
         }
       } catch (e) {
         console.error("Gagal load website content:", e);
@@ -76,58 +89,72 @@ export function WebsiteTab() {
     return () => { cancelled = true; };
   }, []);
 
-  function field<K extends keyof WebsiteSettingsRow>(key: K, value: WebsiteSettingsRow[K]) {
+function field<K extends keyof WebsiteSettingsRow>(key: K, value: WebsiteSettingsRow[K]) {
     setRow((prev) => (prev ? { ...prev, [key]: value } : prev));
   }
 
-  function handleHeroMove(idx: number, direction: 1 | -1) {
-    if (!row) return;
-    const next = [...(row.hero_slides ?? [])];
-    const target = idx + direction;
-    if (target < 0 || target >= next.length) return;
-    const tmp = next[idx];
-    next[idx] = next[target];
-    next[target] = tmp;
-    setRow({ ...row, hero_slides: next });
+  function syncHeroSlides(
+    banners: { url: string | null; pos: { x: number; y: number } }[],
+  ) {
+    const slides = banners
+      .filter((b) => b.url)
+      .map((b) => withPosition(b.url!, b.pos.x, b.pos.y));
+    setRow((prev) => (prev ? { ...prev, hero_slides: slides } : prev));
+  }
+
+  async function handleHeroSlotUpload(slot: number, file: File) {
+    setUploading(`hero-${slot}`);
+    setMessage("");
+    try {
+      const { url, error } = await uploadWebsiteImage(file, WEBSITE.HERO_FOLDER);
+      if (error || !url) {
+        setMessage(error ?? "Upload gagal. Cek koneksi atau izin bucket storage.");
+        return;
+      }
+      const next = heroBanners.map((b, i) =>
+        i === slot ? { url, pos: { x: 50, y: 50 } } : b,
+      );
+      setHeroBanners(next);
+      syncHeroSlides(next);
+      setMessage(`Foto hero ${slot + 1} berhasil diunggah.`);
+    } catch (err) {
+      setMessage(`Upload gagal: ${err instanceof Error ? err.message : "terjadi kesalahan"}`);
+    } finally {
+      setUploading(null);
+    }
+  }
+
+  async function handleHeroSlotRemove(slot: number) {
+    const url = heroBanners[slot]?.url;
+    if (url) await deleteWebsiteImage(url);
+    const next = heroBanners.map((b, i) =>
+      i === slot ? { url: null, pos: { x: 50, y: 50 } } : b,
+    );
+    setHeroBanners(next);
+    syncHeroSlides(next);
+    setMessage(`Foto hero ${slot + 1} dihapus.`);
+  }
+
+  function handleHeroPositionChange(slot: number, x: number, y: number) {
+    const next = heroBanners.map((b, i) =>
+      i === slot ? { ...b, pos: { x, y } } : b,
+    );
+    setHeroBanners(next);
+    syncHeroSlides(next);
   }
 
   async function handleSave() {
     if (!row) return;
     setSaving(true);
     setMessage("");
-    const { ok, error } = await updateWebsiteSettings(row);
+    const slides = heroBanners
+      .filter((b) => b.url)
+      .map((b) => withPosition(b.url!, b.pos.x, b.pos.y));
+    const payload = { ...row, hero_slides: slides };
+    const { ok, error } = await updateWebsiteSettings(payload);
     setSaving(false);
     if (ok) setMessage("Konten website berhasil disimpan.");
     else setMessage(`Gagal menyimpan: ${error ?? "terjadi kesalahan"}`);
-  }
-
-  async function handleHeroUpload(file: File) {
-    setUploading("hero");
-    setMessage("");
-    try {
-      if ((row?.hero_slides ?? []).length >= 3) {
-        setMessage("Hero sudah 3 slide — hapus salah satu dulu.");
-        return;
-      }
-      const { url, error } = await uploadWebsiteImage(file, WEBSITE.HERO_FOLDER);
-      if (error || !url) { 
-        setMessage(error ?? "Upload gagal. Cek koneksi atau izin bucket storage."); 
-        return; 
-      }
-      const next = [...(row?.hero_slides ?? []), url].slice(0, 3);
-      setRow((prev) => (prev ? { ...prev, hero_slides: next } : prev));
-      setMessage(`Slide hero ke-${next.length} berhasil diunggah.`);
-    } finally { setUploading(null); }
-  }
-
-  async function handleHeroRemove(idx: number) {
-    if (!row) return;
-    const url = (row.hero_slides ?? [])[idx];
-    if (!url) return;
-    await deleteWebsiteImage(url);
-    const next = (row.hero_slides ?? []).filter((_, i) => i !== idx);
-    setRow({ ...row, hero_slides: next });
-    setMessage("Slide hero dihapus.");
   }
 
   async function handleInfoUpload(file: File) {
@@ -246,26 +273,12 @@ export function WebsiteTab() {
           </Field>
 
           <div>
-            <span className="mb-1 block text-xs font-semibold text-[var(--muted)]">Slide Hero (3 foto — slider di #hero)</span>
-            <p className="mb-2 text-[11px] text-[var(--muted-3)]">Upload tepat 3 foto, auto-slide 2 detik di hero. Max 3.</p>
-            <div className="flex flex-col gap-2">
-              {(row.hero_slides ?? []).map((url, idx) => (
-                <div key={idx} className="relative flex items-center gap-2 rounded-lg border border-[var(--line)] bg-white p-2">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={url} alt={`hero ${idx + 1}`} className="h-14 w-14 shrink-0 rounded object-cover" />
-                  <span className="flex-1 truncate text-[11px] text-[var(--muted)]">{url.split("/").pop()?.split("?").shift()}</span>
-                  <button type="button" onClick={() => handleHeroMove(idx, -1)} disabled={idx === 0} className="rounded p-1 hover:bg-[var(--soft)] disabled:opacity-30"><ArrowUp className="h-3 w-3" /></button>
-                  <button type="button" onClick={() => handleHeroMove(idx, 1)} disabled={idx === ((row.hero_slides ?? []).length) - 1} className="rounded p-1 hover:bg-[var(--soft)] disabled:opacity-30"><ArrowDown className="h-3 w-3" /></button>
-                  <button type="button" onClick={() => handleHeroRemove(idx)} className="rounded bg-red-50 p-1 text-red-500 hover:bg-red-100"><X className="h-3 w-3" /></button>
-                </div>
+            <span className="mb-1 block text-xs font-semibold text-[var(--muted)]">Slide Hero (3 slot tetap)</span>
+            <p className="mb-3 text-[11px] text-[var(--muted-3)]">3 slot upload hero tetap — upload atau ganti foto di masing-masing slot. Klik gambar untuk mengganti, geser untuk atur posisi tampilan.</p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {heroBanners.map((banner, idx) => (
+                <BannerSlotHero key={idx} slot={idx} banner={banner} uploading={uploading === `hero-${idx}`} onUpload={(f) => handleHeroSlotUpload(idx, f)} onRemove={() => handleHeroSlotRemove(idx)} onPosition={(x, y) => handleHeroPositionChange(idx, x, y)} />
               ))}
-              {(row.hero_slides ?? []).length < 3 && (
-                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--line)] py-3 text-[11px] font-semibold text-[var(--muted)] hover:border-[var(--brand)] hover:text-[var(--brand)]">
-                  {uploading === "hero" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
-                  {(row.hero_slides ?? []).length === 0 ? "Tambah slide hero (1/3)" : `Tambah slide hero (${(row.hero_slides?.length ?? 0) + 1}/3)`}
-                  <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleHeroUpload(f); e.target.value = ""; }} />
-                </label>
-              )}
             </div>
           </div>
 
@@ -690,5 +703,116 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
       {children}
       {hint && <span className="mt-1 block text-[11px] text-[var(--muted-3)]">{hint}</span>}
     </label>
+  );
+}
+
+function BannerSlotHero({
+  slot,
+  banner,
+  uploading,
+  onUpload,
+  onRemove,
+  onPosition,
+}: {
+  slot: number;
+  banner: { url: string | null; pos: { x: number; y: number } };
+  uploading: boolean;
+  onUpload: (file: File) => void;
+  onRemove: () => void;
+  onPosition: (x: number, y: number) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function updateFromPointer(e: React.PointerEvent<HTMLDivElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+    onPosition(x, y);
+  }
+
+  return (
+    <div className="rounded-xl border border-[var(--line)] bg-white p-3">
+      <span className="text-[11px] font-semibold text-[var(--muted-3)]">Foto {slot + 1}</span>
+      <div
+        className="relative mt-2 h-28 w-full cursor-grab touch-none select-none overflow-hidden rounded-lg border border-dashed border-[var(--line)] bg-[var(--soft)]"
+        onPointerDown={(e) => {
+          if (!banner.url) return;
+          e.currentTarget.setPointerCapture(e.pointerId);
+          updateFromPointer(e);
+        }}
+        onPointerMove={(e) => {
+          if (e.currentTarget.hasPointerCapture(e.pointerId)) updateFromPointer(e);
+        }}
+      >
+        {uploading ? (
+          <div className="flex h-full items-center justify-center">
+            <Loader2 className="h-5 w-5 animate-spin text-[var(--muted)]" />
+          </div>
+        ) : banner.url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={banner.url}
+            alt={`Hero ${slot + 1}`}
+            className="pointer-events-none h-full w-full object-cover"
+            style={{ objectPosition: `${banner.pos.x}% ${banner.pos.y}%` }}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="flex h-full w-full flex-col items-center justify-center gap-1 text-[var(--muted)] hover:text-[var(--brand)]"
+          >
+            <ImagePlus className="h-5 w-5" />
+            <span className="text-[10px] font-semibold">Tambah</span>
+          </button>
+        )}
+      </div>
+      <div className="mt-2 flex items-center justify-between gap-1">
+        {banner.url ? (
+          <>
+            <p className="text-[9px] text-[var(--muted-3)]">
+              Geser · {Math.round(banner.pos.x)}%, {Math.round(banner.pos.y)}%
+            </p>
+            <div className="flex gap-1">
+              <button
+                type="button"
+                onClick={() => inputRef.current?.click()}
+                className="rounded-md border border-[var(--line)] bg-white px-2 py-0.5 text-[10px] font-semibold text-[var(--muted)] hover:border-[var(--brand)] hover:text-[var(--brand)]"
+              >
+                Ganti
+              </button>
+              <button
+                type="button"
+                onClick={onRemove}
+                className="rounded-md border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-500 hover:bg-red-100"
+              >
+                Hapus
+              </button>
+            </div>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="flex w-full items-center justify-center gap-1 rounded-md border border-[var(--line)] bg-white px-2 py-0.5 text-[10px] font-semibold text-[var(--muted)] hover:border-[var(--brand)] hover:text-[var(--brand)]"
+          >
+            <Camera className="h-3 w-3" />
+            Pilih Foto
+          </button>
+        )}
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) onUpload(f);
+          e.target.value = "";
+        }}
+      />
+    </div>
   );
 }

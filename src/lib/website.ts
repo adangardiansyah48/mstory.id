@@ -106,10 +106,13 @@ export async function compressAndUploadImage(
   bucket: string,
   folder: string
 ): Promise<string | null> {
-  const { compressImage } = await import("@/lib/image-compress");
+  const { compressImage, getWebsiteCompressOpts } = await import("@/lib/image-compress");
+  const opts = bucket === WEBSITE_BUCKET
+    ? getWebsiteCompressOpts(folder)
+    : { maxWidth: 1600, maxHeight: 1200, quality: 0.7, maxBytes: 240 * 1024 };
   let payload: File;
   try {
-    payload = await compressImage(file, { maxWidth: 1600, maxHeight: 1200, quality: 0.7, maxBytes: 240 * 1024 });
+    payload = await compressImage(file, opts);
   } catch {
     return null;
   }
@@ -117,8 +120,9 @@ export async function compressAndUploadImage(
   if (!supabase) return null;
   const timestamp = Date.now();
   const rand = Math.random().toString(36).slice(2, 6);
-  const base = payload.name.replace(/\.[^.]+$/, "");
-  const path = `${folder}/${timestamp}_${rand}_${base}.webp`;
+  const base = payload.name.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9-_]+/g, "-").slice(0, 40) || "img";
+  const cleanFolder = folder.replace(/^\/+|\/+$/g, "");
+  const path = `${cleanFolder}/${timestamp}_${rand}_${base}.webp`;
   try {
     const { error: upErr } = await supabase.storage.from(bucket).upload(path, payload, {
       upsert: true,
