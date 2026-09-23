@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Swal from "sweetalert2";
 import {
   getStoredPublicUrl,
   parseObjectPosition,
@@ -32,13 +33,28 @@ import {
 import { getPackages } from "@/lib/website";
 import { Check, ImagePlus, Loader2, Trash2, X, ArrowUp, ArrowDown, Camera } from "lucide-react";
 
+function notify(icon: "success" | "error" | "warning" | "info", title: string, text?: string) {
+  void Swal.fire({ icon, title, text, timer: icon === "success" ? 1600 : undefined, showConfirmButton: icon !== "success" });
+}
+
+function confirmDelete(title: string, text: string) {
+  return Swal.fire({
+    icon: "warning",
+    title,
+    text,
+    showCancelButton: true,
+    confirmButtonText: "Ya, Hapus",
+    cancelButtonText: "Batal",
+    confirmButtonColor: "#dc2626",
+  });
+}
+
 export function WebsiteTab() {
   const [row, setRow] = useState<WebsiteSettingsRow | null>(null);
   const [gallery, setGallery] = useState<WebsiteGalleryRow[]>([]);
   const [cats, setCats] = useState<{ id: number; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
   const [uploading, setUploading] = useState<string | null>(null);
   const [newGalleryCategory, setNewGalleryCategory] = useState<number | null>(null);
   const [filterCategory, setFilterCategory] = useState<number | null>(null);
@@ -104,11 +120,10 @@ function field<K extends keyof WebsiteSettingsRow>(key: K, value: WebsiteSetting
 
   async function handleHeroSlotUpload(slot: number, file: File) {
     setUploading(`hero-${slot}`);
-    setMessage("");
     try {
       const { url, error } = await uploadWebsiteImage(file, WEBSITE.HERO_FOLDER);
       if (error || !url) {
-        setMessage(error ?? "Upload gagal. Cek koneksi atau izin bucket storage.");
+        notify("error", "Upload gagal", error ?? "Cek koneksi atau izin bucket storage.");
         return;
       }
       const next = heroBanners.map((b, i) =>
@@ -116,15 +131,17 @@ function field<K extends keyof WebsiteSettingsRow>(key: K, value: WebsiteSetting
       );
       setHeroBanners(next);
       syncHeroSlides(next);
-      setMessage(`Foto hero ${slot + 1} berhasil diunggah.`);
+      notify("success", `Foto hero ${slot + 1} berhasil diunggah.`);
     } catch (err) {
-      setMessage(`Upload gagal: ${err instanceof Error ? err.message : "terjadi kesalahan"}`);
+      notify("error", "Upload gagal", err instanceof Error ? err.message : "terjadi kesalahan");
     } finally {
       setUploading(null);
     }
   }
 
   async function handleHeroSlotRemove(slot: number) {
+    const r = await confirmDelete(`Hapus foto hero ${slot + 1}?`, "Foto akan dihapus dari storage.");
+    if (!r.isConfirmed) return;
     const url = heroBanners[slot]?.url;
     if (url) await deleteWebsiteImage(url);
     const next = heroBanners.map((b, i) =>
@@ -132,7 +149,7 @@ function field<K extends keyof WebsiteSettingsRow>(key: K, value: WebsiteSetting
     );
     setHeroBanners(next);
     syncHeroSlides(next);
-    setMessage(`Foto hero ${slot + 1} dihapus.`);
+    notify("success", `Foto hero ${slot + 1} dihapus.`);
   }
 
   function handleHeroPositionChange(slot: number, x: number, y: number) {
@@ -146,57 +163,58 @@ function field<K extends keyof WebsiteSettingsRow>(key: K, value: WebsiteSetting
   async function handleSave() {
     if (!row) return;
     setSaving(true);
-    setMessage("");
     const slides = heroBanners
       .filter((b) => b.url)
       .map((b) => withPosition(b.url!, b.pos.x, b.pos.y));
     const payload = { ...row, hero_slides: slides };
     const { ok, error } = await updateWebsiteSettings(payload);
     setSaving(false);
-    if (ok) setMessage("Konten website berhasil disimpan.");
-    else setMessage(`Gagal menyimpan: ${error ?? "terjadi kesalahan"}`);
+    if (ok) notify("success", "Konten website berhasil disimpan.");
+    else notify("error", "Gagal menyimpan", error ?? "terjadi kesalahan");
   }
 
   async function handleInfoUpload(file: File) {
     setUploading("info");
-    setMessage("");
     try {
       const { url, error } = await uploadWebsiteImage(file, WEBSITE.INFO_FOLDER);
-      if (error || !url) { setMessage(error ?? "Upload gagal."); return; }
+      if (error || !url) { notify("error", "Upload gagal", error ?? "Gagal upload info banner."); return; }
       setRow((prev) => (prev ? { ...prev, info_image: url } : prev));
-      setMessage("Foto info banner berhasil diunggah.");
+      notify("success", "Foto info banner berhasil diunggah.");
     } finally { setUploading(null); }
   }
 
   async function handleInfoRemove() {
+    const r = await confirmDelete("Hapus foto info banner?", "Foto akan dihapus dari storage.");
+    if (!r.isConfirmed) return;
     if (!row?.info_image) return;
     await deleteWebsiteImage(row.info_image);
     setRow({ ...row, info_image: null });
-    setMessage("Foto info banner dihapus.");
+    notify("success", "Foto info banner dihapus.");
   }
 
   async function handleGalleryUpload(file: File) {
     setUploading("gallery");
-    setMessage("");
     try {
       const { url, error } = await uploadWebsiteImage(file, WEBSITE.GALLERY_FOLDER);
-      if (error || !url) { setMessage(error ?? "Upload gagal."); return; }
+      if (error || !url) { notify("error", "Upload gagal", error ?? "Gagal upload galeri."); return; }
       const name = file.name.replace(/\.[^.]+$/, "").slice(0, 22) || "Gallery";
       const { ok, error: err2 } = await addWebsiteGalleryItem({ title: name, subtitle: "portfolio", image_path: url, category_id: newGalleryCategory ?? null });
-      if (!ok) { setMessage(err2 ?? "Gagal tambah galeri."); return; }
+      if (!ok) { notify("error", "Gagal tambah galeri", err2 ?? "unknown"); return; }
       const galleryRows = await fetchWebsiteGalleryRows();
       setGallery(galleryRows);
       setNewGalleryCategory(null);
-      setMessage(`Foto galeri "${name}" berhasil ditambahkan.`);
+      notify("success", `Foto galeri "${name}" berhasil ditambahkan.`);
     } finally { setUploading(null); }
   }
 
   async function handleGalleryDelete(id: number, imageUrl: string) {
+    const r = await confirmDelete("Hapus item galeri?", "Foto dan data galeri akan dihapus.");
+    if (!r.isConfirmed) return;
     await deleteWebsiteImage(imageUrl);
     const { ok, error } = await deleteWebsiteGalleryItem(id);
-    if (!ok) { setMessage(`Gagal hapus: ${error ?? "unknown"}`); return; }
+    if (!ok) { notify("error", "Gagal hapus", error ?? "unknown"); return; }
     setGallery((prev) => prev.filter((g) => g.id !== id));
-    setMessage("Item galeri dihapus.");
+    notify("success", "Item galeri dihapus.");
   }
 
   async function handleGalleryMove(id: number, direction: 1 | -1) {
@@ -212,7 +230,7 @@ function field<K extends keyof WebsiteSettingsRow>(key: K, value: WebsiteSetting
     const r1 = await updateWebsiteGalleryItem(id, { sort_order: b });
     const r2 = await updateWebsiteGalleryItem(targetVisible.id, { sort_order: a });
     if (!r1.ok || !r2.ok) {
-      setMessage(`Gagal urutkan: ${r1.error ?? r2.error ?? "unknown"}`);
+      notify("error", "Gagal urutkan", r1.error ?? r2.error ?? "unknown");
       return;
     }
     setGallery((prev) => {
@@ -228,7 +246,7 @@ function field<K extends keyof WebsiteSettingsRow>(key: K, value: WebsiteSetting
 
   async function handleGalleryToggle(id: number, isActive: boolean) {
     const { ok, error } = await updateWebsiteGalleryItem(id, { is_active: isActive });
-    if (!ok) { setMessage(`Gagal toggle: ${error ?? "unknown"}`); return; }
+    if (!ok) { notify("error", "Gagal toggle", error ?? "unknown"); return; }
     setGallery((prev) => prev.map((g) => (g.id === id ? { ...g, is_active: isActive } : g)));
     clearWebsiteContentCache();
   }
@@ -254,11 +272,6 @@ function field<K extends keyof WebsiteSettingsRow>(key: K, value: WebsiteSetting
 
   return (
     <div className="space-y-5">
-      {message && (
-        <div className="rounded-lg border border-[var(--line)] bg-[var(--soft)] px-4 py-3 text-sm text-[var(--muted)]">
-          {message}
-        </div>
-      )}
 
       {/* === IDENTITAS & HERO === */}
       <div className="rounded-2xl p-5 glass">
@@ -464,7 +477,7 @@ function field<K extends keyof WebsiteSettingsRow>(key: K, value: WebsiteSetting
                   <input type="checkbox" checked={g.is_active} onChange={(e) => handleGalleryToggle(g.id, e.target.checked)} />
                   aktif
                 </label>
-                <button type="button" onClick={async () => { await updateWebsiteGalleryItem(g.id, { title: g.title, subtitle: g.subtitle, link_url: g.link_url, category_id: g.category_id ?? null }); setMessage(`Item "${g.title}" disimpan.`); }} className="rounded border border-[var(--line)] px-2 py-0.5 text-[10px] font-semibold text-[var(--muted)] hover:bg-[var(--soft)]">Simpan</button>
+                <button type="button" onClick={async () => { const { ok, error } = await updateWebsiteGalleryItem(g.id, { title: g.title, subtitle: g.subtitle, link_url: g.link_url, category_id: g.category_id ?? null }); if (ok) notify("success", `Item "${g.title}" disimpan.`); else notify("error", "Gagal simpan", error ?? "unknown"); }} className="rounded border border-[var(--line)] px-2 py-0.5 text-[10px] font-semibold text-[var(--muted)] hover:bg-[var(--soft)]">Simpan</button>
               </div>
               <button type="button" onClick={() => handleGalleryMove(g.id, -1)} disabled={idx === 0} className="rounded p-1 hover:bg-[var(--soft)] disabled:opacity-30"><ArrowUp className="h-3 w-3" /></button>
               <button type="button" onClick={() => handleGalleryMove(g.id, 1)} disabled={idx === visibleGallery.length - 1} className="rounded p-1 hover:bg-[var(--soft)] disabled:opacity-30"><ArrowDown className="h-3 w-3" /></button>
@@ -524,12 +537,13 @@ function field<K extends keyof WebsiteSettingsRow>(key: K, value: WebsiteSetting
                 category_id: newAlbum.category_id,
                 cover_image_path: "",
               });
-              if (!ok) { setMessage(error ?? "Gagal buat album"); setAlbumUploading(null); return; }
+              if (!ok) { notify("error", "Gagal buat album", error ?? "unknown"); setAlbumUploading(null); return; }
               const albumRows = await fetchWebsiteAlbums();
               setAlbums(albumRows);
               setNewAlbum({ title: "", couple_name: "", category_id: null });
               setExpandedAlbum(id ?? null);
-              setMessage(`Album "${newAlbum.couple_name}" berhasil dibuat. Upload cover & foto sekarang.`);
+              notify("success", `Album "${newAlbum.couple_name}" berhasil dibuat.`);
+              void Swal.fire({ icon: "info", title: "Upload cover & foto sekarang", timer: 1500, showConfirmButton: false });
               setAlbumUploading(null);
             }}
             className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--brand)] px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-white hover:bg-[var(--brand-hover)] disabled:opacity-50"
@@ -568,10 +582,12 @@ function field<K extends keyof WebsiteSettingsRow>(key: K, value: WebsiteSetting
                       {isExpanded ? "Tutup" : "Kelola"}
                     </button>
                     <button type="button" onClick={async () => {
+                      const r = await confirmDelete(`Hapus album "${album.couple_name}"?`, "Cover & semua foto album juga akan terhapus.");
+                      if (!r.isConfirmed) return;
                       await deleteWebsiteAlbum(album.id);
                       setAlbums((prev) => prev.filter((a) => a.id !== album.id));
                       if (expandedAlbum === album.id) setExpandedAlbum(null);
-                      setMessage(`Album "${album.couple_name}" dihapus.`);
+                      notify("success", `Album "${album.couple_name}" dihapus.`);
                     }} className="rounded-lg bg-red-50 p-1.5 text-red-500 hover:bg-red-100">
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -597,7 +613,7 @@ function field<K extends keyof WebsiteSettingsRow>(key: K, value: WebsiteSetting
                         <label className="text-[10px] font-semibold text-[var(--muted)]">Aktif:</label>
                         <input type="checkbox" checked={album.is_active} onChange={(e) => { const v = e.target.checked; setAlbums((prev) => prev.map((a) => a.id === album.id ? { ...a, is_active: v } : a)); updateWebsiteAlbum(album.id, { is_active: v }); }} />
                       </div>
-                      <button onClick={async () => { await updateWebsiteAlbum(album.id, { title: album.title, couple_name: album.couple_name, category_id: album.category_id ?? null }); setMessage(`Album "${album.couple_name}" disimpan.`); }}
+                      <button onClick={async () => { const { ok, error } = await updateWebsiteAlbum(album.id, { title: album.title, couple_name: album.couple_name, category_id: album.category_id ?? null }); if (ok) notify("success", `Album "${album.couple_name}" disimpan.`); else notify("error", "Gagal simpan", error ?? "unknown"); }}
                         className="rounded-lg bg-[var(--brand)] px-4 py-2 text-[11px] font-bold uppercase text-white hover:bg-[var(--brand-hover)]">Simpan Album</button>
 
                       {/* Cover image */}
@@ -606,7 +622,7 @@ function field<K extends keyof WebsiteSettingsRow>(key: K, value: WebsiteSetting
                         {album.cover_image_path ? (
                           <div className="relative inline-block">
                             <img src={getStoredPublicUrl(album.cover_image_path) ?? album.cover_image_path} alt="" className="h-28 w-28 rounded-lg object-cover" />
-                            <button onClick={() => { updateWebsiteAlbum(album.id, { cover_image_path: "" }); setAlbums((prev) => prev.map((a) => a.id === album.id ? { ...a, cover_image_path: "" } : a)); }}
+                            <button onClick={async () => { const r = await confirmDelete("Hapus cover album?", "Cover akan dihapus."); if (!r.isConfirmed) return; await updateWebsiteAlbum(album.id, { cover_image_path: "" }); setAlbums((prev) => prev.map((a) => a.id === album.id ? { ...a, cover_image_path: "" } : a)); notify("success", "Cover dihapus."); }}
                               className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600">
                               <X className="h-3 w-3" />
                             </button>
@@ -618,8 +634,11 @@ function field<K extends keyof WebsiteSettingsRow>(key: K, value: WebsiteSetting
                             <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                               const f = e.target.files?.[0]; if (!f) return;
                               setAlbumUploading(`cover-${album.id}`);
-                              const { url } = await uploadWebsiteImage(f, WEBSITE.ALBUM_COVER);
-                              if (url) { await updateWebsiteAlbum(album.id, { cover_image_path: url }); setAlbums((prev) => prev.map((a) => a.id === album.id ? { ...a, cover_image_path: url } : a)); }
+                              const { url, error } = await uploadWebsiteImage(f, WEBSITE.ALBUM_COVER);
+                              if (error || !url) { notify("error", "Upload cover gagal", error ?? "Gagal upload cover."); setAlbumUploading(null); e.target.value = ""; return; }
+                              const { ok, error: err2 } = await updateWebsiteAlbum(album.id, { cover_image_path: url });
+                              if (!ok) notify("error", "Gagal simpan cover", err2 ?? "unknown");
+                              else { setAlbums((prev) => prev.map((a) => a.id === album.id ? { ...a, cover_image_path: url } : a)); notify("success", "Cover berhasil diunggah."); }
                               setAlbumUploading(null);
                               e.target.value = "";
                             }} />
@@ -636,8 +655,11 @@ function field<K extends keyof WebsiteSettingsRow>(key: K, value: WebsiteSetting
                           <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                             const f = e.target.files?.[0]; if (!f) return;
                             setAlbumUploading(`photo-${album.id}`);
-                            const { url } = await uploadWebsiteImage(f, WEBSITE.ALBUM_PHOTOS);
-                            if (url) { await addWebsiteAlbumPhoto(album.id, url); setAlbumPhotos(await fetchWebsiteAlbumPhotos()); }
+                            const { url, error } = await uploadWebsiteImage(f, WEBSITE.ALBUM_PHOTOS);
+                            if (error || !url) { notify("error", "Upload gagal", error ?? "Gagal upload foto album."); setAlbumUploading(null); e.target.value = ""; return; }
+                            const { ok, error: err2 } = await addWebsiteAlbumPhoto(album.id, url);
+                            if (!ok) notify("error", "Gagal simpan foto", err2 ?? "unknown");
+                            else { setAlbumPhotos(await fetchWebsiteAlbumPhotos()); notify("success", "Foto album ditambahkan."); }
                             setAlbumUploading(null);
                             e.target.value = "";
                           }} />
@@ -647,7 +669,7 @@ function field<K extends keyof WebsiteSettingsRow>(key: K, value: WebsiteSetting
                             {photos.map((photo) => (
                               <div key={photo.id} className="group relative">
                                 <img src={getStoredPublicUrl(photo.image_path) ?? photo.image_path} alt="" className="h-20 w-full rounded-lg object-cover sm:h-24" />
-                                <button onClick={async () => { await deleteWebsiteImage(photo.image_path); await deleteWebsiteAlbumPhoto(photo.id); setAlbumPhotos((prev) => prev.filter((p) => p.id !== photo.id)); }}
+                                <button onClick={async () => { const r = await confirmDelete("Hapus foto?", "Foto akan dihapus dari album."); if (!r.isConfirmed) return; await deleteWebsiteImage(photo.image_path); await deleteWebsiteAlbumPhoto(photo.id); setAlbumPhotos((prev) => prev.filter((p) => p.id !== photo.id)); notify("success", "Foto dihapus."); }}
                                   className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white opacity-0 transition-opacity group-hover:opacity-100">
                                   <X className="h-3 w-3" />
                                 </button>
