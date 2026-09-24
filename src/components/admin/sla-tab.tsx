@@ -293,6 +293,25 @@ export function SlaTab() {
     await Swal.fire({ icon: "success", title: draft ? "Balasan tersimpan" : "Balasan dihapus", timer: 1200, showConfirmButton: false });
   }
 
+  async function handleDeleteReply(t: TestimonialRow) {
+    const c = await Swal.fire({
+      icon: "warning",
+      title: "Hapus balasan admin?",
+      text: "Balasan akan dihapus, testimoni pelanggan tetap tampil.",
+      showCancelButton: true,
+      confirmButtonText: "Hapus Balasan",
+      cancelButtonText: "Batal",
+      confirmButtonColor: "#dc2626",
+    });
+    if (!c.isConfirmed) return;
+    const updated = await patchTestimonial(t.id, { admin_reply: "" });
+    if (!updated) return;
+    setTestimonials((prev) => ({ ...prev, [t.booking_id]: { ...t, admin_reply: null, admin_replied_at: null } }));
+    setReplyDraft((p) => ({ ...p, [t.booking_id]: "" }));
+    setEditingReplyId(null);
+    await Swal.fire({ icon: "success", title: "Balasan dihapus", timer: 1100, showConfirmButton: false });
+  }
+
   async function handleToggleDisplay(t: TestimonialRow) {
     const updated = await patchTestimonial(t.id, { is_displayed: !t.is_displayed });
     if (!updated) return;
@@ -450,15 +469,18 @@ export function SlaTab() {
                           <div className="flex gap-2">
                             <button onClick={() => handleSaveReply(testi)} disabled={testiSavingId === testi.id} className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--brand)] px-3 py-2 text-xs font-bold text-white hover:bg-[var(--brand-hover)] disabled:opacity-40"><Save className="h-3.5 w-3.5" />{testi.admin_reply ? "Update balasan" : "Kirim balasan"}</button>
                             <button onClick={() => { setEditingReplyId(null); setReplyDraft((p) => ({ ...p, [testi.booking_id]: testi.admin_reply ?? "" })); }} className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-xs font-semibold text-[var(--muted)]"><X className="h-3.5 w-3.5" />Batal</button>
-                            {testi.admin_reply && <button onClick={async () => { setReplyDraft((p) => ({ ...p, [testi.booking_id]: "" })); await patchTestimonial(testi.id, { admin_reply: "" }).then((u) => { if (u) setTestimonials((pr) => ({ ...pr, [testi.booking_id]: { ...testi, admin_reply: null } })); setEditingReplyId(null); }); }} className="ml-auto text-xs font-semibold text-red-600">Hapus balasan</button>}
+                            {testi.admin_reply && <button onClick={() => handleDeleteReply(testi)} className="ml-auto text-xs font-semibold text-red-600">Hapus balasan</button>}
                           </div>
                         </div>
                       ) : (
                         <div className="mt-2 flex flex-wrap gap-1.5">
                           <button onClick={() => { setReplyDraft((p) => ({ ...p, [testi.booking_id]: testi.admin_reply ?? "" })); setEditingReplyId(testi.id); }} className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-[var(--muted)] hover:border-[var(--brand)]"><MessageSquareReply className="h-3.5 w-3.5" />{testi.admin_reply ? "Edit balasan" : "Balas"}</button>
+                          {testi.admin_reply ? (
+                            <button onClick={() => handleDeleteReply(testi)} disabled={testiSavingId === testi.id} className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1.5 text-[11px] font-semibold text-red-600 hover:bg-red-100 disabled:opacity-40"><Trash2 className="h-3.5 w-3.5" />Hapus balasan</button>
+                          ) : null}
                           <button onClick={() => handleToggleDisplay(testi)} disabled={testiSavingId === testi.id} className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-[var(--muted)] hover:border-[var(--brand)] disabled:opacity-40">{testi.is_displayed ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}{testi.is_displayed ? "Sembunyikan" : "Tampilkan"}</button>
                           <button onClick={() => handleEditTestimonial(testi)} className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-[var(--muted)] hover:border-[var(--brand)]"><Pencil className="h-3.5 w-3.5" />Edit</button>
-                          <button onClick={() => handleDeleteTestimonial(testi)} className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1.5 text-[11px] font-semibold text-red-600 hover:bg-red-100"><Trash2 className="h-3.5 w-3.5" />Hapus</button>
+                          <button onClick={() => handleDeleteTestimonial(testi)} className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2.5 py-1.5 text-[11px] font-semibold text-red-600 hover:bg-red-100"><Trash2 className="h-3.5 w-3.5" />Hapus testimoni</button>
                         </div>
                       )}
                     </div>
