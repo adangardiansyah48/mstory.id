@@ -29,7 +29,7 @@ export default function WebsitePage() {
   const [albumLightboxIdx, setAlbumLightboxIdx] = useState<number | null>(null);
   const [albumPhotoIdx, setAlbumPhotoIdx] = useState(0);
   const [albumZoom, setAlbumZoom] = useState(1);
-  const [testimonials, setTestimonials] = useState<{ client_name: string; rating: number; message: string; created_at: string }[]>([]);
+  const [testimonials, setTestimonials] = useState<{ client_name: string; rating: number; message: string; admin_reply?: string | null; created_at: string }[]>([]);
   const [fanpageSettings, setFanpageSettings] = useState<SiteSettings | null>(null);
 
   useEffect(() => {
@@ -425,6 +425,12 @@ export default function WebsitePage() {
                 </p>
                 <p className="mt-3 text-sm font-light leading-relaxed text-[#1C1C1A]/80">{t.message}</p>
                 <p className="mt-3 font-serif text-sm">{t.client_name}</p>
+                {t.admin_reply ? (
+                  <div className="mt-3 rounded-lg border border-[#D8D5CC]/60 bg-[#FCFCF9] px-3 py-2.5">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#1C1C1A]/60">Balasan Mstory.id</p>
+                    <p className="mt-1 text-xs leading-relaxed text-[#1C1C1A]/80">{t.admin_reply}</p>
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>

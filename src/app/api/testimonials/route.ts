@@ -58,7 +58,7 @@ export async function GET() {
 
   const { data, error } = await admin
     .from("testimonials")
-    .select("client_name, rating, message, created_at")
+    .select("client_name, rating, message, admin_reply, created_at")
     .eq("is_displayed", true)
     .order("created_at", { ascending: false })
     .limit(12);
