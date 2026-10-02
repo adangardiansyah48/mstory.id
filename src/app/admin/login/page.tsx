@@ -51,15 +51,14 @@ export default function AdminLogin() {
       return;
     }
 
-    await Swal.fire({
+    router.push("/admin/dashboard");
+    Swal.fire({
       icon: "success",
       title: "Berhasil Masuk",
       text: "Selamat datang di dashboard Mstory.id",
       timer: 1200,
       showConfirmButton: false,
     });
-    router.push("/admin/dashboard");
-    router.refresh();
   }
 
   return (

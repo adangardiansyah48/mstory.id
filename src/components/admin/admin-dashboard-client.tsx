@@ -96,15 +96,14 @@ export function AdminDashboardClient({
     const supabase = createClient();
     if (!supabase) return;
     await supabase.auth.signOut();
-    await Swal.fire({
+    router.push("/admin/login");
+    Swal.fire({
       icon: "success",
       title: "Berhasil Keluar",
       text: "Sampai jumpa lagi!",
       timer: 1000,
       showConfirmButton: false,
     });
-    router.push("/admin/login");
-    router.refresh();
   }
 
   const allTabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
