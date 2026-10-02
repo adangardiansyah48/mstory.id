@@ -18,13 +18,18 @@ export default async function AdminDashboardPage() {
   if (user.email === "superadmin@mstory.id") {
     role = "superadmin";
   } else {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .maybeSingle();
-    if (profile?.role) {
-      role = profile.role as "superadmin" | "admin" | "owner";
+    const metaRole = user.user_metadata?.role;
+    if (metaRole === "superadmin" || metaRole === "admin" || metaRole === "owner") {
+      role = metaRole;
+    } else {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (profile?.role) {
+        role = profile.role as "superadmin" | "admin" | "owner";
+      }
     }
   }
 
