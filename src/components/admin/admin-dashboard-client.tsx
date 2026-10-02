@@ -40,7 +40,7 @@ export function AdminDashboardClient({
   userRole?: UserRole;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>("overview");
+  const [tab, setTab] = useState<Tab>("bookings");
   const [refreshKey, setRefreshKey] = useState(0);
   const [adminTheme, setAdminTheme] = useState("CLASSIC");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
