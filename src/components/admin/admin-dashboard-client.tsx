@@ -187,33 +187,51 @@ export function AdminDashboardClient({
       </header>
 
       <main className="relative mx-auto w-full max-w-7xl flex-1 px-6 py-7">
-        <div className={cn(tab !== "overview" && "hidden")}>
-          <OverviewTab refreshKey={refreshKey} onNavigate={setTab} />
-        </div>
-        <div className={cn(tab !== "bookings" && "hidden")}>
-          <BookingTab active={tab === "bookings"} onChanged={() => setRefreshKey((k) => k + 1)} onNavigate={setTab} />
-        </div>
-        <div className={cn(tab !== "packages" && "hidden")}>
-          <PackagesTab />
-        </div>
-        <div className={cn(tab !== "sla" && "hidden")}>
-          <SlaTab />
-        </div>
-        <div className={cn(tab !== "finance" && "hidden")}>
-          <FinanceTab />
-        </div>
-        <div className={cn(tab !== "website" && "hidden")}>
-          <WebsiteTab />
-        </div>
-        <div className={cn(tab !== "accounts" && "hidden")}>
-          <AccountsTab />
-        </div>
-        <div className={cn(tab !== "vendors" && "hidden")}>
-          <VendorsTab />
-        </div>
-        <div className={cn(tab !== "settings" && "hidden")}>
-          <SettingsTab onThemeChanged={(theme) => setAdminTheme(theme)} />
-        </div>
+        {tabs.some(t => t.key === "overview") && (
+          <div className={cn(tab !== "overview" && "hidden")}>
+            <OverviewTab refreshKey={refreshKey} onNavigate={setTab} />
+          </div>
+        )}
+        {tabs.some(t => t.key === "bookings") && (
+          <div className={cn(tab !== "bookings" && "hidden")}>
+            <BookingTab active={tab === "bookings"} onChanged={() => setRefreshKey((k) => k + 1)} onNavigate={setTab} />
+          </div>
+        )}
+        {tabs.some(t => t.key === "packages") && (
+          <div className={cn(tab !== "packages" && "hidden")}>
+            <PackagesTab />
+          </div>
+        )}
+        {tabs.some(t => t.key === "sla") && (
+          <div className={cn(tab !== "sla" && "hidden")}>
+            <SlaTab />
+          </div>
+        )}
+        {tabs.some(t => t.key === "finance") && (
+          <div className={cn(tab !== "finance" && "hidden")}>
+            <FinanceTab />
+          </div>
+        )}
+        {tabs.some(t => t.key === "website") && (
+          <div className={cn(tab !== "website" && "hidden")}>
+            <WebsiteTab />
+          </div>
+        )}
+        {tabs.some(t => t.key === "accounts") && (
+          <div className={cn(tab !== "accounts" && "hidden")}>
+            <AccountsTab />
+          </div>
+        )}
+        {tabs.some(t => t.key === "vendors") && (
+          <div className={cn(tab !== "vendors" && "hidden")}>
+            <VendorsTab />
+          </div>
+        )}
+        {tabs.some(t => t.key === "settings") && (
+          <div className={cn(tab !== "settings" && "hidden")}>
+            <SettingsTab onThemeChanged={(theme) => setAdminTheme(theme)} />
+          </div>
+        )}
       </main>
     </div>
   );
