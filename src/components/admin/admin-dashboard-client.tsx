@@ -30,7 +30,15 @@ import { getSiteSettings, getStoredPublicUrl } from "@/lib/site-settings";
 
 type Tab = "overview" | "bookings" | "packages" | "sla" | "finance" | "website" | "accounts" | "settings" | "vendors";
 
-export function AdminDashboardClient({ email }: { email: string }) {
+type UserRole = "superadmin" | "admin" | "owner";
+
+export function AdminDashboardClient({
+  email,
+  userRole = "admin",
+}: {
+  email: string;
+  userRole?: UserRole;
+}) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("overview");
   const [refreshKey, setRefreshKey] = useState(0);
@@ -89,7 +97,7 @@ export function AdminDashboardClient({ email }: { email: string }) {
     router.refresh();
   }
 
-  const tabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
+  const allTabs: { key: Tab; label: string; icon: React.ReactNode }[] = [
     { key: "overview", label: "Ringkasan", icon: <BarChart3 className="h-4 w-4" /> },
     { key: "bookings", label: "Booking", icon: <CalendarDays className="h-4 w-4" /> },
     { key: "packages", label: "Paket", icon: <Package className="h-4 w-4" /> },
@@ -100,6 +108,19 @@ export function AdminDashboardClient({ email }: { email: string }) {
     { key: "vendors", label: "Vendor", icon: <Handshake className="h-4 w-4" /> },
     { key: "settings", label: "Pengaturan", icon: <LayoutTemplate className="h-4 w-4" /> },
   ];
+
+  const tabs = allTabs.filter((t) => {
+    if (userRole === "superadmin") return true;
+    if (userRole === "admin") {
+      const allowed: Tab[] = ["bookings", "packages", "sla", "website", "vendors", "settings"];
+      return allowed.includes(t.key);
+    }
+    if (userRole === "owner") {
+      const allowed: Tab[] = ["overview", "finance", "accounts"];
+      return allowed.includes(t.key);
+    }
+    return false;
+  });
 
   return (
     <div

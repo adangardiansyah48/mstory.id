@@ -14,5 +14,19 @@ export default async function AdminDashboardPage() {
     redirect("/admin/login");
   }
 
-  return <AdminDashboardClient email={user.email ?? ""} />;
+  let role: "superadmin" | "admin" | "owner" = "admin";
+  if (user.email === "superadmin@mstory.id") {
+    role = "superadmin";
+  } else {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (profile?.role) {
+      role = profile.role as "superadmin" | "admin" | "owner";
+    }
+  }
+
+  return <AdminDashboardClient email={user.email ?? ""} userRole={role} />;
 }
