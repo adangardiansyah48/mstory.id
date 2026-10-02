@@ -32,6 +32,16 @@ type Tab = "overview" | "bookings" | "packages" | "sla" | "finance" | "website" 
 
 type UserRole = "superadmin" | "admin" | "owner";
 
+const ROLE_ALLOWED_TABS: Record<UserRole, Tab[]> = {
+  superadmin: ["overview", "bookings", "packages", "sla", "finance", "website", "accounts", "vendors", "settings"],
+  admin: ["bookings", "packages", "sla", "website", "vendors", "settings"],
+  owner: ["overview", "finance", "accounts"],
+};
+
+function allowedTabsFor(role: UserRole): Tab[] {
+  return ROLE_ALLOWED_TABS[role] ?? ROLE_ALLOWED_TABS.admin;
+}
+
 export function AdminDashboardClient({
   email,
   userRole = "admin",
@@ -40,7 +50,7 @@ export function AdminDashboardClient({
   userRole?: UserRole;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>("bookings");
+  const [tab, setTab] = useState<Tab>(() => allowedTabsFor(userRole)[0]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [adminTheme, setAdminTheme] = useState("CLASSIC");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
@@ -109,18 +119,7 @@ export function AdminDashboardClient({
     { key: "settings", label: "Pengaturan", icon: <LayoutTemplate className="h-4 w-4" /> },
   ];
 
-  const tabs = allTabs.filter((t) => {
-    if (userRole === "superadmin") return true;
-    if (userRole === "admin") {
-      const allowed: Tab[] = ["bookings", "packages", "sla", "website", "vendors", "settings"];
-      return allowed.includes(t.key);
-    }
-    if (userRole === "owner") {
-      const allowed: Tab[] = ["overview", "finance", "accounts"];
-      return allowed.includes(t.key);
-    }
-    return false;
-  });
+  const tabs = allTabs.filter((t) => allowedTabsFor(userRole).includes(t.key));
 
   return (
     <div
