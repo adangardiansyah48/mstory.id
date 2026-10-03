@@ -113,8 +113,9 @@ export function AccountsTab({ userRole = "admin" }: { userRole?: UserRole }) {
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
   const [editPassword, setEditPassword] = useState("");
   const [search, setSearch] = useState("");
-  // Hanya superadmin yang boleh menambah / mengubah / menghapus akun.
-  const canManage = userRole === "superadmin";
+  // Hanya superadmin dan owner yang boleh menambah / mengubah / menghapus akun.
+  // Admin (staff) tidak punya akses ke tab ini sama sekali.
+  const canManage = userRole === "superadmin" || userRole === "owner";
 
   async function loadUsers(silent = false) {
     if (!silent && users.length === 0) setLoading(true);
