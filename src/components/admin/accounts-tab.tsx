@@ -46,7 +46,7 @@ function AccountForm({
         {editingUser ? (
           <div>
             <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Email</p>
-            <input value={editingUser.email} disabled className="h-11 w-full rounded-xl border border-[var(--line)] bg-[var(--soft)] px-4 text-sm text-[var(--muted)]" />
+            <input value={editingUser.email} disabled autoComplete="off" className="h-11 w-full rounded-xl border border-[var(--line)] bg-[var(--soft)] px-4 text-sm text-[var(--muted)]" />
           </div>
         ) : (
           <div>
@@ -55,6 +55,7 @@ function AccountForm({
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
               placeholder="admin@example.com"
+              autoComplete="off"
               className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-4 text-sm focus:border-[var(--brand)] focus:outline-none"
             />
           </div>
@@ -68,6 +69,7 @@ function AccountForm({
             value={editingUser ? editPassword : newPassword}
             onChange={(e) => (editingUser ? setEditPassword(e.target.value) : setNewPassword(e.target.value))}
             placeholder="••••••••"
+            autoComplete="new-password"
             className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-4 text-sm focus:border-[var(--brand)] focus:outline-none"
           />
         </div>
@@ -95,13 +97,15 @@ function closeModal(
   setEditingUser: (value: null) => void,
   setNewEmail: (value: string) => void,
   setNewPassword: (value: string) => void,
-  setEditPassword: (value: string) => void
+  setEditPassword: (value: string) => void,
+  setSearch: (value: string) => void
 ) {
   setShowAddForm(false);
   setEditingUser(null);
   setNewEmail("");
   setNewPassword("");
   setEditPassword("");
+  setSearch("");
 }
 
 export function AccountsTab({ userRole = "admin" }: { userRole?: UserRole }) {
@@ -243,10 +247,10 @@ export function AccountsTab({ userRole = "admin" }: { userRole?: UserRole }) {
 
       <div className="relative">
         <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-2)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20L16 16"/></svg>
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari email..." className="h-11 w-full rounded-xl border border-[var(--line)] bg-white pl-9 pr-4 text-sm focus:border-[var(--brand)] focus:outline-none" />
+        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari email..." autoComplete="off" className="h-11 w-full rounded-xl border border-[var(--line)] bg-white pl-9 pr-4 text-sm focus:border-[var(--brand)] focus:outline-none" />
       </div>
 
-      <Modal open={showAddForm || !!editingUser} onClose={() => closeModal(setShowAddForm, setEditingUser, setNewEmail, setNewPassword, setEditPassword)}>
+      <Modal open={showAddForm || !!editingUser} onClose={() => closeModal(setShowAddForm, setEditingUser, setNewEmail, setNewPassword, setEditPassword, setSearch)}>
         <AccountForm
           editingUser={editingUser}
           newEmail={newEmail}
@@ -257,7 +261,7 @@ export function AccountsTab({ userRole = "admin" }: { userRole?: UserRole }) {
           setEditPassword={setEditPassword}
           saveEdit={saveEdit}
           addUser={addUser}
-          closeModal={() => closeModal(setShowAddForm, setEditingUser, setNewEmail, setNewPassword, setEditPassword)}
+          closeModal={() => closeModal(setShowAddForm, setEditingUser, setNewEmail, setNewPassword, setEditPassword, setSearch)}
         />
       </Modal>
 
