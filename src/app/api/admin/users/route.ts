@@ -24,8 +24,7 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const role = await getUserRole(user.id);
-  // Owner boleh melihat daftar akun (read-only); hanya superadmin yang boleh
-  // menambah / mengubah / menghapus akun.
+  // Owner full control account management; admin tidak boleh akses sama sekali
   if (role !== "superadmin" && role !== "owner") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -45,7 +44,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const role = await getUserRole(user.id);
-  if (role !== "superadmin") {
+  if (role !== "superadmin" && role !== "owner") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -80,7 +79,7 @@ export async function PATCH(req: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const role = await getUserRole(user.id);
-  if (role !== "superadmin") {
+  if (role !== "superadmin" && role !== "owner") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -115,7 +114,7 @@ export async function DELETE(req: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const role = await getUserRole(user.id);
-  if (role !== "superadmin") {
+  if (role !== "superadmin" && role !== "owner") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
