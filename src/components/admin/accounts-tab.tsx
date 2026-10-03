@@ -20,6 +20,8 @@ function AccountForm({
   setNewEmail,
   newPassword,
   setNewPassword,
+  newRole,
+  setNewRole,
   editPassword,
   setEditPassword,
   saveEdit,
@@ -31,6 +33,8 @@ function AccountForm({
   setNewEmail: (value: string) => void;
   newPassword: string;
   setNewPassword: (value: string) => void;
+  newRole: string;
+  setNewRole: (value: string) => void;
   editPassword: string;
   setEditPassword: (value: string) => void;
   saveEdit: () => Promise<void>;
@@ -49,16 +53,29 @@ function AccountForm({
             <input value={editingUser.email} disabled autoComplete="off" className="h-11 w-full rounded-xl border border-[var(--line)] bg-[var(--soft)] px-4 text-sm text-[var(--muted)]" />
           </div>
         ) : (
-          <div>
-            <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Email</p>
-            <input
-              value={newEmail}
-              onChange={(e) => setNewEmail(e.target.value)}
-              placeholder="admin@example.com"
-              autoComplete="off"
-              className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-4 text-sm focus:border-[var(--brand)] focus:outline-none"
-            />
-          </div>
+          <>
+            <div>
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Email</p>
+              <input
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="admin@example.com"
+                autoComplete="off"
+                className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-4 text-sm focus:border-[var(--brand)] focus:outline-none"
+              />
+            </div>
+            <div>
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Role</p>
+              <select
+                value={newRole}
+                onChange={(e) => setNewRole(e.target.value)}
+                className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-4 text-sm focus:border-[var(--brand)] focus:outline-none"
+              >
+                <option value="admin">Admin (Staff Operasional)</option>
+                <option value="owner">Owner (Pemilik Bisnis)</option>
+              </select>
+            </div>
+          </>
         )}
         <div>
           <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
@@ -97,6 +114,7 @@ function closeModal(
   setEditingUser: (value: null) => void,
   setNewEmail: (value: string) => void,
   setNewPassword: (value: string) => void,
+  setNewRole: (value: string) => void,
   setEditPassword: (value: string) => void,
   setSearch: (value: string) => void
 ) {
@@ -104,6 +122,7 @@ function closeModal(
   setEditingUser(null);
   setNewEmail("");
   setNewPassword("");
+  setNewRole("admin");
   setEditPassword("");
   setSearch("");
 }
@@ -113,6 +132,7 @@ export function AccountsTab({ userRole = "admin" }: { userRole?: UserRole }) {
   const [loading, setLoading] = useState(true);
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [newRole, setNewRole] = useState("admin");
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
   const [editPassword, setEditPassword] = useState("");
@@ -159,7 +179,7 @@ export function AccountsTab({ userRole = "admin" }: { userRole?: UserRole }) {
     const res = await fetch("/api/admin/users", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: newEmail.trim(), password: newPassword }),
+      body: JSON.stringify({ email: newEmail.trim(), password: newPassword, role: newRole }),
     });
     const json = await res.json();
     if (!res.ok) {
@@ -169,6 +189,7 @@ export function AccountsTab({ userRole = "admin" }: { userRole?: UserRole }) {
     await Swal.fire({ icon: "success", title: "Akun dibuat", timer: 1200, showConfirmButton: false });
     setNewEmail("");
     setNewPassword("");
+    setNewRole("admin");
     setShowAddForm(false);
     await loadUsers(true);
   }
@@ -250,19 +271,21 @@ export function AccountsTab({ userRole = "admin" }: { userRole?: UserRole }) {
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari email..." autoComplete="off" className="h-11 w-full rounded-xl border border-[var(--line)] bg-white pl-9 pr-4 text-sm focus:border-[var(--brand)] focus:outline-none" />
       </div>
 
-      <Modal open={showAddForm || !!editingUser} onClose={() => closeModal(setShowAddForm, setEditingUser, setNewEmail, setNewPassword, setEditPassword, setSearch)}>
+      <Modal open={showAddForm || !!editingUser} onClose={() => closeModal(setShowAddForm, setEditingUser, setNewEmail, setNewPassword, setNewRole, setEditPassword, setSearch)}>
         <AccountForm
-          editingUser={editingUser}
-          newEmail={newEmail}
-          setNewEmail={setNewEmail}
-          newPassword={newPassword}
-          setNewPassword={setNewPassword}
-          editPassword={editPassword}
-          setEditPassword={setEditPassword}
-          saveEdit={saveEdit}
-          addUser={addUser}
-          closeModal={() => closeModal(setShowAddForm, setEditingUser, setNewEmail, setNewPassword, setEditPassword, setSearch)}
-        />
+           editingUser={editingUser}
+           newEmail={newEmail}
+           setNewEmail={setNewEmail}
+           newPassword={newPassword}
+           setNewPassword={setNewPassword}
+           newRole={newRole}
+           setNewRole={setNewRole}
+           editPassword={editPassword}
+           setEditPassword={setEditPassword}
+           saveEdit={saveEdit}
+           addUser={addUser}
+           closeModal={() => closeModal(setShowAddForm, setEditingUser, setNewEmail, setNewPassword, setNewRole, setEditPassword, setSearch)}
+         />
       </Modal>
 
       <div className="space-y-3">
