@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
   BarChart3,
@@ -48,6 +49,7 @@ export function AdminDashboardClient({
   email: string;
   userRole?: UserRole;
 }) {
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>(() => allowedTabsFor(userRole)[0]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [adminTheme, setAdminTheme] = useState("CLASSIC");
@@ -95,7 +97,7 @@ export function AdminDashboardClient({
     if (!supabase) return;
     await supabase.auth.signOut();
 
-    await Swal.fire({
+    void Swal.fire({
       icon: "success",
       title: "Berhasil Keluar",
       text: "Anda telah keluar dari dashboard.",
@@ -104,7 +106,7 @@ export function AdminDashboardClient({
       showConfirmButton: false,
     });
 
-    window.location.replace("/admin/login");
+    router.replace("/admin/login");
   }
 
   const allTabs: { key: Tab; label: string; icon: React.ReactNode }[] = [

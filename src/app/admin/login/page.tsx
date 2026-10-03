@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2, Lock, LogIn } from "lucide-react";
 import Swal from "sweetalert2";
 import { createClient } from "@/lib/supabase/client";
@@ -9,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { getSiteSettings, getStoredPublicUrl } from "@/lib/site-settings";
 
 export default function AdminLogin() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -49,7 +51,7 @@ export default function AdminLogin() {
       return;
     }
 
-    await Swal.fire({
+    void Swal.fire({
       icon: "success",
       title: "Berhasil Masuk",
       text: "Selamat datang di dashboard admin!",
@@ -58,7 +60,7 @@ export default function AdminLogin() {
       showConfirmButton: false,
     });
 
-    window.location.replace("/admin/dashboard");
+    router.replace("/admin/dashboard");
   }
 
   return (
