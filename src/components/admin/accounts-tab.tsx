@@ -12,6 +12,8 @@ interface AdminUser {
   created_at: string;
 }
 
+type UserRole = "superadmin" | "admin" | "owner";
+
 function AccountForm({
   editingUser,
   newEmail,
@@ -102,7 +104,7 @@ function closeModal(
   setEditPassword("");
 }
 
-export function AccountsTab() {
+export function AccountsTab({ userRole = "admin" }: { userRole?: UserRole }) {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [newEmail, setNewEmail] = useState("");
@@ -111,6 +113,8 @@ export function AccountsTab() {
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
   const [editPassword, setEditPassword] = useState("");
   const [search, setSearch] = useState("");
+  // Hanya superadmin yang boleh menambah / mengubah / menghapus akun.
+  const canManage = userRole === "superadmin";
 
   async function loadUsers(silent = false) {
     if (!silent && users.length === 0) setLoading(true);
@@ -219,15 +223,21 @@ export function AccountsTab() {
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-serif text-lg font-semibold text-[var(--ink)]">Manajemen Akun</h2>
-        <button
-          onClick={() => {
-            setShowAddForm(true);
-            setEditingUser(null);
-          }}
-          className="inline-flex h-11 items-center gap-1.5 rounded-xl bg-[var(--brand)] px-4 text-xs font-bold uppercase tracking-wider text-white shadow-md hover:bg-[var(--brand-hover)]"
-        >
-          <Plus className="h-4 w-4" /> Tambah Akun
-        </button>
+        {canManage ? (
+          <button
+            onClick={() => {
+              setShowAddForm(true);
+              setEditingUser(null);
+            }}
+            className="inline-flex h-11 items-center gap-1.5 rounded-xl bg-[var(--brand)] px-4 text-xs font-bold uppercase tracking-wider text-white shadow-md hover:bg-[var(--brand-hover)]"
+          >
+            <Plus className="h-4 w-4" /> Tambah Akun
+          </button>
+        ) : (
+          <span className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-2)]">
+            Mode baca saja
+          </span>
+        )}
       </div>
 
       <div className="relative">
@@ -261,12 +271,16 @@ export function AccountsTab() {
               <p className="text-xs text-[var(--muted-2)]">Terdaftar {new Date(u.created_at).toLocaleDateString("id-ID")}</p>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => { setEditingUser(u); setEditPassword(""); }} className="text-[var(--muted)] hover:text-[var(--ink)]" title="Ganti password">
-                <Pencil className="h-4 w-4" />
-              </button>
-              <button onClick={() => deleteUser(u.id, u.email)} className="text-red-400 hover:text-red-600" title="Hapus">
-                <Trash2 className="h-4 w-4" />
-              </button>
+              {canManage && (
+                <>
+                  <button onClick={() => { setEditingUser(u); setEditPassword(""); }} className="text-[var(--muted)] hover:text-[var(--ink)]" title="Ganti password">
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button onClick={() => deleteUser(u.id, u.email)} className="text-red-400 hover:text-red-600" title="Hapus">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </>
+              )}
             </div>
           </div>
         ))}

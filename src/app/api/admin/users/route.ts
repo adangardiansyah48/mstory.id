@@ -24,8 +24,9 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const role = await getUserRole(user.id);
-  // Only superadmin can manage accounts
-  if (role !== "superadmin") {
+  // Owner boleh melihat daftar akun (read-only); hanya superadmin yang boleh
+  // menambah / mengubah / menghapus akun.
+  if (role !== "superadmin" && role !== "owner") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -59,14 +60,19 @@ export async function POST(req: Request) {
   const allowedRoles = ["superadmin", "admin", "owner"];
   const finalRole = allowedRoles.includes(newRole) ? newRole : "admin";
 
-  const { data, error } = await admin.auth.admin.createUser({
-    email: String(email).trim(),
-    password: String(password),
-    email_confirm: true,
-    user_metadata: { role: finalRole },
+  // `auth.admin.createUser()` selalu gagal di project ini: GoTrue mengirim kolom
+  // `email` ke `auth.identities`, padahal kolom itu GENERATED ALWAYS
+  // (lower(identity_data->>'email')) dan dimiliki `supabase_auth_admin` sehingga
+  // tidak bisa di-ALTER. Solusinya fungsi `public.admin_create_user` (lihat
+  // schema_admin_user_rpc.sql) yang menulis langsung ke auth.* dan sekaligus
+  // mengisi `instance_id` — tanpa itu GoTrue tidak melihat user barunya.
+  const { data, error } = await admin.rpc("admin_create_user", {
+    p_email: String(email).trim(),
+    p_password: String(password),
+    p_role: finalRole,
   });
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-  return NextResponse.json({ user: data.user });
+  return NextResponse.json({ user: Array.isArray(data) ? data[0] : null });
 }
 
 export async function PATCH(req: Request) {

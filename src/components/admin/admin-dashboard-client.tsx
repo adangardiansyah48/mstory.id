@@ -220,7 +220,7 @@ export function AdminDashboardClient({
         )}
         {tabs.some(t => t.key === "accounts") && (
           <div className={cn(tab !== "accounts" && "hidden")}>
-            <AccountsTab />
+            <AccountsTab userRole={userRole} />
           </div>
         )}
         {tabs.some(t => t.key === "vendors") && (
