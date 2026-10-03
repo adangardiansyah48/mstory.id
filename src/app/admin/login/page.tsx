@@ -49,6 +49,15 @@ export default function AdminLogin() {
       return;
     }
 
+    await Swal.fire({
+      icon: "success",
+      title: "Berhasil Masuk",
+      text: "Selamat datang di dashboard admin!",
+      confirmButtonColor: "#A8967A",
+      timer: 1500,
+      showConfirmButton: false,
+    });
+
     window.location.replace("/admin/dashboard");
   }
 

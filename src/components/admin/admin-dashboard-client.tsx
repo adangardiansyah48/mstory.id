@@ -94,6 +94,16 @@ export function AdminDashboardClient({
     const supabase = createClient();
     if (!supabase) return;
     await supabase.auth.signOut();
+
+    await Swal.fire({
+      icon: "success",
+      title: "Berhasil Keluar",
+      text: "Anda telah keluar dari dashboard.",
+      confirmButtonColor: "#A8967A",
+      timer: 1500,
+      showConfirmButton: false,
+    });
+
     window.location.replace("/admin/login");
   }
 
