@@ -497,6 +497,26 @@ export function BookingTab({
     });
   }
 
+  async function cancelBooking(id: number, name: string) {
+    const confirmed = await Swal.fire({
+      icon: "warning",
+      title: "Batalkan Booking",
+      text: `Batalkan booking "${name}"? Status akan menjadi Dibatalkan.`,
+      showCancelButton: true,
+      confirmButtonText: "Ya, Batalkan",
+      cancelButtonText: "Batal",
+      confirmButtonColor: "#dc2626",
+    });
+    if (!confirmed.isConfirmed) return;
+    await patchBooking(id, { status: "CANCELLED" });
+    await Swal.fire({
+      icon: "success",
+      title: "Booking Dibatalkan",
+      timer: 1200,
+      showConfirmButton: false,
+    });
+  }
+
   async function blockDateHandle() {
     if (!blockDate) return;
     const confirmed = await Swal.fire({
@@ -691,7 +711,7 @@ const filtered = bookings.filter((b) => {
                       <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-[11px] text-[var(--muted)]">
                         <span>{booking.invoice_number}</span>
                         <span>·</span>
-                        <span>Acara: {formatShortDate(booking.event_date)}</span>
+                        <span>Acara : {formatShortDate(booking.event_date)}</span>
                         {booking.created_at && (
                           <>
                             <span>·</span>
@@ -709,7 +729,7 @@ const filtered = bookings.filter((b) => {
                       </p>
                       {booking.status !== "LUNAS" && booking.status !== "CANCELLED" && (
                         <p className="text-[10px] text-[var(--muted)]">
-                          Sisa: {formatCurrency(booking.status === "MENUNGGU_DP" ? booking.grand_total : remaining)}
+                          Sisa : {formatCurrency(booking.status === "MENUNGGU_DP" ? booking.grand_total : remaining)}
                         </p>
                       )}
                     </div>
@@ -735,6 +755,16 @@ const filtered = bookings.filter((b) => {
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
+                    {booking.status !== "CANCELLED" && (
+                      <button
+                        onClick={() => cancelBooking(booking.id, booking.client?.full_name ?? "")}
+                        disabled={updatingId === booking.id}
+                        className="inline-flex h-9 items-center gap-1.5 rounded-full border border-red-100 bg-red-50 px-4 text-[11px] font-bold uppercase tracking-widest text-red-700 transition-colors hover:bg-red-200 disabled:opacity-50"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                        Batalkan
+                      </button>
+                    )}
                     {booking.status === "MENUNGGU_DP" && (
                       <>
                         <button
@@ -848,44 +878,44 @@ const filtered = bookings.filter((b) => {
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-1.5 text-xs text-[var(--ink)]">
                         <p>
-                          <span className="text-[var(--muted)]">WhatsApp:</span>{" "}
+                          <span className="text-[var(--muted)]">WhatsApp :</span>{" "}
                           {booking.client?.whatsapp_number}
                         </p>
                         <p>
-                          <span className="text-[var(--muted)]">Paket:</span>{" "}
+                          <span className="text-[var(--muted)]">Paket :</span>{" "}
                           {[booking.details?.[0]?.packages?.sub_categories?.categories?.name, booking.details?.[0]?.packages?.sub_categories?.name, booking.details?.[0]?.packages?.name].filter(Boolean).join(" - ") || "-"}
                         </p>
                         <p>
-                          <span className="text-[var(--muted)]">Event:</span>{" "}
+                          <span className="text-[var(--muted)]">Event :</span>{" "}
                           {booking.location_type === "KOTA_TASIK"
                             ? "Kota Tasikmalaya"
                             : "Luar Kota"}{" "}
                           · {booking.event_address}
                         </p>
                         <p>
-                          <span className="text-[var(--muted)]">Subtotal:</span>{" "}
+                          <span className="text-[var(--muted)]">Subtotal :</span>{" "}
                           {formatCurrency(booking.subtotal ?? (booking.grand_total - (booking.transport_fee ?? 0)))}
                         </p>
                         <p>
-                          <span className="text-[var(--muted)]">Transport:</span>{" "}
+                          <span className="text-[var(--muted)]">Transport :</span>{" "}
                           {formatCurrency(booking.transport_fee ?? 0)}
                         </p>
                         <p>
-                          <span className="text-[var(--muted)]">Grand Total:</span>{" "}
+                          <span className="text-[var(--muted)]">Grand Total :</span>{" "}
                           {formatCurrency(booking.grand_total)}
                         </p>
                         <p>
-                          <span className="text-[var(--muted)]">DP:</span>{" "}
+                          <span className="text-[var(--muted)]">DP :</span>{" "}
                           {formatCurrency(booking.status === "MENUNGGU_DP" ? 0 : booking.dp_amount)}
                         </p>
                         <p>
-                          <span className="text-[var(--muted)]">Sisa:</span>{" "}
+                          <span className="text-[var(--muted)]">Sisa :</span>{" "}
                           {formatCurrency(booking.status === "MENUNGGU_DP" ? booking.grand_total : remaining)}
                         </p>
                       </div>
                       <div className="space-y-1.5 text-xs text-[var(--ink)]">
                         <p>
-                          <span className="text-[var(--muted)]">Waktu Booking:</span>{" "}
+                          <span className="text-[var(--muted)]">Waktu Booking :</span>{" "}
                           {booking.created_at
                             ? new Date(booking.created_at).toLocaleString("id-ID", {
                                 day: "numeric",
@@ -897,13 +927,13 @@ const filtered = bookings.filter((b) => {
                             : "-"}
                         </p>
                         <p>
-                          <span className="text-[var(--muted)]">Verifikasi DP:</span>{" "}
+                          <span className="text-[var(--muted)]">Verifikasi DP :</span>{" "}
                           {booking.dp_paid_at
                             ? new Date(booking.dp_paid_at).toLocaleString("id-ID")
                             : "Belum"}
                         </p>
                         <p>
-                          <span className="text-[var(--muted)]">Pelunasan:</span>{" "}
+                          <span className="text-[var(--muted)]">Pelunasan :</span>{" "}
                           {booking.paid_at
                             ? new Date(booking.paid_at).toLocaleString("id-ID")
                             : "Belum"}
