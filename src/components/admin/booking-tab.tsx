@@ -756,7 +756,7 @@ const filtered = bookings.filter((b) => {
                         </button>
                         <button
                           onClick={() => setPdfFor({ booking, kind: "MENUNGGU_PELUNASAN" })}
-                          title="Preview & download PDF tanda terima pelunasan"
+                          title="Preview & download PDF tanda terima DP"
                           className="glass-inset inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[11px] font-bold uppercase tracking-widest text-[var(--ink)]"
                         >
                           <FileDown className="h-3.5 w-3.5" />
@@ -764,7 +764,7 @@ const filtered = bookings.filter((b) => {
                         </button>
                         <button
                           onClick={() => openInvoice(booking, "PELUNASAN")}
-                          title="Lihat / kirim tanda terima pelunasan via WhatsApp"
+                          title="Lihat / kirim tanda terima DP via WhatsApp"
                           className="glass-inset inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[11px] font-bold uppercase tracking-widest text-[var(--ink)]"
                         >
                           <MessageCircle className="h-3.5 w-3.5" />
@@ -784,7 +784,7 @@ const filtered = bookings.filter((b) => {
                         </button>
                         <button
                           onClick={() => setPdfFor({ booking, kind: "LUNAS" })}
-                          title="Preview PDF tanda terima lunas"
+                          title="Preview PDF tanda terima pelunasan"
                           className="glass-inset inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[11px] font-bold uppercase tracking-widest text-[var(--ink)]"
                         >
                           <FileDown className="h-3.5 w-3.5" />
@@ -792,7 +792,7 @@ const filtered = bookings.filter((b) => {
                         </button>
                         <button
                           onClick={() => openInvoice(booking, "LUNAS")}
-                          title="Lihat tanda terima lunas via WhatsApp"
+                          title="Lihat tanda terima pelunasan via WhatsApp"
                           className="glass-inset inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[11px] font-bold uppercase tracking-widest text-[var(--ink)]"
                         >
                           <MessageCircle className="h-3.5 w-3.5" />
