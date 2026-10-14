@@ -115,9 +115,9 @@ export function InvoicePdfDocument({ booking, kind, logoUrl, vendorFee }: Props)
   const remaining = kind === "LUNAS" ? 0 : Math.max(total - dpAmount, 0);
 
   const statusMap: Record<string, string> = {
-    MENUNGGU_DP: "Status: Menunggu DP",
-    MENUNGGU_PELUNASAN: "Status: Menunggu Pelunasan",
-    LUNAS: "Status: Lunas",
+    MENUNGGU_DP: "Status : Menunggu DP",
+    MENUNGGU_PELUNASAN: "Status : Menunggu Pelunasan",
+    LUNAS: "Status : Lunas",
   };
 
   return (
@@ -129,8 +129,8 @@ export function InvoicePdfDocument({ booking, kind, logoUrl, vendorFee }: Props)
           <View style={s.titleBlock}>
             <Text style={s.title}>I N V O I C E</Text>
             <Text style={s.invoiceNo}>No. {booking.invoice_number}</Text>
-            <Text style={s.dates}>Tanggal Booking: {fmtDate(booking.booking_date)}</Text>
-            <Text style={s.dates}>Waktu Booking: {fmtBookingTime(booking.created_at)}</Text>
+            <Text style={s.dates}>Tanggal Booking : {fmtDate(booking.booking_date)}</Text>
+            <Text style={s.dates}>Waktu Booking : {fmtBookingTime(booking.created_at)}</Text>
           </View>
         </View>
 
@@ -141,14 +141,14 @@ export function InvoicePdfDocument({ booking, kind, logoUrl, vendorFee }: Props)
         <View style={s.twoCol}>
           <View style={s.colLeft}>
             <Text style={s.sectionTitle}>DITAGIHKAN KEPADA</Text>
-            <View style={s.kvRow}><Text style={s.kvLabel}>Nama</Text><Text style={s.kvValue}>: {booking.client?.full_name ?? "-"}</Text></View>
-            <View style={s.kvRow}><Text style={s.kvLabel}>No. WhatsApp</Text><Text style={s.kvValue}>: {booking.client?.whatsapp_number ?? "-"}</Text></View>
-            <View style={s.kvRow}><Text style={s.kvLabel}>Alamat</Text><Text style={s.kvValue}>: {booking.event_address ?? "-"}</Text></View>
+            <View style={s.kvRow}><Text style={s.kvLabel}>Nama</Text><Text style={s.kvValue}> : {booking.client?.full_name ?? "-"}</Text></View>
+            <View style={s.kvRow}><Text style={s.kvLabel}>No. WhatsApp</Text><Text style={s.kvValue}> : {booking.client?.whatsapp_number ?? "-"}</Text></View>
+            <View style={s.kvRow}><Text style={s.kvLabel}>Alamat</Text><Text style={s.kvValue}> : {booking.event_address ?? "-"}</Text></View>
           </View>
           <View style={s.colRight}>
             <Text style={s.sectionTitle}>DETAIL ACARA</Text>
-            <View style={s.kvRow}><Text style={s.kvLabel}>Tanggal Acara</Text><Text style={s.kvValue}>: {fmtDate(booking.event_date)}</Text></View>
-            <View style={s.kvRow}><Text style={s.kvLabel}>Lokasi</Text><Text style={s.kvValue}>: {booking.location_type === "KOTA_TASIK" ? "Kota Tasikmalaya" : "Luar Kota"}</Text></View>
+            <View style={s.kvRow}><Text style={s.kvLabel}>Tanggal Acara</Text><Text style={s.kvValue}> : {fmtDate(booking.event_date)}</Text></View>
+            <View style={s.kvRow}><Text style={s.kvLabel}>Lokasi</Text><Text style={s.kvValue}> : {booking.location_type === "KOTA_TASIK" ? "Kota Tasikmalaya" : "Luar Kota"}</Text></View>
           </View>
         </View>
 
@@ -222,17 +222,17 @@ export function InvoicePdfDocument({ booking, kind, logoUrl, vendorFee }: Props)
           <View style={{ borderWidth: 1, borderColor: "#e5e5e5", borderRadius: 6, padding: 12 }}>
             <View style={{ flexDirection: "row", paddingVertical: 3 }}>
               <Text style={{ width: 100, color: C.muted, fontSize: 9 }}>Bank</Text>
-              <Text style={{ width: 12, color: C.muted, fontSize: 9 }}>:</Text>
+              <Text style={{ width: 12, color: C.muted, fontSize: 9 }}> : </Text>
               <Text style={{ flex: 1, fontWeight: "bold", fontSize: 9 }}>{PAYMENT_BANK}</Text>
             </View>
             <View style={{ flexDirection: "row", paddingVertical: 3 }}>
               <Text style={{ width: 100, color: C.muted, fontSize: 9 }}>No. Rekening</Text>
-              <Text style={{ width: 12, color: C.muted, fontSize: 9 }}>:</Text>
+              <Text style={{ width: 12, color: C.muted, fontSize: 9 }}> : </Text>
               <Text style={{ flex: 1, fontWeight: "bold", fontSize: 9, letterSpacing: 1 }}>{PAYMENT_ACCOUNT}</Text>
             </View>
             <View style={{ flexDirection: "row", paddingVertical: 3 }}>
               <Text style={{ width: 100, color: C.muted, fontSize: 9 }}>Atas Nama</Text>
-              <Text style={{ width: 12, color: C.muted, fontSize: 9 }}>:</Text>
+              <Text style={{ width: 12, color: C.muted, fontSize: 9 }}> : </Text>
               <Text style={{ flex: 1, fontWeight: "bold", fontSize: 9 }}>{PAYMENT_ACCOUNT_HOLDER}</Text>
             </View>
           </View>
@@ -303,7 +303,7 @@ export function VendorFeePdfDocument({ vendorName, monthLabel, logoUrl, rows }: 
           {logoUrl ? <Image src={logoUrl} style={s.logo} /> : <View style={s.logo} />}
           <View style={s.titleBlock}>
             <Text style={s.titleSmall}>BUKTI PENYERAHAN FEE VENDOR</Text>
-            <Text style={s.dates}>Periode: {monthLabel}</Text>
+            <Text style={s.dates}>Periode : {monthLabel}</Text>
           </View>
         </View>
 
