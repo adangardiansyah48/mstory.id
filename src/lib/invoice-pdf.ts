@@ -15,6 +15,7 @@ function slugify(input: string): string {
 export interface InvoicePdfBooking {
   invoice_number: string;
   booking_date?: string | null;
+  created_at?: string | null;
   event_date: string;
   location_type: "KOTA_TASIK" | "LUAR_KOTA";
   event_address: string;
@@ -96,6 +97,16 @@ function fmtDate(value?: string | null): string {
   });
 }
 
+function fmtBookingTime(value?: string | null): string {
+  if (!value) return "-";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleTimeString("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }) + " WIB";
+}
+
 const BADGE: Record<InvoicePdfKind, { line1: string; line2: string; text: [number, number, number] }> = {
   MENUNGGU_DP: { line1: "UNPAID", line2: "MENUNGGU DP", text: [146, 64, 14] },
   MENUNGGU_PELUNASAN: { line1: "PARTIALLY PAID", line2: "DP RECEIVED", text: [29, 78, 216] },
@@ -170,17 +181,18 @@ export async function downloadInvoicePdf(input: {
   doc.text(`No. ${booking.invoice_number}`, RIGHT, 34.5, { align: "right" });
 
   doc.setFont("Helvetica", "normal");
-  doc.setFontSize(9.5);
+  doc.setFontSize(9);
   doc.setTextColor(...MUTED);
-  doc.text(`Tanggal Booking :  ${fmtDate(booking.booking_date)}`, RIGHT, 43, { align: "right" });
-  doc.text(`Tanggal Acara   :  ${fmtDate(booking.event_date)}`, RIGHT, 48.5, { align: "right" });
+  doc.text(`Tanggal Booking :  ${fmtDate(booking.booking_date)}`, RIGHT, 41.5, { align: "right" });
+  doc.text(`Waktu Booking   :  ${fmtBookingTime(booking.created_at)}`, RIGHT, 46.5, { align: "right" });
+  doc.text(`Tanggal Acara   :  ${fmtDate(booking.event_date)}`, RIGHT, 51.5, { align: "right" });
 
   // Double rule
   doc.setDrawColor(...BRAND_C);
   doc.setLineWidth(1.1);
-  doc.line(MARGIN, 57, RIGHT, 57);
-  doc.setLineWidth(0.3);
   doc.line(MARGIN, 59, RIGHT, 59);
+  doc.setLineWidth(0.3);
+  doc.line(MARGIN, 61, RIGHT, 61);
 
   // ============ CLIENT & PAYMENT ============
   let y = 70;

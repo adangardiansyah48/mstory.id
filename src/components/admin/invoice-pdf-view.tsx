@@ -78,6 +78,13 @@ function fmtDate(d?: string | null) {
   return new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
 }
 
+function fmtBookingTime(d?: string | null) {
+  if (!d) return "-";
+  const date = new Date(d);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) + " WIB";
+}
+
 function subDays(d: string, days: number): string {
   const date = new Date(d);
   date.setDate(date.getDate() - days);
@@ -123,6 +130,7 @@ export function InvoicePdfDocument({ booking, kind, logoUrl, vendorFee }: Props)
             <Text style={s.title}>I N V O I C E</Text>
             <Text style={s.invoiceNo}>No. {booking.invoice_number}</Text>
             <Text style={s.dates}>Tanggal Booking: {fmtDate(booking.booking_date)}</Text>
+            <Text style={s.dates}>Waktu Booking: {fmtBookingTime(booking.created_at)}</Text>
           </View>
         </View>
 

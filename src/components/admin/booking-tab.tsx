@@ -9,6 +9,7 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
+  Clock,
   Download,
   FileDown,
   MessageCircle,
@@ -34,6 +35,7 @@ interface BookingRow {
   invoice_number: string;
   client_id: number;
   booking_date?: string | null;
+  created_at?: string | null;
   event_date: string;
   location_type: "KOTA_TASIK" | "LUAR_KOTA";
   event_address: string;
@@ -54,6 +56,13 @@ interface BookingRow {
     packages: { name: string; dp_value?: number; sub_categories?: { name: string; categories?: { name: string } | null } | null };
   }[];
   addons: { add_ons?: { name: string }; price_at_booking: number; qty?: number }[];
+}
+
+function formatBookingTime(dateStr?: string | null): string {
+  if (!dateStr) return "-";
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) + " WIB";
 }
 
 const STATUS_STYLES: Record<BookingStatus, string> = {
@@ -679,9 +688,20 @@ const filtered = bookings.filter((b) => {
                           {STATUS_LABELS[booking.status]}
                         </span>
                       </div>
-                      <p className="mt-0.5 font-mono text-[11px] text-[var(--muted)]">
-                        {booking.invoice_number} · {formatShortDate(booking.event_date)}
-                      </p>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-[11px] text-[var(--muted)]">
+                        <span>{booking.invoice_number}</span>
+                        <span>·</span>
+                        <span>Acara: {formatShortDate(booking.event_date)}</span>
+                        {booking.created_at && (
+                          <>
+                            <span>·</span>
+                            <span className="inline-flex items-center gap-1 font-semibold text-[var(--ink)]" title="Waktu booking pelanggan">
+                              <Clock className="h-3 w-3 text-[var(--brand)]" />
+                              {formatBookingTime(booking.created_at)}
+                            </span>
+                          </>
+                        )}
+                      </div>
                     </div>
                     <div className="shrink-0 text-right">
                       <p className="text-sm font-bold text-[var(--ink)]">
@@ -864,6 +884,18 @@ const filtered = bookings.filter((b) => {
                         </p>
                       </div>
                       <div className="space-y-1.5 text-xs text-[var(--ink)]">
+                        <p>
+                          <span className="text-[var(--muted)]">Waktu Booking:</span>{" "}
+                          {booking.created_at
+                            ? new Date(booking.created_at).toLocaleString("id-ID", {
+                                day: "numeric",
+                                month: "long",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }) + " WIB"
+                            : "-"}
+                        </p>
                         <p>
                           <span className="text-[var(--muted)]">Verifikasi DP:</span>{" "}
                           {booking.dp_paid_at
