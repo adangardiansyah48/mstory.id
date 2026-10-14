@@ -410,7 +410,7 @@ export async function downloadInvoicePdf(input: {
     kind === "MENUNGGU_DP"
       ? "invoice-dp"
       : kind === "MENUNGGU_PELUNASAN"
-        ? "tagihan-pelunasan"
+        ? "tanda-terima-pelunasan"
         : "tanda-terima-lunas";
   doc.save(`${booking.invoice_number}-${suffix}.pdf`);
 }

@@ -250,7 +250,7 @@ export async function downloadInvoicePdfBlob(booking: InvoicePdfBooking, kind: I
   const blob = await pdf(<InvoicePdfDocument booking={booking} kind={kind} logoUrl={logoUrl} vendorFee={vendorFee} />).toBlob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  const suffix = kind === "MENUNGGU_DP" ? "invoice-dp" : kind === "MENUNGGU_PELUNASAN" ? "tagihan-pelunasan" : "tanda-terima-lunas";
+  const suffix = kind === "MENUNGGU_DP" ? "invoice-dp" : kind === "MENUNGGU_PELUNASAN" ? "tanda-terima-pelunasan" : "tanda-terima-lunas";
   a.href = url;
   a.download = `${booking.invoice_number}-${suffix}.pdf`;
   document.body.appendChild(a);

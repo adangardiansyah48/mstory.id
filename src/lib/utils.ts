@@ -153,9 +153,9 @@ function vendorFeeLines(grandTotal: number, vendorFee?: number, vendorName?: str
 function invoiceHeader(type: "DP" | "PELUNASAN" | "LUNAS"): string[] {
   const title =
     type === "DP"
-      ? "TAGIHAN DP"
+      ? "TANDA TERIMA DP"
       : type === "PELUNASAN"
-        ? "TAGIHAN PELUNASAN"
+        ? "TANDA TERIMA PELUNASAN"
         : "TANDA TERIMA LUNAS";
   return [`*${title} - Mstory.id*`, `━━━━━━━━━━━━━━━━━━`];
 }

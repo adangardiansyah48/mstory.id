@@ -756,7 +756,7 @@ const filtered = bookings.filter((b) => {
                         </button>
                         <button
                           onClick={() => setPdfFor({ booking, kind: "MENUNGGU_PELUNASAN" })}
-                          title="Preview & download PDF tagihan pelunasan"
+                          title="Preview & download PDF tanda terima pelunasan"
                           className="glass-inset inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[11px] font-bold uppercase tracking-widest text-[var(--ink)]"
                         >
                           <FileDown className="h-3.5 w-3.5" />
@@ -764,7 +764,7 @@ const filtered = bookings.filter((b) => {
                         </button>
                         <button
                           onClick={() => openInvoice(booking, "PELUNASAN")}
-                          title="Lihat / kirim tagihan pelunasan via WhatsApp"
+                          title="Lihat / kirim tanda terima pelunasan via WhatsApp"
                           className="glass-inset inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[11px] font-bold uppercase tracking-widest text-[var(--ink)]"
                         >
                           <MessageCircle className="h-3.5 w-3.5" />

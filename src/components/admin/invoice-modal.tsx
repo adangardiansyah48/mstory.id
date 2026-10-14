@@ -138,7 +138,7 @@ const waLink = buildWhatsAppLink(
                   : "bg-white/60 text-[var(--muted)] backdrop-blur-md hover:bg-white/85",
               )}
             >
-              Tagihan
+              Tanda Terima
             </button>
             <button
               onClick={() => setKind("LUNAS")}
