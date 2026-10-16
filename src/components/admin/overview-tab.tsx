@@ -13,6 +13,7 @@ import {
 import { cn, formatCurrency } from "@/lib/utils";
 import { STATUS_LABELS } from "@/lib/types";
 import { useAutoRefresh } from "@/lib/use-auto-refresh";
+import { resolveVendorFee } from "@/lib/vendor-fee";
 
 interface Stats {
   totalBookings: number;
@@ -55,7 +56,7 @@ export function OverviewTab({
         if (s.vendor_fee != null) setVendorFee(Number(s.vendor_fee) || 0);
       } catch { /* fallback */ }
       const [bookingCount, clientCount] = await Promise.all([
-        supabase.from("bookings").select("status, grand_total, event_date, dp_amount, source, dp_paid_at, paid_at").limit(2000),
+        supabase.from("bookings").select("status, grand_total, event_date, dp_amount, source, dp_paid_at, paid_at, vendor_id, vendor_fee_at_booking, vendor_name").limit(2000),
         supabase.from("clients").select("id", { count: "exact", head: true }),
       ]);
 
@@ -68,18 +69,19 @@ export function OverviewTab({
         (b) => b.event_date >= today && b.status !== "CANCELLED",
       ).length;
 
-     const isVendor = (b: Record<string, unknown>) => b.source === "VENDOR";
       const revenueDp = bookings
         .filter((b) => b.status === "MENUNGGU_PELUNASAN" || b.status === "LUNAS")
         .reduce((s, b) => {
-          const net = Math.max(Number(b.grand_total ?? 0) - (isVendor(b as never) ? vendorFee : 0), 0);
+          const fee = resolveVendorFee(b, { vendor_fee: vendorFee });
+          const net = Math.max(Number(b.grand_total ?? 0) - fee, 0);
           return s + Math.min(Number(b.dp_amount ?? 0), net);
         }, 0);
 
       const revenuePelunasan = bookings
         .filter((b) => b.status === "LUNAS")
         .reduce((s, b) => {
-          const net = Math.max(Number(b.grand_total ?? 0) - (isVendor(b as never) ? vendorFee : 0), 0);
+          const fee = resolveVendorFee(b, { vendor_fee: vendorFee });
+          const net = Math.max(Number(b.grand_total ?? 0) - fee, 0);
           return s + Math.max(net - Math.min(Number(b.dp_amount ?? 0), net), 0);
         }, 0);
 

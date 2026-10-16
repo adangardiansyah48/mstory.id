@@ -6,6 +6,7 @@ import { CalendarDays, DollarSign, Download, X } from "lucide-react";
 import { cn, formatCurrency, formatShortDate } from "@/lib/utils";
 import { STATUS_LABELS } from "@/lib/types";
 import type { BookingStatus } from "@/lib/types";
+import { resolveVendorFee } from "@/lib/vendor-fee";
 import { VendorFeePdfPreview, downloadVendorFeePdfBlob, type VendorFeeRow } from "./invoice-pdf-view";
 import { useAutoRefresh } from "@/lib/use-auto-refresh";
 
@@ -21,6 +22,7 @@ interface FinanceRow {
   booking_date: string | null;
   vendor_name?: string | null;
   vendor_id?: number | null;
+  vendor_fee_at_booking?: number | null;
 }
 
 export function FinanceTab() {
@@ -60,7 +62,7 @@ export function FinanceTab() {
 
     const { data, error } = await supabase
       .from("bookings")
-      .select("id, invoice_number, event_date, grand_total, dp_amount, source, status, booking_date, client:clients(full_name), vendor_name, vendor_id")
+      .select("id, invoice_number, event_date, grand_total, dp_amount, source, status, booking_date, client:clients(full_name), vendor_name, vendor_id, vendor_fee_at_booking")
       .neq("status", "CANCELLED")
       .gte("event_date", start)
       .lt("event_date", end)
@@ -96,8 +98,12 @@ export function FinanceTab() {
   const totals = useMemo(() => {
     let dpDiterima = 0;
     let pelunasanDiterima = 0;
+    let totalFeeVendor = 0;
 
     for (const r of rows) {
+      const fee = resolveVendorFee(r, { vendor_fee: vendorFee }, vendorMap);
+      if (r.source === "VENDOR") totalFeeVendor += fee;
+
       const dp = Math.min(Number(r.dp_amount ?? 0), Number(r.grand_total ?? 0));
       const pel = Math.max(Number(r.grand_total ?? 0) - dp, 0);
       if (r.status === "MENUNGGU_PELUNASAN" || r.status === "LUNAS") {
@@ -108,13 +114,18 @@ export function FinanceTab() {
       }
     }
 
+    const totalPemasukan = dpDiterima + pelunasanDiterima;
+    const netPemasukan = Math.max(totalPemasukan - totalFeeVendor, 0);
+
     return {
       dpDiterima,
       pelunasanDiterima,
-      total: dpDiterima + pelunasanDiterima,
+      total: totalPemasukan,
+      totalFeeVendor,
+      net: netPemasukan,
       count: rows.length,
     };
-  }, [rows]);
+  }, [rows, vendorFee, vendorMap]);
 
   const monthLabel = new Date(`${month}-01`).toLocaleDateString("id-ID", {
     month: "long",
@@ -153,7 +164,7 @@ export function FinanceTab() {
       const vendorIdResolved = (v as unknown as { id?: number })?.id ?? vId;
       const vendorName = v?.display_name ?? v?.name ?? r.vendor_name ?? "Vendor";
       const vendorCode = v?.code ?? (r.vendor_name && /^VEND-/i.test(r.vendor_name) ? r.vendor_name : null);
-      const fee = v?.fee_per_booking ?? vendorFee;
+      const fee = resolveVendorFee(r, { vendor_fee: vendorFee }, vendorMap);
       const key = vendorIdResolved != null ? `id:${vendorIdResolved}` : vendorCode ? `code:${vendorCode.toLowerCase()}` : `name:${vendorName.toLowerCase()}`;
       if (!map.has(key)) map.set(key, { vendorId: vendorIdResolved ?? null, vendorCode, vendorName, bookings: [], totalFee: 0 });
       const entry = map.get(key)!;
@@ -204,7 +215,7 @@ export function FinanceTab() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
         <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100">
             <DollarSign className="h-4 w-4 text-amber-700" />
@@ -227,17 +238,28 @@ export function FinanceTab() {
             {formatCurrency(totals.pelunasanDiterima)}
           </p>
         </div>
+        <div className="rounded-2xl border border-purple-200 bg-purple-50/60 p-4">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100">
+            <DollarSign className="h-4 w-4 text-purple-700" />
+          </div>
+          <p className="mt-2 text-[11px] font-semibold uppercase tracking-wider text-purple-700">
+            Kewajiban Fee Vendor
+          </p>
+          <p className="mt-1 font-sans text-lg font-bold text-purple-800">
+            {formatCurrency(totals.totalFeeVendor)}
+          </p>
+        </div>
         <div className="rounded-2xl border border-green-200 bg-green-50/60 p-4">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100">
             <CalendarDays className="h-4 w-4 text-green-700" />
           </div>
           <p className="mt-2 text-[11px] font-semibold uppercase tracking-wider text-green-700">
-            Total Pemasukan ({monthLabel})
+            Pemasukan Bersih ({monthLabel})
           </p>
           <p className="mt-1 font-sans text-lg font-bold text-green-800">
-            {formatCurrency(totals.total)}
+            {formatCurrency(totals.net)}
           </p>
-          <p className="mt-1 text-[10px] text-green-600">{totals.count} transaksi aktif</p>
+          <p className="mt-1 text-[10px] text-green-600">Total Kotor: {formatCurrency(totals.total)}</p>
         </div>
       </div>
 
@@ -259,8 +281,7 @@ export function FinanceTab() {
           <tbody className="divide-y divide-[var(--line)]">
             {visibleRows.map((r) => {
               const isVendor = r.source === "VENDOR";
-              const vm = r.vendor_id != null ? vendorMap[r.vendor_id] : undefined;
-              const fee = isVendor ? (vm?.fee_per_booking ?? vendorFee) : 0;
+              const fee = resolveVendorFee(r, { vendor_fee: vendorFee }, vendorMap);
               const pelunasan = r.status === "LUNAS" ? Math.max(Number(r.grand_total) - Math.min(Number(r.dp_amount), Number(r.grand_total)), 0) : 0;
               return (
                 <tr key={r.id} className="text-sm">

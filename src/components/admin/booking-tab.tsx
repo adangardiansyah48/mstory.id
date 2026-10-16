@@ -19,7 +19,8 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { cn, formatCurrency, formatShortDate, todayInput } from "@/lib/utils";
+import { cn, formatCurrency, formatShortDate, todayInput, generateInvoiceNumber } from "@/lib/utils";
+import { resolveVendorFee } from "@/lib/vendor-fee";
 import Swal from "sweetalert2";
 import { STATUS_LABELS } from "@/lib/types";
 import type { BookingStatus } from "@/lib/types";
@@ -51,6 +52,7 @@ interface BookingRow {
   source: string;
   vendor_name: string;
   vendor_id?: number | null;
+  vendor_fee_at_booking?: number | null;
   details: {
     price_at_booking: number;
     packages: { name: string; dp_value?: number; sub_categories?: { name: string; categories?: { name: string } | null } | null };
@@ -167,8 +169,11 @@ export function BookingTab({
 
   useEffect(() => {
     if (active) {
-      setSearch("");
-      setPage(0);
+      const timer = setTimeout(() => {
+        setSearch("");
+        setPage(0);
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [active]);
 
@@ -234,10 +239,11 @@ export function BookingTab({
     const transportNum = Number(formData.transport_fee) || 0;
     const grandNum = Number(formData.grand_total) || 0;
     const finalGrand = subtotalNum + transportNum > 0 ? subtotalNum + transportNum : grandNum;
+    const invNumber = await generateInvoiceNumber();
     const { data: bookingData, error: bookingErr } = await supabase
       .from("bookings")
       .insert({
-        invoice_number: `ADMIN-${Date.now()}`,
+        invoice_number: invNumber,
         client_id: clientData.id,
         event_date: formData.event_date,
         location_type: formData.location_type,
@@ -271,34 +277,36 @@ export function BookingTab({
   async function addVendorBooking() {
     const supabase = createClient();
     if (!supabase) return;
-    if (!formData.vendor_name.trim() || !formData.event_date || !formData.event_address.trim()) {
-      await Swal.fire({ icon: "error", title: "Data Tidak Lengkap", text: "Nama vendor, tanggal, dan alamat wajib diisi." });
+    if (!formData.vendor_name.trim() || !formData.event_date) {
+      await Swal.fire({ icon: "error", title: "Data Tidak Lengkap", text: "Vendor dan tanggal acara wajib diisi." });
       return;
     }
+    const matchedVendor = vendors.find((x) => x.id === formData.vendor_id);
     const { data: clientData, error: clientErr } = await supabase
       .from("clients")
       .insert({
-        full_name: `[VENDOR] ${formData.vendor_name.trim()}`,
-        whatsapp_number: formData.whatsapp_number.trim() || "",
+        full_name: formData.vendor_name.trim(),
+        whatsapp_number: formData.whatsapp_number.trim() || (matchedVendor?.whatsapp ?? ""),
       })
       .select()
       .single();
     if (clientErr || !clientData) {
-      await Swal.fire({ icon: "error", title: "Gagal Menambah Vendor", text: clientErr?.message ?? "Terjadi kesalahan." });
+      await Swal.fire({ icon: "error", title: "Gagal Menambah Data Vendor", text: clientErr?.message ?? "Terjadi kesalahan." });
       return;
     }
     const subtotalNum2 = Number(formData.subtotal) || 0;
     const transportNum2 = Number(formData.transport_fee) || 0;
     const grandNum2 = Number(formData.grand_total) || 0;
     const finalGrand2 = subtotalNum2 + transportNum2 > 0 ? subtotalNum2 + transportNum2 : grandNum2;
+    const invNumber = await generateInvoiceNumber();
     const { data: bookingData, error: bookingErr } = await supabase
       .from("bookings")
       .insert({
-        invoice_number: `VEND-${Date.now()}`,
+        invoice_number: invNumber,
         client_id: clientData.id,
         event_date: formData.event_date,
         location_type: formData.location_type,
-        event_address: formData.event_address.trim(),
+        event_address: formData.event_address.trim() || "Lokasi Vendor",
         subtotal: subtotalNum2,
         transport_fee: transportNum2,
         grand_total: finalGrand2,
@@ -308,6 +316,7 @@ export function BookingTab({
         source: "VENDOR",
         vendor_name: formData.vendor_name.trim(),
         vendor_id: formData.vendor_id,
+        vendor_fee_at_booking: matchedVendor?.fee_per_booking ?? vendorFee,
       })
       .select()
       .single();
@@ -337,6 +346,7 @@ export function BookingTab({
     if (expected > 0 && grandNum !== expected) {
       await Swal.fire({ icon: "info", title: "Grand Total disesuaikan", text: `Grand Total disesuaikan ke Rp ${expected.toLocaleString("id-ID")} (Subtotal + Transport).` });
     }
+    const matchedVendor = vendors.find((x) => x.id === formData.vendor_id);
     const { error: bookingErr } = await supabase
       .from("bookings")
       .update({
@@ -349,6 +359,10 @@ export function BookingTab({
         dp_amount: Number(formData.dp_amount) || 0,
         status: formData.status,
         notes: formData.notes.trim() || null,
+        source: formData.is_vendor ? "VENDOR" : "CLIENT",
+        vendor_name: formData.is_vendor ? (formData.vendor_name.trim() || null) : null,
+        vendor_id: formData.is_vendor ? formData.vendor_id : null,
+        vendor_fee_at_booking: formData.is_vendor ? (matchedVendor?.fee_per_booking ?? editingBooking.vendor_fee_at_booking ?? vendorFee) : 0,
       })
       .eq("id", editingBooking.id);
     if (bookingErr) {
@@ -998,7 +1012,7 @@ const filtered = bookings.filter((b) => {
           booking={invoiceFor as ComponentProps<typeof InvoiceModal>["booking"]}
           defaultKind={invoiceKind}
           logoUrl={logoUrl}
-          vendorFee={invoiceVendor ? vendorFee : undefined}
+          vendorFee={invoiceVendor ? resolveVendorFee(invoiceFor, { vendor_fee: vendorFee }) : undefined}
         />
       )}
 
@@ -1014,65 +1028,78 @@ const filtered = bookings.filter((b) => {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-5 space-y-4">
-              {!editingBooking && (
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" checked={formData.is_vendor} onChange={(e) => setFormData({ ...formData, is_vendor: e.target.checked })} className="accent-[var(--brand)]" />
-                  <span className="text-sm font-semibold text-[var(--ink)]">Booking Vendor</span>
-                </label>
-              )}
-<div>
-              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
-                {formData.is_vendor ? "Vendor" : "Nama Lengkap"}
-              </p>
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={formData.is_vendor} onChange={(e) => setFormData({ ...formData, is_vendor: e.target.checked })} className="accent-[var(--brand)]" />
+                <span className="text-sm font-semibold text-[var(--ink)]">Booking dari Vendor</span>
+              </label>
+
               {formData.is_vendor ? (
-                <select
-                  value={formData.vendor_id ?? ""}
-                  onChange={(e) => {
-                    const vId = e.target.value ? Number(e.target.value) : null;
-                    const v = vendors.find((x) => x.id === vId);
-                    setFormData((s) => ({
-                      ...s,
-                      vendor_id: vId,
-                      vendor_name: v ? v.display_name ?? v.name : "",
-                      whatsapp_number: s.whatsapp_number || (v?.whatsapp ?? ""),
-                    }));
-                  }}
-                  className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none"
-                >
-                  <option value="">-- Pilih vendor --</option>
-                  {vendors.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.code ? `${v.code} · ` : ""}{v.display_name ?? v.name}
-                    </option>
-                  ))}
-                </select>
+                <>
+                  <div>
+                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Pilih Vendor</p>
+                    <select
+                      value={formData.vendor_id ?? ""}
+                      onChange={(e) => {
+                        const vId = e.target.value ? Number(e.target.value) : null;
+                        const v = vendors.find((x) => x.id === vId);
+                        setFormData((s) => ({
+                          ...s,
+                          vendor_id: vId,
+                          vendor_name: v ? v.display_name ?? v.name : "",
+                          full_name: v ? v.display_name ?? v.name : "",
+                          whatsapp_number: v?.whatsapp ?? s.whatsapp_number,
+                          event_address: s.event_address || "Lokasi Vendor",
+                        }));
+                      }}
+                      className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none"
+                    >
+                      <option value="">-- Pilih vendor --</option>
+                      {vendors.map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.code ? `${v.code} · ` : ""}{v.display_name ?? v.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Tanggal Acara</p>
+                    <input type="date" value={formData.event_date} onChange={(e) => setFormData({ ...formData, event_date: e.target.value })} className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none" />
+                  </div>
+                  <div className="rounded-xl border border-blue-200 bg-blue-50/70 p-3 text-xs text-blue-800">
+                    ℹ️ Booking dari vendor: data pelanggan otomatis menggunakan identitas vendor.
+                  </div>
+                </>
               ) : (
-                <input value={formData.full_name} onChange={(e) => setFormData({ ...formData, full_name: e.target.value })} placeholder="Nama pelanggan" className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none" />
+                <>
+                  <div>
+                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Nama Lengkap</p>
+                    <input value={formData.full_name} onChange={(e) => setFormData({ ...formData, full_name: e.target.value })} placeholder="Nama pelanggan" className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none" />
+                  </div>
+                  <div>
+                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">No. WhatsApp</p>
+                    <input type="tel" value={formData.whatsapp_number} onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })} className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none" placeholder="08123456789" />
+                  </div>
+                  <div>
+                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Tanggal Acara</p>
+                    <input type="date" value={formData.event_date} onChange={(e) => setFormData({ ...formData, event_date: e.target.value })} className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none" />
+                  </div>
+                  <div>
+                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Lokasi</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button type="button" onClick={() => setFormData({ ...formData, location_type: "KOTA_TASIK" })} className={`rounded-xl border-2 px-3 py-2 text-xs font-semibold ${formData.location_type === "KOTA_TASIK" ? "border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--ink)]" : "border-white/50 bg-white/60 text-[var(--muted)]"}`}>
+                        <span className="inline-flex items-center gap-1"><Car className="h-3.5 w-3.5" /> Kota Tasik</span>
+                      </button>
+                      <button type="button" onClick={() => setFormData({ ...formData, location_type: "LUAR_KOTA" })} className={`rounded-xl border-2 px-3 py-2 text-xs font-semibold ${formData.location_type === "LUAR_KOTA" ? "border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--ink)]" : "border-white/50 bg-white/60 text-[var(--muted)]"}`}>
+                        <span className="inline-flex items-center gap-1"><CalendarOff className="h-3.5 w-3.5" /> Luar Kota</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Alamat Acara</p>
+                    <input value={formData.event_address} onChange={(e) => setFormData({ ...formData, event_address: e.target.value })} className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none" placeholder="Alamat lengkap" />
+                  </div>
+                </>
               )}
-            </div>
-              <div>
-                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">No. WhatsApp</p>
-                <input type="tel" value={formData.whatsapp_number} onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })} className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none" placeholder="08123456789" />
-              </div>
-              <div>
-                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Tanggal Acara</p>
-                <input type="date" value={formData.event_date} onChange={(e) => setFormData({ ...formData, event_date: e.target.value })} className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none" />
-              </div>
-              <div>
-                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Lokasi</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => setFormData({ ...formData, location_type: "KOTA_TASIK" })} className={`rounded-xl border-2 px-3 py-2 text-xs font-semibold ${formData.location_type === "KOTA_TASIK" ? "border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--ink)]" : "border-white/50 bg-white/60 text-[var(--muted)]"}`}>
-                    <span className="inline-flex items-center gap-1"><Car className="h-3.5 w-3.5" /> Kota Tasik</span>
-                  </button>
-                  <button type="button" onClick={() => setFormData({ ...formData, location_type: "LUAR_KOTA" })} className={`rounded-xl border-2 px-3 py-2 text-xs font-semibold ${formData.location_type === "LUAR_KOTA" ? "border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--ink)]" : "border-white/50 bg-white/60 text-[var(--muted)]"}`}>
-                    <span className="inline-flex items-center gap-1"><CalendarOff className="h-3.5 w-3.5" /> Luar Kota</span>
-                  </button>
-                </div>
-              </div>
-              <div>
-                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Alamat Acara</p>
-                <input value={formData.event_address} onChange={(e) => setFormData({ ...formData, event_address: e.target.value })} className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none" placeholder="Alamat lengkap" />
-              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Subtotal (Rp)</p>
@@ -1129,7 +1156,7 @@ const filtered = bookings.filter((b) => {
                 {pdfFor.booking.invoice_number}{pdfFor.vendor ? " · Invoice Vendor" : ""}
               </p>
               <div className="flex items-center gap-2">
-                <button onClick={async () => { await downloadInvoicePdfBlob(pdfFor.booking, pdfFor.kind, logoUrl, pdfFor.vendor ? vendorFee : undefined); }} className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-2 text-xs font-bold text-white">
+                <button onClick={async () => { await downloadInvoicePdfBlob(pdfFor.booking, pdfFor.kind, logoUrl, pdfFor.vendor ? resolveVendorFee(pdfFor.booking, { vendor_fee: vendorFee }) : undefined); }} className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-2 text-xs font-bold text-white">
                   <Download className="h-3.5 w-3.5" />
                   Download PDF
                 </button>
@@ -1139,7 +1166,7 @@ const filtered = bookings.filter((b) => {
               </div>
             </div>
             <div className="min-h-0 flex-1 bg-gray-100 p-3">
-              <InvoicePdfPreview booking={pdfFor.booking} kind={pdfFor.kind} logoUrl={logoUrl} vendorFee={pdfFor.vendor ? vendorFee : undefined} />
+              <InvoicePdfPreview booking={pdfFor.booking} kind={pdfFor.kind} logoUrl={logoUrl} vendorFee={pdfFor.vendor ? resolveVendorFee(pdfFor.booking, { vendor_fee: vendorFee }) : undefined} />
             </div>
           </div>
         </div>

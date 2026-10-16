@@ -293,7 +293,6 @@ function slugifyVendor(input: string): string {
 
 export function VendorFeePdfDocument({ vendorName, monthLabel, logoUrl, rows }: VendorFeeProps) {
   const totalFee = rows.reduce((s, r) => s + (Number(r.fee) || 0), 0);
-  const feeEach = rows[0]?.fee ?? 0;
 
   return (
     <Document>
@@ -311,7 +310,7 @@ export function VendorFeePdfDocument({ vendorName, monthLabel, logoUrl, rows }: 
           <Text style={s.sectionTitle}>DISERAHKAN KEPADA VENDOR</Text>
           <Text style={{ fontSize: 15, fontWeight: "bold" }}>{vendorName}</Text>
           <Text style={{ fontSize: 9, color: C.muted, marginTop: 4 }}>
-            Akumulasi fee vendor bulan {monthLabel} — {rows.length} booking × {fmt(feeEach)}. Mstory.id menyatakan telah menyerahkan fee atas booking yang ditangani {vendorName}.
+            Akumulasi fee vendor bulan {monthLabel} — total {rows.length} booking dengan total fee {fmt(totalFee)}. Mstory.id menyatakan telah menyerahkan fee atas booking yang ditangani {vendorName}.
           </Text>
         </View>
 

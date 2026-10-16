@@ -22,6 +22,7 @@ interface Step2Props {
   client: WizardClientDetails;
   setClient: React.Dispatch<React.SetStateAction<WizardClientDetails>>;
   transportFeeDefault?: number;
+  isVendor?: boolean;
 }
 
 function toLocalDateKey(date: Date) {
@@ -36,6 +37,7 @@ export function Step2Schedule({
   client,
   setClient,
   transportFeeDefault,
+  isVendor,
 }: Step2Props) {
   const FEE_LABEL = formatCurrency(transportFeeDefault ?? OUTSIDE_CITY_TRANSPORT_FEE);
   const [currentMonth, setCurrentMonth] = useState(() => {
@@ -219,102 +221,106 @@ export function Step2Schedule({
       )}
     </div>
 
-    <div ref={clientInfoRef}>
-      <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-        <User className="h-4 w-4" /> Data Diri
-      </h3>
-        <div className="mt-3 space-y-4">
-          <Input
-            placeholder="Nama Lengkap"
-            value={client.fullName}
-            onChange={(e) =>
-              setClient({ ...client, fullName: e.target.value })
-            }
-            label="Nama Lengkap"
-          />
-          <Input
-            placeholder="Contoh: 08123456789"
-            value={client.whatsappNumber}
-            onChange={(e) =>
-              setClient({ ...client, whatsappNumber: e.target.value })
-            }
-            label="No. WhatsApp"
-            type="tel"
-            inputMode="numeric"
-            error={client.whatsappNumber ? whatsAppValidationMessage(client.whatsappNumber) ?? undefined : undefined}
-          />
-        </div>
-      </div>
-
-      <div>
-        <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-          <MapPin className="h-4 w-4" /> Lokasi Acara
-        </h3>
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          {(
-            [
-              { value: "KOTA_TASIK", label: "Kota Tasikmalaya" },
-              { value: "LUAR_KOTA", label: "Luar Kota" },
-            ] as const
-          ).map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() =>
-                setClient({
-                  ...client,
-                  locationType: opt.value,
-                  travelHours: opt.value === "KOTA_TASIK" ? "" : client.travelHours,
-                })
-              }
-              className={cn(
-                "rounded-[1.5rem] border-2 px-3 py-3 text-xs font-semibold transition-all",
-                client.locationType === opt.value
-                  ? "border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--ink)]"
-                  : "border-white/50 bg-white/60 text-[var(--muted)] backdrop-blur-md hover:border-[var(--brand)] hover:bg-white/85",
-              )}
-            >
-              <span className="inline-flex items-center gap-1.5">
-                {opt.value === "KOTA_TASIK" ? (
-                  <MapPin className="h-3.5 w-3.5" />
-                ) : (
-                  <Car className="h-3.5 w-3.5" />
-                )}
-                {opt.label}
-              </span>
-            </button>
-          ))}
-        </div>
-        {client.locationType === "LUAR_KOTA" && (
-          <div className="mt-3 space-y-3">
+    {!isVendor && (
+      <>
+        <div ref={clientInfoRef}>
+          <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+            <User className="h-4 w-4" /> Data Diri
+          </h3>
+          <div className="mt-3 space-y-4">
             <Input
-              label="Waktu Jarak Tempuh (jam)"
-              type="number"
-              inputMode="decimal"
-              min="0"
-              step="0.5"
-              placeholder="Contoh: 2"
-              value={client.travelHours}
+              placeholder="Nama Lengkap"
+              value={client.fullName}
               onChange={(e) =>
-                setClient({ ...client, travelHours: e.target.value })
+                setClient({ ...client, fullName: e.target.value })
               }
-              error={client.locationType === "LUAR_KOTA" && client.travelHours !== "" && (Number(client.travelHours) || 0) <= 0 ? "Wajib isi &gt; 0 jika Luar Kota" : undefined}
+              label="Nama Lengkap"
             />
-            <div className="rounded-[1.5rem] border border-white/50 bg-white/60 px-4 py-3 text-xs text-[var(--muted)] backdrop-blur-md">
-              Tarif: {FEE_LABEL}/jam × {client.travelHours || "0"} jam = <strong>{formatCurrency((Number(client.travelHours) || 0) * (transportFeeDefault ?? OUTSIDE_CITY_TRANSPORT_FEE))}</strong>
-            </div>
+            <Input
+              placeholder="Contoh: 08123456789"
+              value={client.whatsappNumber}
+              onChange={(e) =>
+                setClient({ ...client, whatsappNumber: e.target.value })
+              }
+              label="No. WhatsApp"
+              type="tel"
+              inputMode="numeric"
+              error={client.whatsappNumber ? whatsAppValidationMessage(client.whatsappNumber) ?? undefined : undefined}
+            />
           </div>
-        )}
-        <div className="mt-3">
-          <Input
-            placeholder="Tuliskan alamat lengkap lokasi acara"
-            value={client.eventAddress}
-            onChange={(e) =>
-              setClient({ ...client, eventAddress: e.target.value })
-            }
-            label="Alamat Langkap"
-          />
         </div>
-      </div>
+
+        <div>
+          <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+            <MapPin className="h-4 w-4" /> Lokasi Acara
+          </h3>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            {(
+              [
+                { value: "KOTA_TASIK", label: "Kota Tasikmalaya" },
+                { value: "LUAR_KOTA", label: "Luar Kota" },
+              ] as const
+            ).map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() =>
+                  setClient({
+                    ...client,
+                    locationType: opt.value,
+                    travelHours: opt.value === "KOTA_TASIK" ? "" : client.travelHours,
+                  })
+                }
+                className={cn(
+                  "rounded-[1.5rem] border-2 px-3 py-3 text-xs font-semibold transition-all",
+                  client.locationType === opt.value
+                    ? "border-[var(--brand)] bg-[var(--brand)]/10 text-[var(--ink)]"
+                    : "border-white/50 bg-white/60 text-[var(--muted)] backdrop-blur-md hover:border-[var(--brand)] hover:bg-white/85",
+                )}
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  {opt.value === "KOTA_TASIK" ? (
+                    <MapPin className="h-3.5 w-3.5" />
+                  ) : (
+                    <Car className="h-3.5 w-3.5" />
+                  )}
+                  {opt.label}
+                </span>
+              </button>
+            ))}
+          </div>
+          {client.locationType === "LUAR_KOTA" && (
+            <div className="mt-3 space-y-3">
+              <Input
+                label="Waktu Jarak Tempuh (jam)"
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="0.5"
+                placeholder="Contoh: 2"
+                value={client.travelHours}
+                onChange={(e) =>
+                  setClient({ ...client, travelHours: e.target.value })
+                }
+                error={client.locationType === "LUAR_KOTA" && client.travelHours !== "" && (Number(client.travelHours) || 0) <= 0 ? "Wajib isi &gt; 0 jika Luar Kota" : undefined}
+              />
+              <div className="rounded-[1.5rem] border border-white/50 bg-white/60 px-4 py-3 text-xs text-[var(--muted)] backdrop-blur-md">
+                Tarif: {FEE_LABEL}/jam × {client.travelHours || "0"} jam = <strong>{formatCurrency((Number(client.travelHours) || 0) * (transportFeeDefault ?? OUTSIDE_CITY_TRANSPORT_FEE))}</strong>
+              </div>
+            </div>
+          )}
+          <div className="mt-3">
+            <Input
+              placeholder="Tuliskan alamat lengkap lokasi acara"
+              value={client.eventAddress}
+              onChange={(e) =>
+                setClient({ ...client, eventAddress: e.target.value })
+              }
+              label="Alamat Langkap"
+            />
+          </div>
+        </div>
+      </>
+    )}
 
       <div>
         <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">

@@ -70,9 +70,13 @@ export function InvoiceModal({
   });
   const packageDescription = packageLines.join("\n") || "-";
 
+  const displayName = booking.source === "VENDOR" && booking.vendor_name
+    ? booking.vendor_name
+    : (booking.client?.full_name ?? "-");
+
   const base = {
     invoiceNumber: booking.invoice_number,
-    fullName: booking.client?.full_name ?? "-",
+    fullName: displayName,
     whatsappNumber: booking.client?.whatsapp_number ?? "-",
     eventDate: booking.event_date,
     eventAddress: booking.event_address,

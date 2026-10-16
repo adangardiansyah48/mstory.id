@@ -98,7 +98,7 @@ export function BookingWizard({
   const [submitting, setSubmitting] = useState(false);
   const [isVendorBooking, setIsVendorBooking] = useState(false);
   const [vendorName, setVendorName] = useState("");
-  const [vendorOptions, setVendorOptions] = useState<{ id: number; name: string }[]>([]);
+  const [vendorOptions, setVendorOptions] = useState<{ id: number; name: string; whatsapp?: string | null; fee_per_booking?: number }[]>([]);
   const [submitResult, setSubmitResult] = useState<{
     invoiceNumber: string;
     waLink: string;
@@ -115,8 +115,13 @@ export function BookingWizard({
       try {
         const supabase = createClient();
         if (!supabase) return;
-        const { data } = await supabase.from("vendors").select("id, name, display_name").eq("is_active", true).order("name", { ascending: true });
-        setVendorOptions(((data as unknown as { id: number; name: string; display_name: string | null }[] | null) ?? []).map((v) => ({ id: v.id, name: v.display_name ?? v.name })));
+        const { data } = await supabase.from("vendors").select("id, name, display_name, whatsapp, fee_per_booking").eq("is_active", true).order("name", { ascending: true });
+        setVendorOptions(((data as unknown as { id: number; name: string; display_name: string | null; whatsapp: string | null; fee_per_booking: number }[] | null) ?? []).map((v) => ({
+          id: v.id,
+          name: v.display_name ?? v.name,
+          whatsapp: v.whatsapp,
+          fee_per_booking: v.fee_per_booking,
+        })));
       } catch {}
     })();
   }, [adminMode]);
@@ -179,10 +184,12 @@ export function BookingWizard({
   const canProceedStep2 =
     !!selection.selectedPackage &&
     !!client.eventDate &&
-    !!client.fullName.trim() &&
-    isValidWhatsAppNumber(client.whatsappNumber) &&
-    !!client.eventAddress.trim() &&
-    (client.locationType !== "LUAR_KOTA" || (Number(client.travelHours) || 0) > 0);
+    ((adminMode && isVendorBooking) || (
+      !!client.fullName.trim() &&
+      isValidWhatsAppNumber(client.whatsappNumber) &&
+      !!client.eventAddress.trim() &&
+      (client.locationType !== "LUAR_KOTA" || (Number(client.travelHours) || 0) > 0)
+    ));
 
   async function handleSubmit() {
     if (!selection.selectedPackage) return;
@@ -206,15 +213,15 @@ export function BookingWizard({
     let invoiceNumber = await generateInvoiceNumber();
     const normalizedPhone = normalizeWhatsAppNumber(client.whatsappNumber);
 
-     try {
-       const { data: clientData, error: clientError } = await supabase
-         .from("clients")
-         .insert({
-           full_name: client.fullName,
-           whatsapp_number: normalizedPhone,
-         })
-         .select()
-         .single();
+      try {
+        const { data: clientData, error: clientError } = await supabase
+          .from("clients")
+          .insert({
+            full_name: adminMode && isVendorBooking ? (vendorName.trim() || "[VENDOR]") : client.fullName,
+            whatsapp_number: normalizedPhone,
+          })
+          .select()
+          .single();
 
        if (clientError) throw clientError;
 
@@ -238,7 +245,10 @@ export function BookingWizard({
             basePayload.source = "VENDOR";
             basePayload.vendor_name = vendorName.trim();
             const v = vendorOptions.find((x) => x.name === vendorName.trim());
-            if (v) basePayload.vendor_id = v.id;
+            if (v) {
+              basePayload.vendor_id = v.id;
+              basePayload.vendor_fee_at_booking = (v as unknown as { fee_per_booking?: number }).fee_per_booking ?? 200000;
+            }
           }
 for (let attempt = 0; attempt < 3; attempt++) {
             const attemptPayload = { ...basePayload, invoice_number: invoiceNumber };
@@ -480,7 +490,19 @@ for (let attempt = 0; attempt < 3; attempt++) {
                             <p className="mb-1 text-[10px] font-bold uppercase text-[var(--muted-2)]">Pilih Vendor (dari master)</p>
                             <select
                               value={vendorName}
-                              onChange={(e) => setVendorName(e.target.value)}
+                              onChange={(e) => {
+                                const selectedName = e.target.value;
+                                setVendorName(selectedName);
+                                const v = vendorOptions.find((x) => x.name === selectedName);
+                                if (v) {
+                                  setClient((prev) => ({
+                                    ...prev,
+                                    fullName: v.name,
+                                    whatsappNumber: v.whatsapp || prev.whatsappNumber || "08123456789",
+                                    eventAddress: prev.eventAddress || "Lokasi Vendor",
+                                  }));
+                                }
+                              }}
                               className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none"
                             >
                               <option value="">-- Pilih vendor --</option>
@@ -503,6 +525,7 @@ for (let attempt = 0; attempt < 3; attempt++) {
                     client={client}
                     setClient={setClient}
                     transportFeeDefault={transportFeeDefault}
+                    isVendor={adminMode && isVendorBooking}
                   />
                 </>
               )}

@@ -21,6 +21,8 @@ export interface InvoicePdfBooking {
   event_address: string;
   source?: string | null;
   vendor_name?: string | null;
+  vendor_id?: number | null;
+  vendor_fee_at_booking?: number | null;
   subtotal: number;
   transport_fee: number;
   grand_total: number;

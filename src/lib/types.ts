@@ -68,6 +68,10 @@ export interface Booking {
   created_at: string;
   dp_paid_at?: string | null;
   paid_at?: string | null;
+  source?: string | null;
+  vendor_name?: string | null;
+  vendor_id?: number | null;
+  vendor_fee_at_booking?: number | null;
 }
 
 export interface BookingDetail {
