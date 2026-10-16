@@ -55,18 +55,44 @@ export function OverviewTab({
         const s = await getSiteSettings();
         if (s.vendor_fee != null) setVendorFee(Number(s.vendor_fee) || 0);
       } catch { /* fallback */ }
-      const [bookingCount, clientCount] = await Promise.all([
-        supabase.from("bookings").select("status, grand_total, event_date, dp_amount, source, dp_paid_at, paid_at, vendor_id, vendor_fee_at_booking, vendor_name").limit(2000),
-        supabase.from("clients").select("id", { count: "exact", head: true }),
-      ]);
+      interface OverviewBookingItem {
+        status?: string;
+        grand_total?: number | string | null;
+        event_date?: string | null;
+        dp_amount?: number | string | null;
+        source?: string | null;
+        dp_paid_at?: string | null;
+        paid_at?: string | null;
+        vendor_id?: number | null;
+        vendor_fee_at_booking?: number | null;
+        vendor_name?: string | null;
+      }
+      let bookingsData: OverviewBookingItem[] = [];
+      const primaryRes = await supabase
+        .from("bookings")
+        .select("status, grand_total, event_date, dp_amount, source, dp_paid_at, paid_at, vendor_id, vendor_fee_at_booking, vendor_name")
+        .limit(2000);
 
-      if (bookingCount.error) throw bookingCount.error;
+      if (primaryRes.error && primaryRes.error.message.includes("vendor_fee_at_booking")) {
+        const fallbackRes = await supabase
+          .from("bookings")
+          .select("status, grand_total, event_date, dp_amount, source, dp_paid_at, paid_at, vendor_id, vendor_name")
+          .limit(2000);
+        if (fallbackRes.error) throw fallbackRes.error;
+        bookingsData = (fallbackRes.data as unknown as OverviewBookingItem[]) ?? [];
+      } else if (primaryRes.error) {
+        throw primaryRes.error;
+      } else {
+        bookingsData = (primaryRes.data as unknown as OverviewBookingItem[]) ?? [];
+      }
+
+      const clientCount = await supabase.from("clients").select("id", { count: "exact", head: true });
       if (clientCount.error) throw clientCount.error;
-      const bookings = bookingCount.data ?? [];
+      const bookings = bookingsData;
 
       const today = new Date().toISOString().slice(0, 10);
       const upcoming = bookings.filter(
-        (b) => b.event_date >= today && b.status !== "CANCELLED",
+        (b) => !!b.event_date && b.event_date >= today && b.status !== "CANCELLED",
       ).length;
 
       const revenueDp = bookings

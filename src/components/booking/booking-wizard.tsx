@@ -251,12 +251,19 @@ export function BookingWizard({
             }
           }
 for (let attempt = 0; attempt < 3; attempt++) {
-            const attemptPayload = { ...basePayload, invoice_number: invoiceNumber };
-            const { data: bd, error: be } = await supabase
+            const attemptPayload: Record<string, unknown> = { ...basePayload, invoice_number: invoiceNumber };
+            let { data: bd, error: be } = await supabase
               .from("bookings")
               .insert(attemptPayload)
               .select()
               .single();
+            if (be && be.message && be.message.includes("vendor_fee_at_booking")) {
+              delete attemptPayload.vendor_fee_at_booking;
+              delete basePayload.vendor_fee_at_booking;
+              const retry = await supabase.from("bookings").insert(attemptPayload).select().single();
+              bd = retry.data;
+              be = retry.error;
+            }
             if (!be) { bookingData = bd; break; }
             if ((be as { code?: string }).code === "23505" && attempt < 2) {
               invoiceNumber = await generateInvoiceNumber();

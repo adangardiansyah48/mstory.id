@@ -60,7 +60,8 @@ export function FinanceTab() {
     endDate.setMonth(endDate.getMonth() + 1);
     const end = endDate.toISOString().slice(0, 10);
 
-    const { data, error } = await supabase
+    let rowData: FinanceRow[] = [];
+    const primaryRes = await supabase
       .from("bookings")
       .select("id, invoice_number, event_date, grand_total, dp_amount, source, status, booking_date, client:clients(full_name), vendor_name, vendor_id, vendor_fee_at_booking")
       .neq("status", "CANCELLED")
@@ -69,13 +70,25 @@ export function FinanceTab() {
       .order("event_date", { ascending: true })
       .limit(1000);
 
-
-    if (error) {
-      console.error("loadData finance error:", error.message);
-      setRows([]);
+    if (primaryRes.error && primaryRes.error.message.includes("vendor_fee_at_booking")) {
+      const fallback = await supabase
+        .from("bookings")
+        .select("id, invoice_number, event_date, grand_total, dp_amount, source, status, booking_date, client:clients(full_name), vendor_name, vendor_id")
+        .neq("status", "CANCELLED")
+        .gte("event_date", start)
+        .lt("event_date", end)
+        .order("event_date", { ascending: true })
+        .limit(1000);
+      if (fallback.error) console.error("loadData finance error:", fallback.error.message);
+      rowData = (fallback.data as unknown as FinanceRow[]) ?? [];
+    } else if (primaryRes.error) {
+      console.error("loadData finance error:", primaryRes.error.message);
+      rowData = [];
     } else {
-      setRows((data as unknown as FinanceRow[]) ?? []);
+      rowData = (primaryRes.data as unknown as FinanceRow[]) ?? [];
     }
+
+    setRows(rowData);
     setLoading(false);
   }
 

@@ -299,27 +299,35 @@ export function BookingTab({
     const grandNum2 = Number(formData.grand_total) || 0;
     const finalGrand2 = subtotalNum2 + transportNum2 > 0 ? subtotalNum2 + transportNum2 : grandNum2;
     const invNumber = await generateInvoiceNumber();
-    const { data: bookingData, error: bookingErr } = await supabase
+    const payload: Record<string, unknown> = {
+      invoice_number: invNumber,
+      client_id: clientData.id,
+      event_date: formData.event_date,
+      location_type: formData.location_type,
+      event_address: formData.event_address.trim() || "Lokasi Vendor",
+      subtotal: subtotalNum2,
+      transport_fee: transportNum2,
+      grand_total: finalGrand2,
+      dp_amount: Number(formData.dp_amount) || 0,
+      status: formData.status,
+      notes: formData.notes.trim() || null,
+      source: "VENDOR",
+      vendor_name: formData.vendor_name.trim(),
+      vendor_id: formData.vendor_id,
+      vendor_fee_at_booking: matchedVendor?.fee_per_booking ?? vendorFee,
+    };
+    let { data: bookingData, error: bookingErr } = await supabase
       .from("bookings")
-      .insert({
-        invoice_number: invNumber,
-        client_id: clientData.id,
-        event_date: formData.event_date,
-        location_type: formData.location_type,
-        event_address: formData.event_address.trim() || "Lokasi Vendor",
-        subtotal: subtotalNum2,
-        transport_fee: transportNum2,
-        grand_total: finalGrand2,
-        dp_amount: Number(formData.dp_amount) || 0,
-        status: formData.status,
-        notes: formData.notes.trim() || null,
-        source: "VENDOR",
-        vendor_name: formData.vendor_name.trim(),
-        vendor_id: formData.vendor_id,
-        vendor_fee_at_booking: matchedVendor?.fee_per_booking ?? vendorFee,
-      })
+      .insert(payload)
       .select()
       .single();
+
+    if (bookingErr && bookingErr.message.includes("vendor_fee_at_booking")) {
+      delete payload.vendor_fee_at_booking;
+      const retry = await supabase.from("bookings").insert(payload).select().single();
+      bookingData = retry.data;
+      bookingErr = retry.error;
+    }
     if (bookingErr || !bookingData) {
       await supabase.from("clients").delete().eq("id", clientData.id);
       await Swal.fire({ icon: "error", title: "Gagal Menambah Booking Vendor", text: bookingErr?.message ?? "Terjadi kesalahan." });
@@ -347,24 +355,31 @@ export function BookingTab({
       await Swal.fire({ icon: "info", title: "Grand Total disesuaikan", text: `Grand Total disesuaikan ke Rp ${expected.toLocaleString("id-ID")} (Subtotal + Transport).` });
     }
     const matchedVendor = vendors.find((x) => x.id === formData.vendor_id);
-    const { error: bookingErr } = await supabase
+    const updatePayload: Record<string, unknown> = {
+      event_date: formData.event_date,
+      location_type: formData.location_type,
+      event_address: formData.event_address.trim(),
+      subtotal: subtotalNum,
+      transport_fee: transportNum,
+      grand_total: finalGrand,
+      dp_amount: Number(formData.dp_amount) || 0,
+      status: formData.status,
+      notes: formData.notes.trim() || null,
+      source: formData.is_vendor ? "VENDOR" : "CLIENT",
+      vendor_name: formData.is_vendor ? (formData.vendor_name.trim() || null) : null,
+      vendor_id: formData.is_vendor ? formData.vendor_id : null,
+      vendor_fee_at_booking: formData.is_vendor ? (matchedVendor?.fee_per_booking ?? editingBooking.vendor_fee_at_booking ?? vendorFee) : 0,
+    };
+    let { error: bookingErr } = await supabase
       .from("bookings")
-      .update({
-        event_date: formData.event_date,
-        location_type: formData.location_type,
-        event_address: formData.event_address.trim(),
-        subtotal: subtotalNum,
-        transport_fee: transportNum,
-        grand_total: finalGrand,
-        dp_amount: Number(formData.dp_amount) || 0,
-        status: formData.status,
-        notes: formData.notes.trim() || null,
-        source: formData.is_vendor ? "VENDOR" : "CLIENT",
-        vendor_name: formData.is_vendor ? (formData.vendor_name.trim() || null) : null,
-        vendor_id: formData.is_vendor ? formData.vendor_id : null,
-        vendor_fee_at_booking: formData.is_vendor ? (matchedVendor?.fee_per_booking ?? editingBooking.vendor_fee_at_booking ?? vendorFee) : 0,
-      })
+      .update(updatePayload)
       .eq("id", editingBooking.id);
+
+    if (bookingErr && bookingErr.message.includes("vendor_fee_at_booking")) {
+      delete updatePayload.vendor_fee_at_booking;
+      const retry = await supabase.from("bookings").update(updatePayload).eq("id", editingBooking.id);
+      bookingErr = retry.error;
+    }
     if (bookingErr) {
       await Swal.fire({ icon: "error", title: "Gagal Memperbarui", text: bookingErr.message });
       return;
