@@ -18,6 +18,7 @@ import {
   PAYMENT_BANK,
 } from "@/lib/types";
 import type { InvoicePdfBooking } from "@/lib/invoice-pdf";
+import { resolveVendorFee } from "@/lib/vendor-fee";
 
 export type InvoiceKind = "DP" | "PELUNASAN" | "LUNAS";
 

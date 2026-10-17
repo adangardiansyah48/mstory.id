@@ -1,6 +1,7 @@
 import { jsPDF } from "jspdf";
 import type { InvoicePdfKind } from "@/lib/types";
 import { PAYMENT_ACCOUNT, PAYMENT_ACCOUNT_HOLDER, PAYMENT_BANK } from "@/lib/types";
+import { resolveVendorFee } from "@/lib/vendor-fee";
 
 function slugify(input: string): string {
   return input

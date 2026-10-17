@@ -113,6 +113,7 @@ export function BookingTab({
 
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [editingBooking, setEditingBooking] = useState<BookingRow | null>(null);
+  const [vendorMap, setVendorMap] = useState<Record<number, { fee_per_booking: number }>>({});
   const [vendors, setVendors] = useState<{ id: number; code: string | null; name: string; display_name: string | null; whatsapp: string | null; fee_per_booking: number; is_active: boolean }[]>([]);
   const [formData, setFormData] = useState<{
     full_name: string;
@@ -161,7 +162,15 @@ export function BookingTab({
         const supabase = createClient();
         if (!supabase) return;
         const { data } = await supabase.from("vendors").select("id, code, name, display_name, whatsapp, fee_per_booking, is_active").eq("is_active", true).order("name", { ascending: true });
-        if (!cancelled) setVendors((data as typeof vendors | null) ?? []);
+        if (!cancelled) {
+          const list = (data as typeof vendors | null) ?? [];
+          setVendors(list);
+          const map: Record<number, { fee_per_booking: number }> = {};
+          for (const v of list) {
+            map[v.id] = { fee_per_booking: Number(v.fee_per_booking) || 0 };
+          }
+          setVendorMap(map);
+        }
       } catch {}
     })();
     return () => { cancelled = true; };
@@ -1007,7 +1016,7 @@ const filtered = bookings.filter((b) => {
           booking={invoiceFor as ComponentProps<typeof InvoiceModal>["booking"]}
           defaultKind={invoiceKind}
           logoUrl={logoUrl}
-          vendorFee={invoiceVendor ? resolveVendorFee(invoiceFor, { vendor_fee: vendorFee }) : undefined}
+          vendorFee={invoiceVendor ? resolveVendorFee(invoiceFor as any, { vendor_fee: vendorFee }, vendorMap as any) : undefined}
         />
       )}
 
@@ -1151,7 +1160,7 @@ const filtered = bookings.filter((b) => {
                 {pdfFor.booking.invoice_number}{pdfFor.vendor ? " · Invoice Vendor" : ""}
               </p>
               <div className="flex items-center gap-2">
-                <button onClick={async () => { await downloadInvoicePdfBlob(pdfFor.booking, pdfFor.kind, logoUrl, pdfFor.vendor ? resolveVendorFee(pdfFor.booking, { vendor_fee: vendorFee }) : undefined); }} className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-2 text-xs font-bold text-white">
+                <button onClick={async () => { await downloadInvoicePdfBlob(pdfFor.booking, pdfFor.kind, logoUrl, pdfFor.vendor ? resolveVendorFee(pdfFor.booking as any, { vendor_fee: vendorFee }, vendorMap as any) : undefined); }} className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-2 text-xs font-bold text-white">
                   <Download className="h-3.5 w-3.5" />
                   Download PDF
                 </button>
@@ -1161,7 +1170,7 @@ const filtered = bookings.filter((b) => {
               </div>
             </div>
             <div className="min-h-0 flex-1 bg-gray-100 p-3">
-              <InvoicePdfPreview booking={pdfFor.booking} kind={pdfFor.kind} logoUrl={logoUrl} vendorFee={pdfFor.vendor ? resolveVendorFee(pdfFor.booking, { vendor_fee: vendorFee }) : undefined} />
+              <InvoicePdfPreview booking={pdfFor.booking} kind={pdfFor.kind} logoUrl={logoUrl} vendorFee={pdfFor.vendor ? resolveVendorFee(pdfFor.booking, { vendor_fee: vendorFee }, vendorMap) : undefined} />
             </div>
           </div>
         </div>
