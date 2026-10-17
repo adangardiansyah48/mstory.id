@@ -242,7 +242,7 @@ export function buildLunasInvoice(input: InvoiceInput): string {
     );
   } else {
     lines.push(
-      `Dibayar Lunas: ${formatCurrency(Number(input.grandTotal) || 0)}`,
+      `Pelunasan Dibayar: ${formatCurrency(Number(input.grandTotal) || 0)}`,
       `Sisa Tagihan: Rp 0 (LUNAS)`,
     );
   }
