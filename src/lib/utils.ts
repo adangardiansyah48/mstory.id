@@ -226,21 +226,34 @@ export function buildPelunasanInvoice(input: InvoiceInput): string {
 }
 
 export function buildLunasInvoice(input: InvoiceInput): string {
-  const paid = Math.max(input.grandTotal - input.dpAmount, 0);
-  return [
+  const dp = Number(input.dpAmount) || 0;
+  const paid = dp > 0 ? Math.max(input.grandTotal - dp, 0) : Number(input.grandTotal) || 0;
+  const lines = [
     ...invoiceHeader("LUNAS"),
     ...invoiceBody(input),
     ``,
     `*RINCIAN PEMBAYARAN*`,
-    `DP Dibayar: ${formatCurrency(input.dpAmount)}`,
-    `Pelunasan Dibayar: ${formatCurrency(paid)}`,
-    `Sisa Tagihan: Rp 0 (LUNAS)`,
+  ];
+  if (dp > 0) {
+    lines.push(
+      `DP Dibayar: ${formatCurrency(dp)}`,
+      `Pelunasan Dibayar: ${formatCurrency(paid)}`,
+      `Sisa Tagihan: Rp 0 (LUNAS)`,
+    );
+  } else {
+    lines.push(
+      `Dibayar Lunas: ${formatCurrency(Number(input.grandTotal) || 0)}`,
+      `Sisa Tagihan: Rp 0 (LUNAS)`,
+    );
+  }
+  lines.push(
     ``,
     `*STATUS: LUNAS*`,
     `Tidak ada tagihan yang tersisa.`,
     ``,
-    `Terima kasih sudah mempercayakan momen berharga Anda kepada Mstory.id! 🎉`,
-  ].join("\n");
+    `Terima kasih sudah mempercayakan momen berharga Anda kepada Mstory.id! dYZ%`,
+  );
+  return lines.join("\n");
 }
 
 export function buildInvoiceMessage(input: {
