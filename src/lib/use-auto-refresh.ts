@@ -14,7 +14,7 @@ interface UseAutoRefreshOptions {
  */
 export function useAutoRefresh(
   callback: () => void | Promise<void>,
-  intervalMs: number,
+  intervalMs: number = 1000,
   options: UseAutoRefreshOptions = {},
 ) {
   const { enabled = true } = options;
