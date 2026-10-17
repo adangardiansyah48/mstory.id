@@ -689,17 +689,6 @@ const filtered = bookings.filter((b) => {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={async () => {
-              const url = `${window.location.origin}/?booking=vendor`;
-              await navigator.clipboard.writeText(url);
-              await Swal.fire({ icon: "success", title: "Link disalin", text: url, timer: 1500, showConfirmButton: false });
-            }}
-            className="flex h-11 items-center gap-1.5 rounded-xl border border-[var(--brand)] bg-white px-4 text-xs font-bold uppercase tracking-wider text-[var(--brand)] shadow hover:bg-[var(--soft)]"
-            title="Salin link khusus booking vendor"
-          >
-            Link Vendor
-          </button>
-          <button
             onClick={() => setShowAddWizard(true)}
             className="flex h-11 items-center gap-1.5 rounded-xl bg-[var(--brand)] px-4 text-xs font-bold uppercase tracking-wider text-white shadow-md hover:bg-[var(--brand-hover)]"
           >
