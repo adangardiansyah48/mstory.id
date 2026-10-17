@@ -18,13 +18,18 @@ import { normalizeWhatsAppNumber } from "@/lib/utils";
 
 export function LinkTreeContent() {
   const [bookingOpen, setBookingOpen] = useState(false);
+  const [bookingIsVendor, setBookingIsVendor] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
   const { settings } = useFanpageSettings();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("booking") === "true") {
-      window.setTimeout(() => setBookingOpen(true), 0);
+    const v = params.get("booking");
+    if (v === "true" || v === "vendor") {
+      window.setTimeout(() => {
+        setBookingIsVendor(v === "vendor");
+        setBookingOpen(true);
+      }, 0);
     }
   }, []);
 
@@ -272,7 +277,7 @@ export function LinkTreeContent() {
       </div>
 
       {statusOpen && <StatusChecker open={true} onClose={() => setStatusOpen(false)} />}
-      {bookingOpen && <BookingWizard open={true} onClose={() => setBookingOpen(false)} waNumber={waNumber} transportFeeDefault={settings.transport_fee ?? 250000} />}
+      {bookingOpen && <BookingWizard open={true} onClose={() => { setBookingOpen(false); setBookingIsVendor(false); }} waNumber={waNumber} transportFeeDefault={settings.transport_fee ?? 250000} isVendorWizard={bookingIsVendor} />}
     </>
   );
 }

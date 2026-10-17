@@ -87,6 +87,7 @@ CREATE TABLE IF NOT EXISTS vendors (
     display_name VARCHAR,
     whatsapp VARCHAR,
     email VARCHAR,
+    address TEXT,
     fee_per_booking DECIMAL(12, 2) DEFAULT 200000.00,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL

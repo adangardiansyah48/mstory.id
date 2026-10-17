@@ -689,6 +689,17 @@ const filtered = bookings.filter((b) => {
         </div>
         <div className="flex gap-2">
           <button
+            onClick={async () => {
+              const url = `${window.location.origin}/?booking=vendor`;
+              await navigator.clipboard.writeText(url);
+              await Swal.fire({ icon: "success", title: "Link disalin", text: url, timer: 1500, showConfirmButton: false });
+            }}
+            className="flex h-11 items-center gap-1.5 rounded-xl border border-[var(--brand)] bg-white px-4 text-xs font-bold uppercase tracking-wider text-[var(--brand)] shadow hover:bg-[var(--soft)]"
+            title="Salin link khusus booking vendor"
+          >
+            Link Vendor
+          </button>
+          <button
             onClick={() => setShowAddWizard(true)}
             className="flex h-11 items-center gap-1.5 rounded-xl bg-[var(--brand)] px-4 text-xs font-bold uppercase tracking-wider text-white shadow-md hover:bg-[var(--brand-hover)]"
           >
@@ -805,7 +816,7 @@ const filtered = bookings.filter((b) => {
                           Verifikasi DP
                         </button>
                         <button
-                          onClick={() => setPdfFor({ booking, kind: "MENUNGGU_DP" })}
+                          onClick={() => setPdfFor({ booking, kind: "MENUNGGU_DP", vendor: booking.source === "VENDOR" })}
                           title="Preview & download PDF invoice DP"
                           className="glass-inset inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[11px] font-bold uppercase tracking-widest text-[var(--ink)]"
                         >
@@ -813,7 +824,7 @@ const filtered = bookings.filter((b) => {
                           PDF
                         </button>
                         <button
-                          onClick={() => openInvoice(booking, "DP")}
+                          onClick={() => openInvoice(booking, "DP", booking.source === "VENDOR")}
                           title="Lihat / kirim invoice DP via WhatsApp"
                           className="glass-inset inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[11px] font-bold uppercase tracking-widest text-[var(--ink)]"
                         >
@@ -834,7 +845,7 @@ const filtered = bookings.filter((b) => {
                           Terima Pelunasan
                         </button>
                         <button
-                          onClick={() => setPdfFor({ booking, kind: "MENUNGGU_PELUNASAN" })}
+                          onClick={() => setPdfFor({ booking, kind: "MENUNGGU_PELUNASAN", vendor: booking.source === "VENDOR" })}
                           title="Preview & download PDF tanda terima DP"
                           className="glass-inset inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[11px] font-bold uppercase tracking-widest text-[var(--ink)]"
                         >
@@ -842,7 +853,7 @@ const filtered = bookings.filter((b) => {
                           PDF
                         </button>
                         <button
-                          onClick={() => openInvoice(booking, "PELUNASAN")}
+                          onClick={() => openInvoice(booking, "PELUNASAN", booking.source === "VENDOR")}
                           title="Lihat / kirim tanda terima DP via WhatsApp"
                           className="glass-inset inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[11px] font-bold uppercase tracking-widest text-[var(--ink)]"
                         >
@@ -862,7 +873,7 @@ const filtered = bookings.filter((b) => {
                           Atur Edit & Cetak
                         </button>
                         <button
-                          onClick={() => setPdfFor({ booking, kind: "LUNAS" })}
+                          onClick={() => setPdfFor({ booking, kind: "LUNAS", vendor: booking.source === "VENDOR" })}
                           title="Preview PDF tanda terima pelunasan"
                           className="glass-inset inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[11px] font-bold uppercase tracking-widest text-[var(--ink)]"
                         >
@@ -870,32 +881,12 @@ const filtered = bookings.filter((b) => {
                           PDF
                         </button>
                         <button
-                          onClick={() => openInvoice(booking, "LUNAS")}
+                          onClick={() => openInvoice(booking, "LUNAS", booking.source === "VENDOR")}
                           title="Lihat tanda terima pelunasan via WhatsApp"
                           className="glass-inset inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[11px] font-bold uppercase tracking-widest text-[var(--ink)]"
                         >
                           <MessageCircle className="h-3.5 w-3.5" />
                           WA
-                        </button>
-                      </>
-                    )}
-                    {booking.source === "VENDOR" && (
-                      <>
-                        <button
-                          onClick={() => setPdfFor({ booking, kind: (booking.status === "MENUNGGU_DP" ? "MENUNGGU_DP" : booking.status === "MENUNGGU_PELUNASAN" ? "MENUNGGU_PELUNASAN" : "LUNAS") as InvoicePdfKind, vendor: true })}
-                          title="Preview & download PDF invoice vendor (fee dipotong)"
-                          className="glass-inset inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[11px] font-bold uppercase tracking-widest text-[var(--ink)]"
-                        >
-                          <FileDown className="h-3.5 w-3.5" />
-                          Vendor PDF
-                        </button>
-                        <button
-                          onClick={() => openInvoice(booking, (booking.status === "MENUNGGU_DP" ? "DP" : booking.status === "MENUNGGU_PELUNASAN" ? "PELUNASAN" : "LUNAS") as InvoiceKind, true)}
-                          title="Lihat / kirim invoice vendor via WhatsApp"
-                          className="glass-inset inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[11px] font-bold uppercase tracking-widest text-[var(--ink)]"
-                        >
-                          <MessageCircle className="h-3.5 w-3.5" />
-                          Vendor WA
                         </button>
                       </>
                     )}

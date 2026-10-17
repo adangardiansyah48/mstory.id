@@ -14,6 +14,7 @@ type Vendor = {
   display_name: string | null;
   whatsapp: string | null;
   email: string | null;
+  address: string | null;
   fee_per_booking: number;
   is_active: boolean;
 };
@@ -23,6 +24,7 @@ const EMPTY: Omit<Vendor, "id" | "code"> = {
   display_name: "",
   whatsapp: "",
   email: "",
+  address: "",
   fee_per_booking: 200000,
   is_active: true,
 };
@@ -88,6 +90,15 @@ function VendorForm({
             className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-4 text-sm focus:border-[var(--brand)] focus:outline-none"
           />
         </div>
+        <div className="sm:col-span-2">
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">Alamat Vendor</p>
+          <input
+            value={form.address ?? ""}
+            onChange={(e) => setForm((s) => ({ ...s, address: e.target.value }))}
+            placeholder="Alamat lengkap vendor"
+            className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-4 text-sm focus:border-[var(--brand)] focus:outline-none"
+          />
+        </div>
         <label className="flex items-center gap-2 text-sm font-semibold text-[var(--ink)]">
           <input
             type="checkbox"
@@ -146,7 +157,7 @@ export function VendorsTab() {
   }
   function startEdit(v: Vendor) {
     setEditing(v);
-    setForm({ name: v.name, display_name: v.display_name ?? "", whatsapp: v.whatsapp ?? "", email: v.email ?? "", fee_per_booking: v.fee_per_booking, is_active: v.is_active });
+    setForm({ name: v.name, display_name: v.display_name ?? "", whatsapp: v.whatsapp ?? "", email: v.email ?? "", address: (v as unknown as { address?: string | null }).address ?? "", fee_per_booking: v.fee_per_booking, is_active: v.is_active });
     setShowForm(true);
   }
 
@@ -162,15 +173,28 @@ export function VendorsTab() {
       display_name: (form.display_name ?? "").trim() || form.name.trim(),
       whatsapp: (form.whatsapp ?? "").trim() || null,
       email: (form.email ?? "").trim() || null,
+      address: (form.address ?? "").trim() || null,
       fee_per_booking: Math.max(0, Number(form.fee_per_booking) || 0),
       is_active: !!form.is_active,
     };
     if (editing) {
-      const { error } = await supabase.from("vendors").update(payload).eq("id", editing.id);
+      let { error } = await supabase.from("vendors").update(payload).eq("id", editing.id);
+      if (error && error.message.includes("address")) {
+        const { address: _addr, ...noAddr } = payload as Record<string, unknown> & { address?: unknown };
+        const retry = await supabase.from("vendors").update(noAddr).eq("id", editing.id);
+        error = retry.error;
+        if (!error) await Swal.fire({ icon: "info", title: "Kolom alamat belum ada di DB", text: "Data tersimpan tanpa alamat. Jalankan migrasi: ALTER TABLE vendors ADD COLUMN IF NOT EXISTS address TEXT;" });
+      }
       if (error) { await Swal.fire({ icon: "error", title: "Gagal simpan", text: error.message }); return; }
       await Swal.fire({ icon: "success", title: "Vendor diperbarui", timer: 1000, showConfirmButton: false });
     } else {
-      const { error } = await supabase.from("vendors").insert(payload);
+      let { error } = await supabase.from("vendors").insert(payload);
+      if (error && error.message.includes("address")) {
+        const { address: _addr, ...noAddr } = payload as Record<string, unknown> & { address?: unknown };
+        const retry = await supabase.from("vendors").insert(noAddr);
+        error = retry.error;
+        if (!error) await Swal.fire({ icon: "info", title: "Kolom alamat belum ada di DB", text: "Data tersimpan tanpa alamat. Jalankan migrasi: ALTER TABLE vendors ADD COLUMN IF NOT EXISTS address TEXT;" });
+      }
       if (error) { await Swal.fire({ icon: "error", title: "Gagal tambah", text: error.message }); return; }
       await Swal.fire({ icon: "success", title: "Vendor ditambahkan", timer: 1000, showConfirmButton: false });
     }
@@ -240,7 +264,7 @@ export function VendorsTab() {
                 {!v.is_active && <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-500">Nonaktif</span>}
               </p>
               <p className="truncate text-xs text-[var(--muted-2)]">
-                {(v.display_name ?? v.name)} · {v.whatsapp ? `WA ${v.whatsapp}` : "tanpa WA"} · Fee Rp {Number(v.fee_per_booking).toLocaleString("id-ID")}/booking
+                {(v.display_name ?? v.name)} · {v.whatsapp ? `WA ${v.whatsapp}` : "tanpa WA"} {v.address ? `· ${v.address}` : ""} · Fee Rp {Number(v.fee_per_booking).toLocaleString("id-ID")}/booking
               </p>
             </div>
             <div className="flex items-center gap-2">

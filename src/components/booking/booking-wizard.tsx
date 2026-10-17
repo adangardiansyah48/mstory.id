@@ -37,6 +37,7 @@ interface BookingWizardProps {
   transportFeeDefault?: number;
   adminMode?: boolean;
   onCreated?: (booking: unknown) => void;
+  isVendorWizard?: boolean;
 }
 
 interface BookingSelection {
@@ -56,6 +57,7 @@ export function BookingWizard({
   transportFeeDefault,
   adminMode,
   onCreated,
+  isVendorWizard: initialVendorWizard = false,
 }: BookingWizardProps) {
   const [step, setStep] = useState(1);
   const [categories, setCategories] = useState<Category[]>(
@@ -96,9 +98,10 @@ export function BookingWizard({
     () => peekBookingData() === null,
   );
   const [submitting, setSubmitting] = useState(false);
-  const [isVendorBooking, setIsVendorBooking] = useState(false);
+  const [isVendorBooking, setIsVendorBooking] = useState(initialVendorWizard);
   const [vendorName, setVendorName] = useState("");
-  const [vendorOptions, setVendorOptions] = useState<{ id: number; name: string; whatsapp?: string | null; fee_per_booking?: number }[]>([]);
+  const [selectedVendor, setSelectedVendor] = useState<{ id: number; name: string; whatsapp?: string | null; address?: string | null; fee_per_booking?: number } | null>(null);
+  const [vendorOptions, setVendorOptions] = useState<{ id: number; name: string; whatsapp?: string | null; address?: string | null; fee_per_booking?: number }[]>([]);
   const [submitResult, setSubmitResult] = useState<{
     invoiceNumber: string;
     waLink: string;
@@ -110,21 +113,21 @@ export function BookingWizard({
   }, [step]);
 
   useEffect(() => {
-    if (!adminMode) return;
     (async () => {
       try {
         const supabase = createClient();
         if (!supabase) return;
-        const { data } = await supabase.from("vendors").select("id, name, display_name, whatsapp, fee_per_booking").eq("is_active", true).order("name", { ascending: true });
-        setVendorOptions(((data as unknown as { id: number; name: string; display_name: string | null; whatsapp: string | null; fee_per_booking: number }[] | null) ?? []).map((v) => ({
+        const { data } = await supabase.from("vendors").select("id, name, display_name, whatsapp, address, fee_per_booking").eq("is_active", true).order("name", { ascending: true });
+        setVendorOptions(((data as unknown as { id: number; name: string; display_name: string | null; whatsapp: string | null; address: string | null; fee_per_booking: number }[] | null) ?? []).map((v) => ({
           id: v.id,
           name: v.display_name ?? v.name,
           whatsapp: v.whatsapp,
+          address: v.address,
           fee_per_booking: v.fee_per_booking,
         })));
       } catch {}
     })();
-  }, [adminMode]);
+  }, []);
 
   useEffect(() => {
     if (submitResult && scrollRef.current) {
@@ -184,7 +187,7 @@ export function BookingWizard({
   const canProceedStep2 =
     !!selection.selectedPackage &&
     !!client.eventDate &&
-    ((adminMode && isVendorBooking) || (
+    ((isVendorBooking || adminMode) ? !!selectedVendor : (
       !!client.fullName.trim() &&
       isValidWhatsAppNumber(client.whatsappNumber) &&
       !!client.eventAddress.trim() &&
@@ -217,7 +220,7 @@ export function BookingWizard({
         const { data: clientData, error: clientError } = await supabase
           .from("clients")
           .insert({
-            full_name: adminMode && isVendorBooking ? (vendorName.trim() || "[VENDOR]") : client.fullName,
+            full_name: (isVendorBooking || adminMode) && (selectedVendor || vendorName.trim()) ? ((selectedVendor?.name || vendorName.trim())) : client.fullName,
             whatsapp_number: normalizedPhone,
           })
           .select()
@@ -240,16 +243,14 @@ export function BookingWizard({
              status: "MENUNGGU_DP",
              notes: client.notes || null,
            };
-           if (adminMode && isVendorBooking) {
-            if (!vendorName.trim()) throw new Error("Pilih vendor dulu");
-            basePayload.source = "VENDOR";
-            basePayload.vendor_name = vendorName.trim();
-            const v = vendorOptions.find((x) => x.name === vendorName.trim());
-            if (v) {
-              basePayload.vendor_id = v.id;
-              basePayload.vendor_fee_at_booking = (v as unknown as { fee_per_booking?: number }).fee_per_booking ?? 200000;
-            }
-          }
+            if (isVendorBooking || adminMode) {
+             const v = selectedVendor || vendorOptions.find((x) => x.name === vendorName.trim());
+             if (!v) throw new Error("Pilih vendor dulu");
+             basePayload.source = "VENDOR";
+             basePayload.vendor_name = v.name;
+             basePayload.vendor_id = v.id;
+             basePayload.vendor_fee_at_booking = v.fee_per_booking ?? 200000;
+           }
 for (let attempt = 0; attempt < 3; attempt++) {
             const attemptPayload: Record<string, unknown> = { ...basePayload, invoice_number: invoiceNumber };
             let { data: bd, error: be } = await supabase
@@ -473,68 +474,116 @@ for (let attempt = 0; attempt < 3; attempt++) {
           ) : (
             <>
               {step === 1 && (
-                <Step1Category
-                  categories={categories}
-                  subCategories={filteredSubs}
-                  packages={filteredPackages}
-                  addons={addons}
-                  selection={selection}
-                  setSelection={setSelection}
-                />
-              )}
-              {step === 2 && (
-                <>
-                  {adminMode && (
+                <div className="space-y-4">
+                  {(adminMode || isVendorBooking) && (
                     <div className="mx-6 mt-4 rounded-2xl border-2 border-[var(--brand)]/30 bg-[var(--brand)]/5 p-4">
-                      <p className="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--brand)]">Data Vendor (Admin)</p>
-                      <div className="space-y-3">
-                        <label className="flex items-center gap-2 text-sm font-semibold text-[var(--ink)]">
-                          <input type="checkbox" checked={isVendorBooking} onChange={(e) => { setIsVendorBooking(e.target.checked); if (!e.target.checked) setVendorName(""); }} className="accent-[var(--brand)]" />
-                          Ini Booking dari Vendor
-                        </label>
-                        {isVendorBooking && (
-                          <div className="animate-fade-in">
-                            <p className="mb-1 text-[10px] font-bold uppercase text-[var(--muted-2)]">Pilih Vendor (dari master)</p>
-                            <select
-                              value={vendorName}
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-bold uppercase tracking-wider text-[var(--brand)]">
+                          PILIH VENDOR MITRA
+                        </p>
+                        {adminMode && (
+                          <label className="flex items-center gap-2 text-xs font-semibold text-[var(--ink)] cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={isVendorBooking}
                               onChange={(e) => {
-                                const selectedName = e.target.value;
-                                setVendorName(selectedName);
-                                const v = vendorOptions.find((x) => x.name === selectedName);
+                                setIsVendorBooking(e.target.checked);
+                                if (!e.target.checked) {
+                                  setSelectedVendor(null);
+                                  setVendorName("");
+                                }
+                              }}
+                              className="accent-[var(--brand)]"
+                            />
+                            Mode Vendor
+                          </label>
+                        )}
+                      </div>
+
+                      {isVendorBooking && (
+                        <div className="mt-3 space-y-3">
+                          <div>
+                            <select
+                              value={selectedVendor?.id ?? ""}
+                              onChange={(e) => {
+                                const vId = Number(e.target.value);
+                                const v = vendorOptions.find((x) => x.id === vId) || null;
+                                setSelectedVendor(v);
+                                setVendorName(v?.name ?? "");
                                 if (v) {
                                   setClient((prev) => ({
                                     ...prev,
                                     fullName: v.name,
                                     whatsappNumber: v.whatsapp || prev.whatsappNumber || "08123456789",
-                                    eventAddress: prev.eventAddress || "Lokasi Vendor",
+                                    eventAddress: v.address || prev.eventAddress || "Lokasi Kantor Vendor",
                                   }));
                                 }
                               }}
                               className="h-11 w-full rounded-xl border border-[var(--line)] bg-white px-3 text-sm focus:border-[var(--brand)] focus:outline-none"
                             >
-                              <option value="">-- Pilih vendor --</option>
+                              <option value="">-- Pilih salah satu vendor --</option>
                               {vendorOptions.map((v) => (
-                                <option key={v.id} value={v.name}>
+                                <option key={v.id} value={v.id}>
                                   {v.name}
                                 </option>
                               ))}
                             </select>
-                            {vendorOptions.length === 0 && (
-                              <p className="mt-1 text-[10px] text-amber-700">Belum ada vendor di master. Isi dulu di menu Admin → Vendor.</p>
-                            )}
                           </div>
-                        )}
-                      </div>
+
+                          {selectedVendor && (
+                            <div className="space-y-2 rounded-xl border border-[var(--line)] bg-white/70 p-3 text-xs">
+                              <div>
+                                <span className="font-semibold text-[var(--muted)]">Nama Vendor:</span>
+                                <input
+                                  disabled
+                                  value={selectedVendor.name}
+                                  className="mt-1 h-9 w-full rounded-lg border border-[var(--line)] bg-gray-50 px-3 text-xs text-gray-700 cursor-not-allowed"
+                                />
+                              </div>
+                              <div>
+                                <span className="font-semibold text-[var(--muted)]">No. WhatsApp:</span>
+                                <input
+                                  disabled
+                                  value={selectedVendor.whatsapp || "Tidak ada nomor"}
+                                  className="mt-1 h-9 w-full rounded-lg border border-[var(--line)] bg-gray-50 px-3 text-xs text-gray-700 cursor-not-allowed"
+                                />
+                              </div>
+                              <div>
+                                <span className="font-semibold text-[var(--muted)]">Alamat Vendor:</span>
+                                <input
+                                  disabled
+                                  value={selectedVendor.address || "Belum ada alamat (dapat diisi di Master Vendor)"}
+                                  className="mt-1 h-9 w-full rounded-lg border border-[var(--line)] bg-gray-50 px-3 text-xs text-gray-700 cursor-not-allowed"
+                                />
+                              </div>
+                              <p className="text-[10px] text-[var(--brand)] italic">
+                                * Data vendor di atas otomatis menjadi identitas pelanggan untuk booking &amp; invoice ini.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
-                  <Step2Schedule
-                    bookedCounts={bookedCounts}
-                    client={client}
-                    setClient={setClient}
-                    transportFeeDefault={transportFeeDefault}
-                    isVendor={adminMode && isVendorBooking}
+
+                  <Step1Category
+                    categories={categories}
+                    subCategories={filteredSubs}
+                    packages={filteredPackages}
+                    addons={addons}
+                    selection={selection}
+                    setSelection={setSelection}
                   />
-                </>
+                </div>
+              )}
+              {step === 2 && (
+                <Step2Schedule
+                  bookedCounts={bookedCounts}
+                  client={client}
+                  setClient={setClient}
+                  transportFeeDefault={transportFeeDefault}
+                  isVendor={isVendorBooking}
+                />
               )}
               {step === 3 && (
                 <Step3Summary
@@ -565,7 +614,7 @@ for (let attempt = 0; attempt < 3; attempt++) {
 
             {step === 1 && (
               <Button
-                disabled={!selection.selectedPackage}
+                disabled={!selection.selectedPackage || (isVendorBooking && !selectedVendor)}
                 onClick={() => setStep(2)}
               >
                 Lanjut
