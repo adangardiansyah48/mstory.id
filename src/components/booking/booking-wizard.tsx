@@ -239,8 +239,8 @@ export function BookingWizard({
              subtotal: subtotal,
              transport_fee: transportFee,
              grand_total: grandTotal,
-             dp_amount: isVendorBooking ? 0 : dpAmount,
-             status: isVendorBooking ? "LUNAS" : "MENUNGGU_DP",
+              dp_amount: isVendorBooking ? 0 : dpAmount,
+              status: isVendorBooking ? "MENUNGGU_PELUNASAN" : "MENUNGGU_DP",
              notes: client.notes || null,
            };
             if (isVendorBooking) {

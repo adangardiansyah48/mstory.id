@@ -261,7 +261,7 @@ export function BookingTab({
         transport_fee: transportNum,
         grand_total: finalGrand,
         dp_amount: Number(formData.dp_amount) || 0,
-        status: formData.is_vendor && formData.status === "MENUNGGU_DP" ? "LUNAS" : formData.status,
+        status: formData.is_vendor && formData.status === "MENUNGGU_DP" ? "MENUNGGU_PELUNASAN" : formData.status,
         notes: formData.notes.trim() || null,
         source: "CLIENT",
         vendor_name: null,
