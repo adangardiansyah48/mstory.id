@@ -139,6 +139,7 @@ interface InvoiceInput {
   paymentHolder: string;
   vendorFee?: number;
   vendorName?: string;
+  isVendor?: boolean;
 }
 
 function vendorFeeLines(grandTotal: number, vendorFee?: number, vendorName?: string): string[] {
@@ -231,31 +232,35 @@ export function buildLunasInvoice(input: InvoiceInput): string {
   const lines = [
     ...invoiceHeader("LUNAS"),
     ...invoiceBody(input),
-    ``,
-    `*RINCIAN PEMBAYARAN*`,
+    "",
+    "*RINCIAN PEMBAYARAN*",
   ];
-  if (dp > 0) {
+  if (input.isVendor) {
     lines.push(
-      `DP Dibayar: ${formatCurrency(dp)}`,
-      `Pelunasan Dibayar: ${formatCurrency(paid)}`,
-      `Sisa Tagihan: Rp 0 (LUNAS)`,
+      "Pelunasan Dibayar: " + formatCurrency(Number(input.grandTotal)||0),
+      "Sisa Tagihan: Rp 0 (LUNAS)",
+    );
+  } else if (dp > 0) {
+    lines.push(
+      "DP Dibayar: " + formatCurrency(dp),
+      "Pelunasan Dibayar: " + formatCurrency(paid),
+      "Sisa Tagihan: Rp 0 (LUNAS)",
     );
   } else {
     lines.push(
-      `Pelunasan Dibayar: ${formatCurrency(Number(input.grandTotal) || 0)}`,
-      `Sisa Tagihan: Rp 0 (LUNAS)`,
+      "Pelunasan Dibayar: " + formatCurrency(Number(input.grandTotal) || 0),
+      "Sisa Tagihan: Rp 0 (LUNAS)",
     );
   }
   lines.push(
-    ``,
-    `*STATUS: LUNAS*`,
-    `Tidak ada tagihan yang tersisa.`,
-    ``,
-    `Terima kasih sudah mempercayakan momen berharga Anda kepada Mstory.id! dYZ%`,
+    "",
+    "*STATUS: LUNAS*",
+    "Tidak ada tagihan yang tersisa.",
+    "",
+    "Terima kasih sudah mempercayakan momen berharga Anda kepada Mstory.id! dYZ%",
   );
   return lines.join("\n");
 }
-
 export function buildInvoiceMessage(input: {
   invoiceNumber: string;
   fullName: string;

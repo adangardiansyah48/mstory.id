@@ -805,14 +805,35 @@ const filtered = bookings.filter((b) => {
                     )}
                     {booking.status === "MENUNGGU_DP" && (
                       <>
-                        <button
-                          onClick={() => verifyDp(booking.id, booking.client?.full_name ?? "")}
-                          disabled={updatingId === booking.id}
-                          className="inline-flex h-9 items-center gap-1.5 rounded-full border border-orange-200 bg-orange-100 px-4 text-[11px] font-bold uppercase tracking-widest text-orange-700 transition-colors hover:bg-orange-200 disabled:opacity-50"
-                        >
-                          <Check className="h-3.5 w-3.5" />
-                          Verifikasi DP
-                        </button>
+                        {booking.source === "VENDOR" ? (
+                          <button
+                            onClick={() => receivePelunasan(booking.id, booking.client?.full_name ?? "")}
+                            disabled={updatingId === booking.id}
+                            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-blue-200 bg-blue-100 px-4 text-[11px] font-bold uppercase tracking-widest text-blue-700 transition-colors hover:bg-blue-200 disabled:opacity-50"
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                            Terima Pelunasan
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => verifyDp(booking.id, booking.client?.full_name ?? "")}
+                              disabled={updatingId === booking.id}
+                              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-orange-200 bg-orange-100 px-4 text-[11px] font-bold uppercase tracking-widest text-orange-700 transition-colors hover:bg-orange-200 disabled:opacity-50"
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                              Terima DP
+                            </button>
+                            <button
+                              onClick={() => receivePelunasan(booking.id, booking.client?.full_name ?? "")}
+                              disabled={updatingId === booking.id}
+                              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-blue-200 bg-blue-100 px-4 text-[11px] font-bold uppercase tracking-widest text-blue-700 transition-colors hover:bg-blue-200 disabled:opacity-50"
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                              Terima Pelunasan
+                            </button>
+                          </>
+                        )}
                         <button
                           onClick={() => setPdfFor({ booking, kind: "MENUNGGU_DP", vendor: booking.source === "VENDOR" })}
                           title="Preview & download PDF invoice DP"
@@ -1016,7 +1037,7 @@ const filtered = bookings.filter((b) => {
           booking={invoiceFor as ComponentProps<typeof InvoiceModal>["booking"]}
           defaultKind={invoiceKind}
           logoUrl={logoUrl}
-          vendorFee={invoiceVendor ? resolveVendorFee(invoiceFor as any, { vendor_fee: vendorFee }, vendorMap as any) : undefined}
+          vendorFee={invoiceVendor ? resolveVendorFee(invoiceFor as unknown as BookingRow, { vendor_fee: vendorFee }, vendorMap as Record<number, { fee_per_booking: number }>) : undefined}
         />
       )}
 
@@ -1160,7 +1181,7 @@ const filtered = bookings.filter((b) => {
                 {pdfFor.booking.invoice_number}{pdfFor.vendor ? " · Invoice Vendor" : ""}
               </p>
               <div className="flex items-center gap-2">
-                <button onClick={async () => { await downloadInvoicePdfBlob(pdfFor.booking, pdfFor.kind, logoUrl, pdfFor.vendor ? resolveVendorFee(pdfFor.booking as any, { vendor_fee: vendorFee }, vendorMap as any) : undefined); }} className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-2 text-xs font-bold text-white">
+                <button onClick={async () => { await downloadInvoicePdfBlob(pdfFor.booking, pdfFor.kind, logoUrl, pdfFor.vendor ? resolveVendorFee(pdfFor.booking as unknown as BookingRow, { vendor_fee: vendorFee }, vendorMap as Record<number, { fee_per_booking: number }>) : undefined); }} className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-2 text-xs font-bold text-white">
                   <Download className="h-3.5 w-3.5" />
                   Download PDF
                 </button>
