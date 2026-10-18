@@ -805,35 +805,23 @@ const filtered = bookings.filter((b) => {
                     )}
                     {booking.status === "MENUNGGU_DP" && (
                       <>
-                        {booking.source === "VENDOR" ? (
-                          <button
-                            onClick={() => receivePelunasan(booking.id, booking.client?.full_name ?? "")}
-                            disabled={updatingId === booking.id}
-                            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-blue-200 bg-blue-100 px-4 text-[11px] font-bold uppercase tracking-widest text-blue-700 transition-colors hover:bg-blue-200 disabled:opacity-50"
-                          >
-                            <Check className="h-3.5 w-3.5" />
-                            Terima Pelunasan
-                          </button>
-                        ) : (
-                          <>
-                            <button
-                              onClick={() => verifyDp(booking.id, booking.client?.full_name ?? "")}
-                              disabled={updatingId === booking.id}
-                              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-orange-200 bg-orange-100 px-4 text-[11px] font-bold uppercase tracking-widest text-orange-700 transition-colors hover:bg-orange-200 disabled:opacity-50"
-                            >
-                              <Check className="h-3.5 w-3.5" />
-                              Terima DP
-                            </button>
-                            <button
-                              onClick={() => receivePelunasan(booking.id, booking.client?.full_name ?? "")}
-                              disabled={updatingId === booking.id}
-                              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-blue-200 bg-blue-100 px-4 text-[11px] font-bold uppercase tracking-widest text-blue-700 transition-colors hover:bg-blue-200 disabled:opacity-50"
-                            >
-                              <Check className="h-3.5 w-3.5" />
-                              Terima Pelunasan
-                            </button>
-                          </>
-                        )}
+                        <select
+                          defaultValue=""
+                          disabled={updatingId === booking.id}
+                          onChange={(event) => {
+                            if (event.target.value === "DP") {
+                              void verifyDp(booking.id, booking.client?.full_name ?? "");
+                            } else if (event.target.value === "PELUNASAN") {
+                              void receivePelunasan(booking.id, booking.client?.full_name ?? "");
+                            }
+                            event.target.value = "";
+                          }}
+                          className="h-9 rounded-full border border-blue-200 bg-blue-100 px-3 text-[11px] font-bold uppercase tracking-widest text-blue-700 outline-none transition-colors hover:bg-blue-200 disabled:opacity-50"
+                        >
+                          <option value="">Verifikasi</option>
+                          {booking.source !== "VENDOR" && <option value="DP">Terima DP</option>}
+                          <option value="PELUNASAN">Terima Pelunasan</option>
+                        </select>
                         <button
                           onClick={() => setPdfFor({ booking, kind: "MENUNGGU_DP", vendor: booking.source === "VENDOR" })}
                           title="Preview & download PDF invoice DP"
