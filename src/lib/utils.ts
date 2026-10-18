@@ -202,7 +202,7 @@ export function buildDpInvoice(input: InvoiceInput): string {
     `DP tidak dapat dikembalikan jika dibatalkan setelah invoice dibuat.`,
     ``,
     `Mohon konfirmasi pembayaran dengan mengirim bukti transfer. 🙏`,
-    `Terima kasih sudah mempercayakan momen berharga Anda kepada Mstory.id!`,
+    `Terima kasih sudah mempercayakan momen berharga Anda kepada Mstory.id! 🙏`,
   ].join("\n");
 }
 
@@ -222,7 +222,7 @@ export function buildPelunasanInvoice(input: InvoiceInput): string {
     ``,
     `*KONFIRMASI*`,
     `Kirim bukti transfer ke admin setelah melakukan pembayaran. 🙏`,
-    `Terima kasih sudah mempercayakan momen berharga Anda kepada Mstory.id!`,
+    `Terima kasih sudah mempercayakan momen berharga Anda kepada Mstory.id! 🙏`,
   ].join("\n");
 }
 
@@ -257,7 +257,7 @@ export function buildLunasInvoice(input: InvoiceInput): string {
     "*STATUS: LUNAS*",
     "Tidak ada tagihan yang tersisa.",
     "",
-    "Terima kasih sudah mempercayakan momen berharga Anda kepada Mstory.id! dYZ%",
+    "Terima kasih sudah mempercayakan momen berharga Anda kepada Mstory.id! 🙏",
   );
   return lines.join("\n");
 }
