@@ -40,6 +40,7 @@ interface Step3Props {
   dpLabel: string;
   dpAmount: number;
   remainingBalance: number;
+  isVendor?: boolean;
 }
 
 export function Step3Summary({
@@ -52,6 +53,7 @@ export function Step3Summary({
   dpLabel,
   dpAmount,
   remainingBalance,
+  isVendor = false,
 }: Step3Props) {
   const pkg = selection.selectedPackage;
 
@@ -156,18 +158,33 @@ export function Step3Summary({
             <span>Grand Total</span>
             <span>{formatCurrency(grandTotal)}</span>
           </div>
-          <div className="mt-3 space-y-1 rounded-xl bg-white/10 p-3">
-            <div className="flex justify-between">
-              <span className="text-[var(--muted-3)]">{dpLabel} Wajib</span>
-              <span className="font-bold text-[#7fd6a8]">
-                {formatCurrency(dpAmount)}
-              </span>
+          {isVendor ? (
+            <div className="mt-3 space-y-1 rounded-xl bg-white/10 p-3">
+              <div className="flex justify-between">
+                <span className="text-[var(--muted-3)]">Pelunasan</span>
+                <span className="font-bold text-[#7fd6a8]">
+                  {formatCurrency(grandTotal)}
+                </span>
+              </div>
+              <div className="flex justify-between text-xs text-[var(--muted-3)]">
+                <span>Skema Pembayaran</span>
+                <span className="font-semibold text-white">Langsung Lunas (Tanpa DP)</span>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-[var(--muted-3)]">Sisa Pelunasan (H-1)</span>
-              <span className="font-bold">{formatCurrency(remainingBalance)}</span>
+          ) : (
+            <div className="mt-3 space-y-1 rounded-xl bg-white/10 p-3">
+              <div className="flex justify-between">
+                <span className="text-[var(--muted-3)]">{dpLabel} Wajib</span>
+                <span className="font-bold text-[#7fd6a8]">
+                  {formatCurrency(dpAmount)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[var(--muted-3)]">Sisa Pelunasan (H-1)</span>
+                <span className="font-bold">{formatCurrency(remainingBalance)}</span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="mt-4 space-y-2 text-xs leading-relaxed text-[var(--muted-6)]">
@@ -192,18 +209,24 @@ export function Step3Summary({
           </p>
           <p className="text-xs text-[var(--muted)]">A/n {PAYMENT_ACCOUNT_HOLDER}</p>
         </div>
-        <div className="mt-3 rounded-2xl bg-amber-100/60 px-4 py-3 text-xs leading-relaxed text-amber-900 backdrop-blur-md">
-          <p className="flex items-start gap-2">
-            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            DP tidak dapat dikembalikan (non-refundable) jika booking dibatalkan
-            setelah invoice dibuat.
-          </p>
-        </div>
+        {!isVendor && (
+          <div className="mt-3 rounded-2xl bg-amber-100/60 px-4 py-3 text-xs leading-relaxed text-amber-900 backdrop-blur-md">
+            <p className="flex items-start gap-2">
+              <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              DP tidak dapat dikembalikan (non-refundable) jika booking dibatalkan
+              setelah invoice dibuat.
+            </p>
+          </div>
+        )}
       </div>
 
       <div>
         <CheckboxField
-          label="Saya menyetujui seluruh ketentuan layanan Mstory.id, termasuk kebijakan DP sesuai paket terpilih, pelunasan maksimal H-1 event, biaya transport luar kota, dan SLA pengerjaan."
+          label={
+            isVendor
+              ? "Saya menyetujui seluruh ketentuan layanan Mstory.id untuk mitra vendor, termasuk skema pelunasan tanpa DP, biaya transport luar kota, dan SLA pengerjaan."
+              : "Saya menyetujui seluruh ketentuan layanan Mstory.id, termasuk kebijakan DP sesuai paket terpilih, pelunasan maksimal H-1 event, biaya transport luar kota, dan SLA pengerjaan."
+          }
           checked={client.agreedToTerms}
           onChange={(checked) => setClient({ ...client, agreedToTerms: checked })}
         />

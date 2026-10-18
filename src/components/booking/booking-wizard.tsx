@@ -187,7 +187,7 @@ export function BookingWizard({
   const canProceedStep2 =
     !!selection.selectedPackage &&
     !!client.eventDate &&
-    ((isVendorBooking || adminMode) ? !!selectedVendor : (
+    (isVendorBooking ? !!selectedVendor : (
       !!client.fullName.trim() &&
       isValidWhatsAppNumber(client.whatsappNumber) &&
       !!client.eventAddress.trim() &&
@@ -220,7 +220,7 @@ export function BookingWizard({
         const { data: clientData, error: clientError } = await supabase
           .from("clients")
           .insert({
-            full_name: (isVendorBooking || adminMode) && (selectedVendor || vendorName.trim()) ? ((selectedVendor?.name || vendorName.trim())) : client.fullName,
+            full_name: isVendorBooking && (selectedVendor || vendorName.trim()) ? ((selectedVendor?.name || vendorName.trim())) : client.fullName,
             whatsapp_number: normalizedPhone,
           })
           .select()
@@ -239,11 +239,11 @@ export function BookingWizard({
              subtotal: subtotal,
              transport_fee: transportFee,
              grand_total: grandTotal,
-             dp_amount: dpAmount,
-             status: "MENUNGGU_DP",
+             dp_amount: isVendorBooking ? 0 : dpAmount,
+             status: isVendorBooking ? "LUNAS" : "MENUNGGU_DP",
              notes: client.notes || null,
            };
-            if (isVendorBooking || adminMode) {
+            if (isVendorBooking) {
              const v = selectedVendor || vendorOptions.find((x) => x.name === vendorName.trim());
              if (!v) throw new Error("Pilih vendor dulu");
              basePayload.source = "VENDOR";
@@ -594,8 +594,9 @@ for (let attempt = 0; attempt < 3; attempt++) {
                   transportFee={transportFee}
                   grandTotal={grandTotal}
                   dpLabel={dpLabel}
-                  dpAmount={dpAmount}
-                  remainingBalance={remainingBalance}
+                  dpAmount={isVendorBooking ? 0 : dpAmount}
+                  remainingBalance={isVendorBooking ? 0 : remainingBalance}
+                  isVendor={isVendorBooking}
                 />
               )}
             </>
