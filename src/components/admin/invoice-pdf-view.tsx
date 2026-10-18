@@ -184,7 +184,7 @@ export function InvoicePdfDocument({ booking, kind, logoUrl, vendorFee }: Props)
           )}
           {kind === "LUNAS" && (
             <>
-              {dpAmount > 0 ? (
+              {booking.source !== "VENDOR" && dpAmount > 0 ? (
                 <>
                   <View style={s.sumRow}><Text style={s.sumLabel}>DP Dibayar</Text><Text style={s.sumValue}>{fmt(dpAmount)}</Text></View>
                   <View style={s.sumRow}><Text style={s.sumLabel}>Pelunasan Dibayar</Text><Text style={s.sumValue}>{fmt(Math.max(total - dpAmount, 0))}</Text></View>

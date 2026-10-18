@@ -335,8 +335,12 @@ export async function downloadInvoicePdf(input: {
   }
 
   if (kind === "LUNAS") {
-    sumLine("DP Dibayar", fmt(Number(booking.dp_amount) || 0));
-    sumLine("Pelunasan Dibayar", fmt(remaining));
+    if (booking.source !== "VENDOR" && (Number(booking.dp_amount) || 0) > 0) {
+      sumLine("DP Dibayar", fmt(Number(booking.dp_amount) || 0));
+      sumLine("Pelunasan Dibayar", fmt(remaining));
+    } else {
+      sumLine("Pelunasan Dibayar", fmt(Number(booking.grand_total) || 0));
+    }
   } else if (kind === "MENUNGGU_PELUNASAN") {
     sumLine("DP Dibayar", fmt(Number(booking.dp_amount) || 0));
   } else {

@@ -93,6 +93,7 @@ export function InvoiceModal({
     dpAmount: booking.dp_amount ?? 0,
     vendorFee: vendorFee ?? 0,
     vendorName: booking.vendor_name ?? undefined,
+    isVendor: booking.source === "VENDOR",
     paymentBank: PAYMENT_BANK,
     paymentAccount: PAYMENT_ACCOUNT,
     paymentHolder: PAYMENT_ACCOUNT_HOLDER,
