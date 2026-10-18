@@ -280,6 +280,7 @@ export function buildInvoiceMessage(input: {
   paymentHolder: string;
   vendorFee?: number;
   vendorName?: string;
+  isVendor?: boolean;
 }): string {
   const lines = [
     `*INVOICE BOOKING - Mstory.id*`,
@@ -297,8 +298,42 @@ export function buildInvoiceMessage(input: {
     ``,
     `*PAKET*`,
     input.packageDescription,
+    ``,
+    `*RINCIAN BIAYA*`,
+    `Subtotal : ${formatCurrency(input.subtotal)}`,
+    `Transport: ${formatCurrency(input.transportFee)}`,
+    `Total    : ${formatCurrency(input.grandTotal)}`,
     ...vendorFeeLines(input.grandTotal, input.vendorFee, input.vendorName),
   ];
+
+  if (input.isVendor) {
+    lines.push(
+      ``,
+      `*STATUS BOOKING: VENDOR (TANPA DP)*`,
+      `Pelunasan: ${formatCurrency(input.grandTotal)}`,
+      ``,
+      `*PEMBAYARAN KE*`,
+      `${input.paymentBank} ${input.paymentAccount}`,
+      `A/n ${input.paymentHolder}`,
+      ``,
+      `Silakan konfirmasi pesanan ini via WhatsApp ke admin Mstory.id. 🙏`,
+    );
+  } else {
+    lines.push(
+      ``,
+      `*PEMBAYARAN DP*`,
+      `${input.dpLabel}: ${formatCurrency(input.dpAmount)}`,
+      `Sisa Pelunasan: ${formatCurrency(input.remainingBalance)}`,
+      ``,
+      `*PEMBAYARAN KE*`,
+      `${input.paymentBank} ${input.paymentAccount}`,
+      `A/n ${input.paymentHolder}`,
+      ``,
+      `DP tidak dapat dikembalikan jika dibatalkan setelah invoice dibuat.`,
+      `Kirim bukti transfer ke admin setelah melakukan transfer. 🙏`,
+    );
+  }
+
   return lines.join("\n");
 }
 

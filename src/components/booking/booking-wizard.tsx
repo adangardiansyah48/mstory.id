@@ -320,7 +320,7 @@ for (let attempt = 0; attempt < 3; attempt++) {
 
       const message = buildInvoiceMessage({
         invoiceNumber,
-        fullName: client.fullName,
+        fullName: isVendorBooking && selectedVendor ? selectedVendor.name : client.fullName,
         whatsappNumber: normalizedPhone,
         eventDate: client.eventDate,
         eventAddress: client.eventAddress,
@@ -333,11 +333,13 @@ for (let attempt = 0; attempt < 3; attempt++) {
         transportFee,
         grandTotal,
         dpLabel,
-        dpAmount,
-        remainingBalance,
+        dpAmount: isVendorBooking ? 0 : dpAmount,
+        remainingBalance: isVendorBooking ? 0 : remainingBalance,
         paymentBank: PAYMENT_BANK,
         paymentAccount: PAYMENT_ACCOUNT,
         paymentHolder: PAYMENT_ACCOUNT_HOLDER,
+        isVendor: isVendorBooking,
+        vendorName: isVendorBooking && selectedVendor ? selectedVendor.name : undefined,
       });
 
       const waLink = buildWhatsAppLink(
@@ -385,7 +387,9 @@ for (let attempt = 0; attempt < 3; attempt++) {
               <p className="mt-2 text-sm text-[var(--muted)]">
                 {adminMode 
                   ? "Booking telah tersimpan. Silakan cek daftar booking untuk melihat invoice." 
-                  : "Kirim invoice via WhatsApp ke admin, lalu tunggu verifikasi DP agar status berubah menjadi Menunggu Pelunasan."}
+                  : isVendorBooking
+                    ? "Kirim invoice via WhatsApp ke admin. Booking vendor diproses dengan skema pelunasan tanpa DP."
+                    : "Kirim invoice via WhatsApp ke admin, lalu tunggu verifikasi DP agar status berubah menjadi Menunggu Pelunasan."}
               </p>
               <div className="mt-4 rounded-2xl bg-white/60 p-4 backdrop-blur-md">
                 <p className="text-xs uppercase tracking-[0.18em] text-[var(--muted)]">
@@ -448,6 +452,21 @@ for (let attempt = 0; attempt < 3; attempt++) {
                         <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-xs font-bold text-white">1</span>
                         <span>Booking berhasil disimpan. Invoice bisa dibuka dari daftar booking di admin dashboard.</span>
                       </li>
+                    ) : isVendorBooking ? (
+                      <>
+                        <li className="flex gap-3">
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-xs font-bold text-white">1</span>
+                          <span>Buka WhatsApp dan kirim invoice booking ini ke admin Mstory.id.</span>
+                        </li>
+                        <li className="flex gap-3">
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-xs font-bold text-white">2</span>
+                          <span>Booking vendor tanpa DP. Tagihan dilunasi sesuai kesepakatan mitra.</span>
+                        </li>
+                        <li className="flex gap-3">
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-xs font-bold text-white">3</span>
+                          <span>Admin akan segera mengonfirmasi dan menjadwalkan tim foto.</span>
+                        </li>
+                      </>
                     ) : (
                       <>
                         <li className="flex gap-3">
@@ -467,7 +486,7 @@ for (let attempt = 0; attempt < 3; attempt++) {
                   </ol>
                 </div>
                 <p className="text-center text-xs text-[var(--muted)]">
-                  {adminMode ? "" : "DP tidak dapat dikembalikan jika booking dibatalkan setelah invoice dibuat."}
+                  {adminMode || isVendorBooking ? "" : "DP tidak dapat dikembalikan jika booking dibatalkan setelah invoice dibuat."}
                 </p>
               </div>
             </div>
