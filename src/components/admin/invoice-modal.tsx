@@ -46,7 +46,8 @@ export function InvoiceModal({
   defaultKind = "DP",
   vendorFee,
 }: InvoiceModalProps) {
-  const [kind, setKind] = useState<InvoiceKind>(defaultKind);
+  const isVendorBooking = booking.source === "VENDOR";
+  const [kind, setKind] = useState<InvoiceKind>(() => (isVendorBooking ? "LUNAS" : defaultKind));
 
   const pkg = booking.details?.[0]?.packages as unknown as { name: string; sub_categories?: { name: string; categories?: { name: string } | null } | null } | undefined;
   const dpLabel = "DP";
@@ -123,41 +124,49 @@ const waLink = buildWhatsAppLink(
             {booking.invoice_number} · {booking.client?.full_name ?? "-"}
           </p>
 
-          <div className="mt-4 flex gap-2">
-            <button
-              onClick={() => setKind("DP")}
-              className={cn(
-                "flex-1 rounded-full px-3 py-2 text-xs font-bold uppercase tracking-widest transition-all",
-                kind === "DP"
-                  ? "bg-[var(--brand)] text-white shadow-[0_4px_20px_-2px_rgba(192,178,158,0.4)]"
-                  : "bg-white/60 text-[var(--muted)] backdrop-blur-md hover:bg-white/85",
-              )}
-            >
-              Invoice DP
-            </button>
-            <button
-              onClick={() => setKind("PELUNASAN")}
-              className={cn(
-                "flex-1 rounded-full px-3 py-2 text-xs font-bold uppercase tracking-widest transition-all",
-                kind === "PELUNASAN"
-                  ? "bg-[var(--brand)] text-white shadow-[0_4px_20px_-2px_rgba(192,178,158,0.4)]"
-                  : "bg-white/60 text-[var(--muted)] backdrop-blur-md hover:bg-white/85",
-              )}
-            >
-              Tanda Terima
-            </button>
-            <button
-              onClick={() => setKind("LUNAS")}
-              className={cn(
-                "flex-1 rounded-full px-3 py-2 text-xs font-bold uppercase tracking-widest transition-all",
-                kind === "LUNAS"
-                  ? "bg-[var(--brand)] text-white shadow-[0_4px_20px_-2px_rgba(192,178,158,0.4)]"
-                  : "bg-white/60 text-[var(--muted)] backdrop-blur-md hover:bg-white/85",
-              )}
-            >
-              Lunas
-            </button>
-          </div>
+          {isVendorBooking ? (
+            <div className="mt-4 flex gap-2">
+              <div className="flex-1 text-center rounded-full bg-[var(--brand)] px-3 py-2 text-xs font-bold uppercase tracking-widest text-white shadow-[0_4px_20px_-2px_rgba(192,178,158,0.4)]">
+                Tanda Terima Lunas (Vendor)
+              </div>
+            </div>
+          ) : (
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => setKind("DP")}
+                className={cn(
+                  "flex-1 rounded-full px-3 py-2 text-xs font-bold uppercase tracking-widest transition-all",
+                  kind === "DP"
+                    ? "bg-[var(--brand)] text-white shadow-[0_4px_20px_-2px_rgba(192,178,158,0.4)]"
+                    : "bg-white/60 text-[var(--muted)] backdrop-blur-md hover:bg-white/85",
+                )}
+              >
+                Invoice DP
+              </button>
+              <button
+                onClick={() => setKind("PELUNASAN")}
+                className={cn(
+                  "flex-1 rounded-full px-3 py-2 text-xs font-bold uppercase tracking-widest transition-all",
+                  kind === "PELUNASAN"
+                    ? "bg-[var(--brand)] text-white shadow-[0_4px_20px_-2px_rgba(192,178,158,0.4)]"
+                    : "bg-white/60 text-[var(--muted)] backdrop-blur-md hover:bg-white/85",
+                )}
+              >
+                Tanda Terima
+              </button>
+              <button
+                onClick={() => setKind("LUNAS")}
+                className={cn(
+                  "flex-1 rounded-full px-3 py-2 text-xs font-bold uppercase tracking-widest transition-all",
+                  kind === "LUNAS"
+                    ? "bg-[var(--brand)] text-white shadow-[0_4px_20px_-2px_rgba(192,178,158,0.4)]"
+                    : "bg-white/60 text-[var(--muted)] backdrop-blur-md hover:bg-white/85",
+                )}
+              >
+                Lunas
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5">
