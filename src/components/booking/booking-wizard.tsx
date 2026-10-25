@@ -602,6 +602,7 @@ for (let attempt = 0; attempt < 3; attempt++) {
                   setClient={setClient}
                   transportFeeDefault={transportFeeDefault}
                   isVendor={isVendorBooking}
+                  isAdmin={adminMode}
                 />
               )}
               {step === 3 && (

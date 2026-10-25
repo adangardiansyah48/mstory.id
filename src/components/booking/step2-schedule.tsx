@@ -23,6 +23,7 @@ interface Step2Props {
   setClient: React.Dispatch<React.SetStateAction<WizardClientDetails>>;
   transportFeeDefault?: number;
   isVendor?: boolean;
+  isAdmin?: boolean;
 }
 
 function toLocalDateKey(date: Date) {
@@ -38,6 +39,7 @@ export function Step2Schedule({
   setClient,
   transportFeeDefault,
   isVendor,
+  isAdmin,
 }: Step2Props) {
   const FEE_LABEL = formatCurrency(transportFeeDefault ?? OUTSIDE_CITY_TRANSPORT_FEE);
   const [currentMonth, setCurrentMonth] = useState(() => {
@@ -86,6 +88,7 @@ export function Step2Schedule({
   }
 
   function isDateSelectable(date: Date) {
+    if (isAdmin) return !isDateFull(date);
     return !isDateFull(date) && !isDateInPast(date);
   }
 
@@ -170,7 +173,7 @@ export function Step2Schedule({
                     isDateSelectable(date) &&
                       client.eventDate !== toLocalDateKey(date) &&
                       "text-[#9ca3af] hover:bg-white/70",
-                    isDateFull(date) && !isDateInPast(date) &&
+                    isDateFull(date) && !(isAdmin && isDateInPast(date)) && !isDateInPast(date) &&
                       "bg-[var(--brand)] text-white line-through",
                   )}
                 >
