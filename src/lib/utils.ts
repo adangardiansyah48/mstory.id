@@ -208,6 +208,7 @@ export function buildDpInvoice(input: InvoiceInput): string {
 
 export function buildPelunasanInvoice(input: InvoiceInput): string {
   const vendorPelunasan = Math.max(Number(input.grandTotal) - Number(input.vendorFee || 0), 0);
+  const remaining = Math.max(Number(input.grandTotal) - Number(input.dpAmount), 0);
   return [
     ...invoiceHeader("PELUNASAN"),
     ...invoiceBody(input),
