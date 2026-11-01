@@ -339,7 +339,11 @@ export async function downloadInvoicePdf(input: {
       sumLine("DP Dibayar", fmt(Number(booking.dp_amount) || 0));
       sumLine("Pelunasan Dibayar", fmt(remaining));
     } else {
-      sumLine("Pelunasan Dibayar", fmt(Number(booking.grand_total) || 0));
+      const vendorFeeAmount = Number(input.vendorFee || booking.vendor_fee_at_booking || 0);
+      const pelunasanAmount = booking.source === "VENDOR"
+        ? Math.max(Number(booking.grand_total || 0) - vendorFeeAmount, 0)
+        : Number(booking.grand_total || 0);
+      sumLine("Pelunasan Dibayar", fmt(pelunasanAmount));
     }
   } else if (kind === "MENUNGGU_PELUNASAN") {
     sumLine("DP Dibayar", fmt(Number(booking.dp_amount) || 0));

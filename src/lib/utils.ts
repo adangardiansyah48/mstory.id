@@ -236,8 +236,9 @@ export function buildLunasInvoice(input: InvoiceInput): string {
     "*RINCIAN PEMBAYARAN*",
   ];
   if (input.isVendor) {
+    const vendorPelunasan = Math.max(Number(input.grandTotal) - Number(input.vendorFee || 0), 0);
     lines.push(
-      "Pelunasan Dibayar: " + formatCurrency(Number(input.grandTotal)||0),
+      "Pelunasan Dibayar (Total - Fee Vendor): " + formatCurrency(vendorPelunasan),
       "Sisa Tagihan: Rp 0 (LUNAS)",
     );
   } else if (dp > 0) {
@@ -307,10 +308,11 @@ export function buildInvoiceMessage(input: {
   ];
 
   if (input.isVendor) {
+    const vendorPelunasan = Math.max(Number(input.grandTotal) - Number(input.vendorFee || 0), 0);
     lines.push(
       ``,
       `*STATUS BOOKING: VENDOR (TANPA DP)*`,
-      `Pelunasan: ${formatCurrency(input.grandTotal)}`,
+      `Pelunasan (Total - Fee Vendor): ${formatCurrency(vendorPelunasan)}`,
       ``,
       `*PEMBAYARAN KE*`,
       `${input.paymentBank} ${input.paymentAccount}`,

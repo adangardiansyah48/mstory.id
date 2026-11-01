@@ -295,7 +295,9 @@ export function FinanceTab() {
             {visibleRows.map((r) => {
               const isVendor = r.source === "VENDOR";
               const fee = resolveVendorFee(r, { vendor_fee: vendorFee }, vendorMap);
-              const pelunasan = r.status === "LUNAS" ? Math.max(Number(r.grand_total) - Math.min(Number(r.dp_amount), Number(r.grand_total)), 0) : 0;
+              const pelunasan = r.status === "LUNAS"
+                ? (isVendor ? Math.max(Number(r.grand_total) - fee, 0) : Math.max(Number(r.grand_total) - Math.min(Number(r.dp_amount), Number(r.grand_total)), 0))
+                : 0;
               return (
                 <tr key={r.id} className="text-sm">
                   <td className="px-4 py-3 font-mono text-xs text-[var(--ink)]">{r.invoice_number}</td>
