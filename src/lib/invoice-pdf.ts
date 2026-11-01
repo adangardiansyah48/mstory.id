@@ -1,7 +1,6 @@
 import { jsPDF } from "jspdf";
 import type { InvoicePdfKind } from "@/lib/types";
 import { PAYMENT_ACCOUNT, PAYMENT_ACCOUNT_HOLDER, PAYMENT_BANK } from "@/lib/types";
-import { resolveVendorFee } from "@/lib/vendor-fee";
 
 function slugify(input: string): string {
   return input
@@ -354,7 +353,13 @@ export async function downloadInvoicePdf(input: {
       sumLine("DP Dibayar", fmt(Number(booking.dp_amount) || 0));
     }
   } else {
-    sumLine("DP", fmt(Number(booking.dp_amount) || 0), BRAND_DARK, "bold");
+    const vendorFeeAmount = Number(input.vendorFee || booking.vendor_fee_at_booking || 0);
+    const pelunasanAmount = Math.max(Number(booking.grand_total || 0) - vendorFeeAmount, 0);
+    if (booking.source === "VENDOR") {
+      sumLine("TOTAL PELUNASAN", fmt(pelunasanAmount), BRAND_DARK, "bold");
+    } else {
+      sumLine("DP", fmt(Number(booking.dp_amount) || 0), BRAND_DARK, "bold");
+    }
   }
 
   const finalLabel = kind === "LUNAS" ? "SISA TAGIHAN" : "TOTAL YANG HARUS DIBAYAR";

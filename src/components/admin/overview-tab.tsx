@@ -98,6 +98,7 @@ export function OverviewTab({
       const revenueDp = bookings
         .filter((b) => b.status === "MENUNGGU_PELUNASAN" || b.status === "LUNAS")
         .reduce((s, b) => {
+          if (b.source === "VENDOR") return s;
           const fee = resolveVendorFee(b, { vendor_fee: vendorFee });
           const net = Math.max(Number(b.grand_total ?? 0) - fee, 0);
           return s + Math.min(Number(b.dp_amount ?? 0), net);
@@ -108,7 +109,8 @@ export function OverviewTab({
         .reduce((s, b) => {
           const fee = resolveVendorFee(b, { vendor_fee: vendorFee });
           const net = Math.max(Number(b.grand_total ?? 0) - fee, 0);
-          return s + Math.max(net - Math.min(Number(b.dp_amount ?? 0), net), 0);
+          const dp = b.source === "VENDOR" ? 0 : Math.min(Number(b.dp_amount ?? 0), net);
+          return s + Math.max(net - dp, 0);
         }, 0);
 
       setStats({

@@ -186,12 +186,15 @@ function invoiceBody(input: InvoiceInput): string[] {
 }
 
 export function buildDpInvoice(input: InvoiceInput): string {
+  const vendorPelunasan = Math.max(Number(input.grandTotal) - Number(input.vendorFee || 0), 0);
   return [
     ...invoiceHeader("DP"),
     ...invoiceBody(input),
     ``,
-    `*YANG HARUS DIBAYAR*`,
-    `${input.dpLabel}: ${formatCurrency(input.dpAmount)}`,
+    input.isVendor ? `*TOTAL PELUNASAN VENDOR*` : `*YANG HARUS DIBAYAR*`,
+    input.isVendor
+      ? `Pelunasan (Total - Fee Vendor): ${formatCurrency(vendorPelunasan)}`
+      : `${input.dpLabel}: ${formatCurrency(input.dpAmount)}`,
     ``,
     `*PEMBAYARAN KE*`,
     `${input.paymentBank} ${input.paymentAccount}`,
@@ -199,7 +202,7 @@ export function buildDpInvoice(input: InvoiceInput): string {
     ``,
     `*KONFIRMASI*`,
     `Kirim bukti transfer ke admin setelah melakukan pembayaran.`,
-    `DP tidak dapat dikembalikan jika dibatalkan setelah invoice dibuat.`,
+    input.isVendor ? `` : `DP tidak dapat dikembalikan jika dibatalkan setelah invoice dibuat.`,
     ``,
     `Mohon konfirmasi pembayaran dengan mengirim bukti transfer. 🙏`,
     `Terima kasih sudah mempercayakan momen berharga Anda kepada Mstory.id! 🙏`,
@@ -295,11 +298,11 @@ export function buildInvoiceMessage(input: {
     `*DATA KLIEN*`,
     `Nama     : ${input.fullName}`,
     `WhatsApp : ${input.whatsappNumber}`,
+    `Alamat   : ${input.eventAddress}`,
     ``,
     `*DETAIL ACARA*`,
     `Tanggal  : ${formatDate(input.eventDate)}`,
     `Lokasi   : ${input.locationLabel}`,
-    `Alamat   : ${input.eventAddress}`,
     ``,
     `*PAKET*`,
     input.packageDescription,

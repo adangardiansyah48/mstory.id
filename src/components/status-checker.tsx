@@ -192,11 +192,17 @@ export function StatusSearchPanel() {
   }
 
   const progress = Array.isArray(result?.project_progress) ? result?.project_progress?.[0] : result?.project_progress;
-  const dpLabel = `DP terbayar: ${formatCurrency(result?.dp_amount ?? 0)}`;
-  const remaining = Math.max(
-    (result?.grand_total ?? 0) - (result?.dp_amount ?? 0),
-    0,
-  );
+  const isVendorBooking = result?.source === "VENDOR";
+  const vendorNet = Math.max((result?.grand_total ?? 0) - (result?.vendor_fee_at_booking ?? 0), 0);
+  const dpLabel = isVendorBooking
+    ? `Pelunasan vendor (Total - Fee): ${formatCurrency(vendorNet)}`
+    : `DP terbayar: ${formatCurrency(result?.dp_amount ?? 0)}`;
+  const remaining = isVendorBooking
+    ? vendorNet
+    : Math.max(
+        (result?.grand_total ?? 0) - (result?.dp_amount ?? 0),
+        0,
+      );
   const isLunas = result?.status === "LUNAS";
 
   return (
@@ -309,12 +315,16 @@ export function StatusSearchPanel() {
                 <p className="text-xs text-[var(--muted-2)]">{dpLabel}</p>
                 {result.status === "MENUNGGU_DP" && (
                   <p className="mt-2 rounded-lg bg-amber-50/80 px-3 py-2 text-xs font-semibold text-amber-700">
-                    Belum ada pembayaran. Menunggu transfer DP.
+                    {isVendorBooking
+                      ? `Menunggu pelunasan vendor: ${formatCurrency(vendorNet)}`
+                      : "Belum ada pembayaran. Menunggu transfer DP."}
                   </p>
                 )}
                 {result.status === "MENUNGGU_PELUNASAN" && (
                   <p className="mt-2 rounded-lg bg-blue-50/80 px-3 py-2 text-xs font-semibold text-blue-700">
-                    DP diterima · Sisa pelunasan: {formatCurrency(remaining)}
+                    {isVendorBooking
+                      ? `Menunggu pelunasan vendor: ${formatCurrency(vendorNet)}`
+                      : `DP diterima · Sisa pelunasan: ${formatCurrency(remaining)}`}
                   </p>
                 )}
                 {isLunas && (

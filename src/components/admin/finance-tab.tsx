@@ -117,8 +117,11 @@ export function FinanceTab() {
       const fee = resolveVendorFee(r, { vendor_fee: vendorFee }, vendorMap);
       if (r.source === "VENDOR") totalFeeVendor += fee;
 
-      const dp = Math.min(Number(r.dp_amount ?? 0), Number(r.grand_total ?? 0));
-      const pel = Math.max(Number(r.grand_total ?? 0) - dp, 0);
+      const isVendor = r.source === "VENDOR";
+      const dp = isVendor ? 0 : Math.min(Number(r.dp_amount ?? 0), Number(r.grand_total ?? 0));
+      const pel = isVendor
+        ? Number(r.grand_total ?? 0)
+        : Math.max(Number(r.grand_total ?? 0) - dp, 0);
       if (r.status === "MENUNGGU_PELUNASAN" || r.status === "LUNAS") {
         dpDiterima += dp;
       }
@@ -304,7 +307,7 @@ export function FinanceTab() {
                   <td className="px-4 py-3 text-[var(--ink)]">{r.client?.full_name ?? "-"}</td>
                   <td className="px-4 py-3 text-[var(--ink)]">{formatShortDate(r.event_date)}</td>
                   <td className="px-4 py-3 text-right font-semibold text-[var(--ink)]">{formatCurrency(r.grand_total)}</td>
-                  <td className="px-4 py-3 text-right text-amber-700">{r.status !== "MENUNGGU_DP" ? formatCurrency(r.dp_amount) : "-"}</td>
+                  <td className="px-4 py-3 text-right text-amber-700">{isVendor ? "-" : r.status !== "MENUNGGU_DP" ? formatCurrency(r.dp_amount) : "-"}</td>
                   <td className="px-4 py-3 text-right text-blue-700">{pelunasan > 0 ? formatCurrency(pelunasan) : "-"}</td>
                   <td className="px-4 py-3 text-right font-semibold text-green-700">{formatCurrency(Number(r.grand_total))}</td>
                   <td className="px-4 py-3 text-right text-[var(--muted-2)]">{isVendor ? formatCurrency(fee) : "-"}</td>

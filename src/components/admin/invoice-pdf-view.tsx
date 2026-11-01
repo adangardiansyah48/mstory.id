@@ -222,8 +222,10 @@ export function InvoicePdfDocument({ booking, kind, logoUrl, vendorFee }: Props)
           )}
           {kind === "MENUNGGU_DP" && (
             <View style={s.sumRow}>
-              <Text style={s.grandLabel}>YANG HARUS DIBAYAR</Text>
-              <Text style={s.grandValue}>{fmt(dpAmount)}</Text>
+              <Text style={s.grandLabel}>{booking.source === "VENDOR" ? "TOTAL PELUNASAN" : "YANG HARUS DIBAYAR"}</Text>
+              <Text style={s.grandValue}>
+                {fmt(booking.source === "VENDOR" ? Math.max(total - (Number(vendorFee || 0)), 0) : dpAmount)}
+              </Text>
             </View>
           )}
           {kind === "LUNAS" && (
@@ -239,8 +241,14 @@ export function InvoicePdfDocument({ booking, kind, logoUrl, vendorFee }: Props)
           )}
           {kind === "MENUNGGU_DP" && (
             <View style={{ marginTop: 12, paddingVertical: 10, paddingHorizontal: 12, backgroundColor: "#fff3cd", borderRadius: 6 }}>
-              <Text style={{ fontSize: 9, color: "#856404", fontWeight: "bold" }}>SEGERA BAYARKAN DP</Text>
-              <Text style={{ fontSize: 9, color: "#856404", marginTop: 4 }}>Bayarkan DP sebesar {fmt(dpAmount)} sesuai rekening pembayaran yang tersedia di bawah.</Text>
+              <Text style={{ fontSize: 9, color: "#856404", fontWeight: "bold" }}>
+                {booking.source === "VENDOR" ? "PELUNASAN MAKSIMAL H-1" : "SEGERA BAYARKAN DP"}
+              </Text>
+              <Text style={{ fontSize: 9, color: "#856404", marginTop: 4 }}>
+                {booking.source === "VENDOR"
+                  ? `Bayarkan pelunasan sebesar ${fmt(Math.max(total - (Number(vendorFee || 0)), 0))} (Total - Fee Vendor) paling lambat H-1 sebelum acara.`
+                  : `Bayarkan DP sebesar ${fmt(dpAmount)} sesuai rekening pembayaran yang tersedia di bawah.`}
+              </Text>
             </View>
           )}
         </View>

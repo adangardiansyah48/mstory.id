@@ -717,10 +717,17 @@ const filtered = bookings.filter((b) => {
       ) : (
         <div className="space-y-3">
           {visible.map((booking) => {
-            const remaining = Math.max(
-              (booking.grand_total ?? 0) - (booking.dp_amount ?? 0),
+            const isVendorRow = booking.source === "VENDOR";
+            const vendorNet = Math.max(
+              (booking.grand_total ?? 0) - (booking.vendor_fee_at_booking ?? 0),
               0,
             );
+            const remaining = isVendorRow
+              ? booking.status === "LUNAS" ? 0 : vendorNet
+              : Math.max(
+                  (booking.grand_total ?? 0) - (booking.dp_amount ?? 0),
+                  0,
+                );
             const isOpen = expanded === booking.id;
             return (
               <div
@@ -933,7 +940,9 @@ const filtered = bookings.filter((b) => {
                         </p>
                         <p>
                           <span className="text-[var(--muted)]">DP :</span>{" "}
-                          {formatCurrency(booking.status === "MENUNGGU_DP" ? 0 : booking.dp_amount)}
+                          {booking.source === "VENDOR"
+                            ? "- (tanpa DP)"
+                            : formatCurrency(booking.status === "MENUNGGU_DP" ? 0 : booking.dp_amount)}
                         </p>
                         <p>
                           <span className="text-[var(--muted)]">Sisa :</span>{" "}
@@ -953,12 +962,14 @@ const filtered = bookings.filter((b) => {
                               }) + " WIB"
                             : "-"}
                         </p>
-                        <p>
-                          <span className="text-[var(--muted)]">Verifikasi DP :</span>{" "}
-                          {booking.dp_paid_at
-                            ? new Date(booking.dp_paid_at).toLocaleString("id-ID")
-                            : "Belum"}
-                        </p>
+                        {booking.source !== "VENDOR" && (
+                          <p>
+                            <span className="text-[var(--muted)]">Verifikasi DP :</span>{" "}
+                            {booking.dp_paid_at
+                              ? new Date(booking.dp_paid_at).toLocaleString("id-ID")
+                              : "Belum"}
+                          </p>
+                        )}
                         <p>
                           <span className="text-[var(--muted)]">Pelunasan :</span>{" "}
                           {booking.paid_at

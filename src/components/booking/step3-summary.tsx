@@ -41,6 +41,7 @@ interface Step3Props {
   dpAmount: number;
   remainingBalance: number;
   isVendor?: boolean;
+  vendorFee?: number;
 }
 
 export function Step3Summary({
@@ -54,6 +55,7 @@ export function Step3Summary({
   dpAmount,
   remainingBalance,
   isVendor = false,
+  vendorFee = 0,
 }: Step3Props) {
   const pkg = selection.selectedPackage;
 
@@ -160,10 +162,16 @@ export function Step3Summary({
           </div>
           {isVendor ? (
             <div className="mt-3 space-y-1 rounded-xl bg-white/10 p-3">
+              {vendorFee > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-[var(--muted-3)]">Fee Vendor</span>
+                  <span className="font-medium">-{formatCurrency(vendorFee)}</span>
+                </div>
+              )}
               <div className="flex justify-between">
-                <span className="text-[var(--muted-3)]">Pelunasan</span>
+                <span className="text-[var(--muted-3)]">Pelunasan (Total - Fee)</span>
                 <span className="font-bold text-[#7fd6a8]">
-                  {formatCurrency(grandTotal)}
+                  {formatCurrency(Math.max(grandTotal - vendorFee, 0))}
                 </span>
               </div>
               <div className="flex justify-between text-xs text-[var(--muted-3)]">

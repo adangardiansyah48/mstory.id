@@ -617,6 +617,7 @@ for (let attempt = 0; attempt < 3; attempt++) {
                   dpAmount={isVendorBooking ? 0 : dpAmount}
                   remainingBalance={isVendorBooking ? 0 : remainingBalance}
                   isVendor={isVendorBooking}
+                  vendorFee={isVendorBooking ? Number(selectedVendor?.fee_per_booking ?? 0) : 0}
                 />
               )}
             </>
