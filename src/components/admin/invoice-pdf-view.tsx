@@ -192,10 +192,9 @@ export function InvoicePdfDocument({ booking, kind, logoUrl, vendorFee }: Props)
           )}
           {kind === "LUNAS" && (
             <>
-              {booking.source !== "VENDOR" && dpAmount > 0 ? (
+              {booking.source === "VENDOR" ? (
                 <>
-                  <View style={s.sumRow}><Text style={s.sumLabel}>DP Dibayar</Text><Text style={s.sumValue}>{fmt(dpAmount)}</Text></View>
-                  <View style={s.sumRow}><Text style={s.sumLabel}>Pelunasan Dibayar</Text><Text style={s.sumValue}>{fmt(Math.max(total - dpAmount, 0))}</Text></View>
+                  <View style={s.sumRow}><Text style={s.sumLabel}>Pelunasan Dibayar</Text><Text style={s.sumValue}>{fmt(Math.max(total - (Number(vendorFee || 0)), 0))}</Text></View>
                   <View style={s.sumRow}>
                     <Text style={s.grandLabel}>Sisa Bayar</Text>
                     <Text style={s.grandValue}>Rp 0</Text>
@@ -203,7 +202,16 @@ export function InvoicePdfDocument({ booking, kind, logoUrl, vendorFee }: Props)
                 </>
               ) : (
                 <>
-                  <View style={s.sumRow}><Text style={s.sumLabel}>Pelunasan Dibayar</Text><Text style={s.sumValue}>{fmt(booking.source === "VENDOR" ? Math.max(total - (Number(vendorFee || 0)), 0) : total)}</Text></View>
+                  {dpAmount > 0 ? (
+                    <>
+                      <View style={s.sumRow}><Text style={s.sumLabel}>DP Dibayar</Text><Text style={s.sumValue}>{fmt(dpAmount)}</Text></View>
+                      <View style={s.sumRow}><Text style={s.sumLabel}>Pelunasan Dibayar</Text><Text style={s.sumValue}>{fmt(Math.max(total - dpAmount, 0))}</Text></View>
+                    </>
+                  ) : (
+                    <>
+                      <View style={s.sumRow}><Text style={s.sumLabel}>Pelunasan Dibayar</Text><Text style={s.sumValue}>{fmt(total)}</Text></View>
+                    </>
+                  )}
                   <View style={s.sumRow}>
                     <Text style={s.grandLabel}>Sisa Bayar</Text>
                     <Text style={s.grandValue}>Rp 0</Text>
