@@ -175,11 +175,19 @@ export function InvoicePdfDocument({ booking, kind, logoUrl, vendorFee }: Props)
           )}
           {kind === "MENUNGGU_PELUNASAN" && (
             <>
-              <View style={s.sumRow}><Text style={s.sumLabel}>DP Dibayar</Text><Text style={s.sumValue}>{fmt(dpAmount)}</Text></View>
-              <View style={s.sumRow}>
-                <Text style={s.grandLabel}>Sisa Pelunasan</Text>
-                <Text style={s.grandValue}>{fmt(remaining)}</Text>
-              </View>
+              {booking.source === "VENDOR" ? (
+                <>
+                  <View style={s.sumRow}><Text style={s.sumLabel}>Pelunasan Dibayar</Text><Text style={s.sumValue}>{fmt(Math.max(total - (Number(vendorFee || 0)), 0))}</Text></View>
+                </>
+              ) : (
+                <>
+                  <View style={s.sumRow}><Text style={s.sumLabel}>DP Dibayar</Text><Text style={s.sumValue}>{fmt(dpAmount)}</Text></View>
+                  <View style={s.sumRow}>
+                    <Text style={s.grandLabel}>Sisa Pelunasan</Text>
+                    <Text style={s.grandValue}>{fmt(remaining)}</Text>
+                  </View>
+                </>
+              )}
             </>
           )}
           {kind === "LUNAS" && (

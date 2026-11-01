@@ -207,14 +207,17 @@ export function buildDpInvoice(input: InvoiceInput): string {
 }
 
 export function buildPelunasanInvoice(input: InvoiceInput): string {
-  const remaining = Math.max(input.grandTotal - input.dpAmount, 0);
+  const vendorPelunasan = Math.max(Number(input.grandTotal) - Number(input.vendorFee || 0), 0);
   return [
     ...invoiceHeader("PELUNASAN"),
     ...invoiceBody(input),
     ``,
-    `DP yang telah dibayar: ${formatCurrency(input.dpAmount)}`,
-    `*SISA PELUNASAN: ${formatCurrency(remaining)}*`,
-    `(Paling lambat H-1 sebelum event tanggal)`,
+    input.isVendor
+      ? `*PELUNASAN VENDOR (Total - Fee Vendor): ${formatCurrency(vendorPelunasan)}*`
+      : `DP yang telah dibayar: ${formatCurrency(input.dpAmount)}`,
+    input.isVendor
+      ? `(Paling lambat H-1 sebelum event tanggal)`
+      : `*SISA PELUNASAN: ${formatCurrency(remaining)}*\n(Paling lambat H-1 sebelum event tanggal)`,
     ``,
     `*PEMBAYARAN KE*`,
     `${input.paymentBank} ${input.paymentAccount}`,

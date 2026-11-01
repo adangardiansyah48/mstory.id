@@ -346,7 +346,13 @@ export async function downloadInvoicePdf(input: {
       sumLine("Pelunasan Dibayar", fmt(pelunasanAmount));
     }
   } else if (kind === "MENUNGGU_PELUNASAN") {
-    sumLine("DP Dibayar", fmt(Number(booking.dp_amount) || 0));
+    if (booking.source === "VENDOR") {
+      const vendorFeeAmount = Number(input.vendorFee || booking.vendor_fee_at_booking || 0);
+      const pelunasanAmount = Math.max(Number(booking.grand_total || 0) - vendorFeeAmount, 0);
+      sumLine("Pelunasan Dibayar", fmt(pelunasanAmount));
+    } else {
+      sumLine("DP Dibayar", fmt(Number(booking.dp_amount) || 0));
+    }
   } else {
     sumLine("DP", fmt(Number(booking.dp_amount) || 0), BRAND_DARK, "bold");
   }
