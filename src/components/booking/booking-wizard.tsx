@@ -215,12 +215,17 @@ export function BookingWizard({
     }
     let invoiceNumber = await generateInvoiceNumber();
     const normalizedPhone = normalizeWhatsAppNumber(client.whatsappNumber);
+    const matchedVendor = vendorOptions.find(
+      (v) => v.whatsapp && normalizeWhatsAppNumber(v.whatsapp) === normalizedPhone,
+    );
+    const vendorBooking = isVendorBooking || !!matchedVendor;
+    const effectiveVendor = selectedVendor || matchedVendor || null;
 
       try {
         const { data: clientData, error: clientError } = await supabase
           .from("clients")
           .insert({
-            full_name: isVendorBooking && (selectedVendor || vendorName.trim()) ? ((selectedVendor?.name || vendorName.trim())) : client.fullName,
+            full_name: vendorBooking && (effectiveVendor || vendorName.trim()) ? ((effectiveVendor?.name || vendorName.trim())) : client.fullName,
             whatsapp_number: normalizedPhone,
           })
           .select()
@@ -239,12 +244,12 @@ export function BookingWizard({
              subtotal: subtotal,
              transport_fee: transportFee,
              grand_total: grandTotal,
-              dp_amount: isVendorBooking ? 0 : dpAmount,
-              status: isVendorBooking ? "MENUNGGU_PELUNASAN" : "MENUNGGU_DP",
+              dp_amount: vendorBooking ? 0 : dpAmount,
+              status: vendorBooking ? "MENUNGGU_PELUNASAN" : "MENUNGGU_DP",
              notes: client.notes || null,
            };
-            if (isVendorBooking) {
-             const v = selectedVendor || vendorOptions.find((x) => x.name === vendorName.trim());
+            if (vendorBooking) {
+             const v = effectiveVendor || selectedVendor || vendorOptions.find((x) => x.name === vendorName.trim());
              if (!v) throw new Error("Pilih vendor dulu");
              basePayload.source = "VENDOR";
              basePayload.vendor_name = v.name;
@@ -320,7 +325,8 @@ for (let attempt = 0; attempt < 3; attempt++) {
 
       const message = buildInvoiceMessage({
         invoiceNumber,
-        fullName: isVendorBooking && selectedVendor ? selectedVendor.name : client.fullName,
+        fullName: vendorBooking && effectiveVendor ? effectiveVendor.name : client.fullName,
+
         whatsappNumber: normalizedPhone,
         eventDate: client.eventDate,
         eventAddress: client.eventAddress,
@@ -333,13 +339,13 @@ for (let attempt = 0; attempt < 3; attempt++) {
         transportFee,
         grandTotal,
         dpLabel,
-        dpAmount: isVendorBooking ? 0 : dpAmount,
-        remainingBalance: isVendorBooking ? 0 : remainingBalance,
+        dpAmount: vendorBooking ? 0 : dpAmount,
+        remainingBalance: vendorBooking ? 0 : remainingBalance,
         paymentBank: PAYMENT_BANK,
         paymentAccount: PAYMENT_ACCOUNT,
         paymentHolder: PAYMENT_ACCOUNT_HOLDER,
-        isVendor: isVendorBooking,
-        vendorName: isVendorBooking && selectedVendor ? selectedVendor.name : undefined,
+        isVendor: vendorBooking,
+        vendorName: vendorBooking && effectiveVendor ? effectiveVendor.name : undefined,
       });
 
       const waLink = buildWhatsAppLink(
