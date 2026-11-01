@@ -226,9 +226,9 @@ export async function downloadInvoicePdf(input: {
 
   kv("Nama :", booking.client?.full_name ?? "-");
   y += 7.5;
-  y += kv("Alamat :", booking.event_address ?? "-");
-  y += 8;
-  kv("WhatsApp :", booking.client?.whatsapp_number ?? "-");
+  y += kv("WhatsApp :", booking.client?.whatsapp_number ?? "-");
+  y += 7.5;
+  kv("Alamat :", booking.event_address ?? "-");
 
   // Right: bank + A/N + status (tanpa kotak, teks lebih besar)
   const payX = MARGIN + 118;
@@ -358,7 +358,12 @@ export async function downloadInvoicePdf(input: {
   }
 
   const finalLabel = kind === "LUNAS" ? "SISA TAGIHAN" : "TOTAL YANG HARUS DIBAYAR";
-  const finalValue = kind === "LUNAS" ? "Rp 0,00 (LUNAS)" : fmt(remaining);
+  const vendorNet = Math.max(
+    Number(booking.grand_total || 0) - Number(input.vendorFee || booking.vendor_fee_at_booking || 0),
+    0,
+  );
+  const finalDue = booking.source === "VENDOR" && kind !== "LUNAS" ? vendorNet : remaining;
+  const finalValue = kind === "LUNAS" ? "Rp 0,00 (LUNAS)" : fmt(finalDue);
   doc.setFont("Helvetica", "bold");
   doc.setFontSize(11);
   doc.setTextColor(...(kind === "LUNAS" || remaining <= 0 ? GREEN_TXT : INK));
