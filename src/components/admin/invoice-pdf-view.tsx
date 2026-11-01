@@ -234,7 +234,7 @@ export function InvoicePdfDocument({ booking, kind, logoUrl, vendorFee }: Props)
           {kind === "MENUNGGU_PELUNASAN" && (
             <View style={{ marginTop: 12, paddingVertical: 10, paddingHorizontal: 12, backgroundColor: "#DBEAFE", borderRadius: 6 }}>
               <Text style={{ fontSize: 9, color: "#1D4ED8", fontWeight: "bold" }}>PELUNASAN MAKSIMAL H-1</Text>
-              <Text style={{ fontSize: 9, color: "#1D4ED8", marginTop: 4 }}>Sisa pelunasan {fmt(remaining)} wajib dibayar paling lambat H-1 (sehari sebelum acara). Batas akhir: {fmtDate(subDays(booking.event_date, 1))}.</Text>
+              <Text style={{ fontSize: 9, color: "#1D4ED8", marginTop: 4 }}>Sisa pelunasan {fmt(booking.source === "VENDOR" ? Math.max(total - (Number(vendorFee || 0)), 0) : remaining)} wajib dibayar paling lambat H-1 (sehari sebelum acara). Batas akhir: {fmtDate(subDays(booking.event_date, 1))}.</Text>
             </View>
           )}
           {kind === "MENUNGGU_DP" && (
