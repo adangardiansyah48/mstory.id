@@ -215,9 +215,14 @@ export function BookingWizard({
     }
     let invoiceNumber = await generateInvoiceNumber();
     const normalizedPhone = normalizeWhatsAppNumber(client.whatsappNumber);
-    const matchedVendor = vendorOptions.find(
-      (v) => v.whatsapp && normalizeWhatsAppNumber(v.whatsapp) === normalizedPhone,
-    );
+    const matchedVendor = vendorOptions.find((v) => {
+      const phoneMatch =
+        v.whatsapp && normalizeWhatsAppNumber(v.whatsapp) === normalizedPhone;
+      const nameMatch =
+        (v.name || "").toLowerCase().replace(/\s+/g, "") ===
+        (client.fullName || "").toLowerCase().replace(/\s+/g, "");
+      return phoneMatch || nameMatch;
+    });
     const vendorBooking = isVendorBooking || !!matchedVendor;
     const effectiveVendor = selectedVendor || matchedVendor || null;
 
