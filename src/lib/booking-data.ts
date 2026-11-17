@@ -24,7 +24,7 @@ async function fetchBookingData(): Promise<BookingData> {
   const [catRes, subRes, pkgRes, addonRes, bookingRes] = await Promise.all([
     supabase.from("categories").select("*").order("id"),
     supabase.from("sub_categories").select("*").order("id"),
-    supabase.from("packages").select("*").eq("is_active", true).order("id"),
+    supabase.from("packages").select("*").eq("is_active", true).order("id", { ascending: false }),
     supabase.from("addons").select("*").eq("is_active", true).order("id"),
     supabase
       .from("bookings")
