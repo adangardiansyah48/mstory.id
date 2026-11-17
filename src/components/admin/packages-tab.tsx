@@ -132,7 +132,7 @@ export function PackagesTab() {
       const [c, s, p, a] = await Promise.all([
         supabase.from("categories").select("*").order("id"),
         supabase.from("sub_categories").select("*").order("id"),
-        supabase.from("packages").select("*").order("id", { ascending: false }),
+        supabase.from("packages").select("*").order("price", { ascending: false }),
         supabase.from("addons").select("*").order("id"),
       ]);
       setCategories(c.data ?? []);
