@@ -1,10 +1,12 @@
 import { cookies } from "next/headers";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { executeLocally } from "@/lib/db/executor-server";
+import { wrapClient } from "@/lib/db/shim";
 
 export async function createClient() {
   const cookieStore = await cookies();
 
-  return createServerClient(
+  const real = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -18,12 +20,15 @@ export async function createClient() {
               cookieStore.set(name, value, options),
             );
           } catch {
-            // The `setAll` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
+            // Dipanggil dari Server Component; sesi diperbarui middleware.
           }
         },
       },
     },
   );
+
+  // Pakai koneksi Postgres langsung hanya jika kredensial tersedia.
+  // Jika tidak, tetap pakai klien Supabase apa adanya (perilaku lama).
+  if (!process.env.SUPABASE_DB_PASSWORD) return real;
+  return wrapClient(real, executeLocally);
 }

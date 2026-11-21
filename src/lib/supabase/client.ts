@@ -1,10 +1,16 @@
 import { createBrowserClient } from "@supabase/ssr";
+import { executeViaApi } from "@/lib/db/executor-client";
+import { wrapClient } from "@/lib/db/shim";
 
 /**
- * Create the Supabase browser client. Returns null until the project's
- * environment variables (`NEXT_PUBLIC_SUPABASE_URL` and
- * `NEXT_PUBLIC_SUPABASE_ANON_KEY`) are configured in `.env.local`, so the
- * public site still renders during setup.
+ * Klien Supabase untuk browser.
+ *
+ * Auth & Storage tetap memakai Supabase asli. Query tabel (`from`) dan `rpc`
+ * dialihkan ke API route `/api/db` yang terhubung langsung ke Postgres via
+ * Supavisor — karena Data API/PostgREST project sedang bermasalah (PGRST002).
+ *
+ * Mengembalikan null sampai env Supabase diisi agar halaman publik tetap
+ * bisa dirender saat setup.
  */
 export function createClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -14,5 +20,6 @@ export function createClient() {
     return null;
   }
 
-  return createBrowserClient(url, anonKey);
+  const real = createBrowserClient(url, anonKey);
+  return wrapClient(real, executeViaApi);
 }
